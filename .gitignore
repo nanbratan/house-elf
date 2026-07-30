@@ -28,5 +28,3 @@ infra/data/
 # Editor / OS
 .DS_Store
 *.log
-
-docs/plan/
