@@ -38,7 +38,7 @@ project dies. Do it once, deliberately, before any interesting code exists.
 ### T0.3 — Mastra server skeleton
 
 - Scaffold `apps/server` with `bunx create-mastra@latest server --empty --no-git
-  --no-skills`, run from `apps/`. **Consult the `mastra` skill's `create-mastra.md`
+--no-skills`, run from `apps/`. **Consult the `mastra` skill's `create-mastra.md`
   reference first** and re-check the flags — do not follow a remembered procedure.
   - `--empty` is required. Without it the CLI clones the "Agent Harness" template,
     which brings shell/web-fetch/task tools, `ObservationalMemory` and dependencies
@@ -64,12 +64,25 @@ project dies. Do it once, deliberately, before any interesting code exists.
 
 ### T0.4 — SvelteKit skeleton
 
-- Scaffold `apps/web` with SvelteKit 2, Svelte 5, TypeScript, Vite.
-- Add Tailwind CSS v4 (Vite plugin, not PostCSS — v4 uses `@tailwindcss/vite`).
+- Scaffold `apps/web` with SvelteKit 2, Svelte 5, TypeScript, Vite. Run from `apps/`:
+  `bunx sv@latest create web --template minimal --types ts --add tailwindcss
+--no-install --no-download-check`.
+  - `--add` is mutually exclusive with `--no-add-ons`, and `--add tailwindcss` still
+    prompts for the typography/forms plugins — answer with none.
+  - Afterwards: rename the package to `@house-elf/web`, drop the scaffold's own
+    `typescript` devDependency so the exact root pin (D13) governs, and delete its
+    nested `.gitignore` and boilerplate README.
+- Tailwind CSS v4 arrives as a Vite plugin (`@tailwindcss/vite`, not PostCSS). The
+  scaffold puts the stylesheet at `src/routes/layout.css`, imported from
+  `+layout.svelte` — not the older `src/app.css`.
+- Define the theme as semantic tokens in a `@theme` block in that stylesheet
+  (`--color-canvas`, `--color-surface`, `--color-accent`, …) and have components
+  reference only those, never raw palette values.
 - Two routes, both static placeholders for now:
   - `/` — conversation list
   - `/c/[id]` — a conversation
-- A minimal app shell: sidebar (conversation list) + main pane. Dark theme.
+- A minimal app shell: sidebar (conversation list) + main pane. Dark theme. The
+  sidebar collapses via a toggle in the main pane's header.
 - Verify `bun run dev` serves it and Tailwind classes apply.
 
 ### T0.5 — Lint, format, types
@@ -98,12 +111,26 @@ an existing codebase is how projects end up with no tests.
 - Playwright installed and configured for E2E, with Chromium downloaded.
 - Integration test helper that connects to `TEST_DATABASE_URL` and generates unique
   resource/thread prefixes per test.
-- **Write one real test at each layer now** so the wiring is proven:
+- **Write one real test at each layer now** so the wiring is proven. Where possible
+  point them at code that already exists rather than throwaway fixtures — T0.1–T0.5
+  necessarily shipped untested, since the runner does not exist until this task, and
+  this is where that debt gets paid.
   - a unit test in `packages/shared`
   - a rune test in a `.svelte.test.ts` file (proves `$state` works under Vitest)
   - an integration test that writes to and reads from `postgres-test`
-  - a component test rendering a trivial Svelte component via Testing Library
+  - a component test covering the **T0.4 app shell** — the only real behaviour M0
+    produced, and currently verified by hand only:
+    - the sidebar toggle collapses and expands it
+    - `aria-expanded` and the button's accessible name track that state
+    - the conversation matching the current path gets the active styling, others do
+      not
+
+    Query by role and accessible name, not CSS selectors, per
+    [03-testing.md](03-testing.md) — the markup will change in M2 and the tests
+    should survive it.
+
   - an E2E test loading `/` and asserting the shell renders
+
 - Verify coverage reporting produces output and that dropping below a threshold
   actually fails the command (test this by temporarily raising a threshold).
 

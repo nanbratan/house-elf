@@ -49,12 +49,14 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 Split across two sessions; T0.6 is large.
 
 Session A:
+
 - [x] T0.1 Repo and workspaces
 - [x] T0.2 Postgres + pgvector
 - [x] T0.3 Mastra server skeleton
-- [ ] T0.4 SvelteKit skeleton
+- [x] T0.4 SvelteKit skeleton
 
 Session B:
+
 - [ ] T0.5 Lint, format, types
 - [ ] T0.6 Test infrastructure
 - [ ] T0.7 Automation
@@ -147,7 +149,7 @@ shipping only as `@typescript/native-preview`, to be revisited when its README's
 row says "done".
 
 **What is true:** `typescript@latest` on npm is **7.0.2** — TS 7 has shipped, and it
-*is* the Go port, published under the main `typescript` package name. So
+_is_ the Go port, published under the main `typescript` package name. So
 `typescript@latest` now silently swaps the compiler implementation. But the two
 type-aware tools this plan depends on both refuse it:
 `typescript-eslint@8.65.0` declares `typescript: ">=4.8.4 <6.1.0"` and
@@ -221,7 +223,7 @@ the root `.env` into compose means an `--env-file` flag on every invocation, for
 local-only throwaway password.
 
 **Did:** hardcoded `houseelf`/`houseelf` in `infra/docker-compose.yml` with a comment
-saying it is local-only and unused in production. The *connection strings* still live
+saying it is local-only and unused in production. The _connection strings_ still live
 in `.env` (`DATABASE_URL`, `TEST_DATABASE_URL`), which is what the apps actually read,
 so the convention holds where it matters. M6's production compose takes credentials
 from the environment.
@@ -255,6 +257,58 @@ duplicated and the root `.env` stays the single source.
 
 **Corrected:** `10-m0-foundation.md` T0.3 now states this.
 
+### 2026-07-30 — `sv create` flag constraints and scaffold layout
+
+**Plan said:** T0.4 — scaffold `apps/web`, add Tailwind v4 via the Vite plugin.
+
+**What is true:** `sv create --add tailwindcss` cannot be combined with
+`--no-add-ons` ("option '--no-add-ons' cannot be used with option '--add'"), and
+`--add tailwindcss` still prompts interactively for the typography/forms plugins.
+Neither was taken. The scaffold also puts the stylesheet at
+`src/routes/layout.css` imported from `+layout.svelte`, not the older `src/app.css`.
+
+Command used: `bunx sv@latest create web --template minimal --types ts
+--add tailwindcss --no-install --no-download-check`, run from `apps/`, answering the
+plugin prompt with none.
+
+**Did:** dropped the scaffold's `typescript` devDependency so the exact root pin
+(D13) governs, removed its nested `.gitignore` and boilerplate README, and renamed
+the package to `@house-elf/web`.
+
+**Corrected:** `10-m0-foundation.md` T0.4 now records the command and constraints.
+
+### 2026-07-30 — theme tokens chosen (user decision)
+
+Slate-based dark palette with a low-chroma periwinkle accent
+(`oklch(0.72 0.09 265)`), chosen to read as a developer tool rather than an "AI
+product": desaturated, neither bright nor dim. Defined as semantic tokens
+(`--color-canvas`, `--color-surface`, `--color-raised`, `--color-line`,
+`--color-content`, `--color-muted`, `--color-faint`, `--color-accent`,
+`--color-accent-soft`) in a Tailwind v4 `@theme` block in
+`apps/web/src/routes/layout.css`. Components must use these tokens, never raw
+palette values, so the theme stays changeable from one block.
+
+Sidebar is collapsible via a toggle in the main pane's header (user's choice over a
+fixed or off-canvas sidebar).
+
+### 2026-07-30 — M0 tasks before T0.6 ship untested by construction
+
+**Plan said:** `03-testing.md` — "no failing tests … No exceptions, no 'I'll add
+tests later'", and AGENTS.md rule 5 requires every task to end green including tests.
+
+**What is true:** the task order makes that impossible for T0.1–T0.5. There is no
+Vitest, no jsdom and no Testing Library until T0.6, which the plan deliberately
+sequences after the scaffolding. So those tasks ended green on `check` alone.
+
+Most of that work is config and static markup, which cannot regress. The exception is
+the T0.4 app shell: the sidebar collapse toggle and the active-conversation
+highlighting are real behaviour, currently verified only by clicking through a
+browser.
+
+**Corrected:** `10-m0-foundation.md` T0.6 now names the app shell as the subject of
+its component test, with the specific assertions, instead of a throwaway component.
+The debt is scheduled rather than remembered.
+
 ## Open questions
 
 Things needing a human answer. Remove once resolved.
@@ -263,4 +317,3 @@ Things needing a human answer. Remove once resolved.
   the documented source of truth for what is done, and `AGENTS.md` says to fix plan
   documents "in the same commit" as the code — neither works if the directory is not
   tracked. Recommend at minimum un-ignoring `PROGRESS.md`. Being updated regardless.
-
