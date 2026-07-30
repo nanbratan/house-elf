@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+build/
+.svelte-kit/
+.mastra/
+
+# Test / coverage artifacts
+coverage/
+playwright-report/
+test-results/
+blob-report/
+.playwright/
+
+# Generated documents (CV renders — M4)
+*.pdf
+
+# Postgres volume data
+infra/data/
+
+# Editor / OS
+.DS_Store
+*.log
+
+docs/plan/
