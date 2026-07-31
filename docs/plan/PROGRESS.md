@@ -58,7 +58,7 @@ Session B:
 - [x] T0.5 Lint, format, types
 - [x] T0.6 Test infrastructure
 - [x] T0.7 Automation
-- [ ] T0.8 Dev orchestration
+- [x] T0.8 Dev orchestration
 - [ ] **DoD verified**
 
 ## M1 — Chat end to end → [11-m1-chat-e2e.md](11-m1-chat-e2e.md)
@@ -692,18 +692,79 @@ passes. Hooks install from the root `prepare` script, so a fresh clone gets them
 **Proven, not assumed:** a file with two ESLint errors was staged and `git commit` was
 attempted for real. The commit was rejected and `HEAD` stayed on `92838e6`.
 
-### 2026-07-31 — the gate runs in parallel where the stages are independent
+### 2026-07-31 — the gate parallelises by workspace, not by stage
 
-**Not in the plan.** `verify` is five independent stages run with `&&`. Measured warm,
-serially: build 5.3s, check 1.8s, test 1.5s, lint 0.45s, format 0.17s — 10.3s total,
-against a 5.8s critical path. Pre-push now runs them as parallel lefthook jobs: 5.9s,
-bounded by the build, a 43% saving for no new dependency.
+**Not in the plan.** `verify` is five stages run with `&&`. Measured warm, serially:
+build 5.3s, check 1.8s, test 1.5s, lint 0.45s, format 0.17s — 10.3s total against a
+5.8s critical path, so pre-push was first written to run the five stages as parallel
+lefthook jobs. That was wrong, and the comment claiming the stages were independent was
+wrong with it.
+
+**What is actually shared.** `check`, `test` and `build` all run SvelteKit's sync.
+Kit's `write_if_changed` (`@sveltejs/kit/src/core/sync/utils.js`) compares against a
+per-process `Map`, not against disk, so the map is empty in every fresh process and all
+of `apps/web/.svelte-kit/` is rewritten unconditionally with a non-atomic
+`writeFileSync` — three writers and several readers on the same files, every run.
+Vitest is louder about it: it deletes and recreates `coverage/.tmp` and aborts with
+"Something removed the coverage directory … Make sure you are not running multiple
+Vitests with the same `coverage.reportsDirectory`". Repeated sequential runs of the
+racy config all passed, which is exactly what an intermittent race looks like; it was
+found by reading Kit's source, not by re-running the hook.
+
+**Then measured, because source-reading is not proof.** A second sync with byte-identical
+content still moves the file's mtime, confirming the rewrite is unconditional across
+processes. With a reader spinning on `.svelte-kit/types/src/routes/$types.d.ts` while 12
+syncs ran: 28,231,863 correct reads, 400 zero-length reads, and 5,775 reads where the
+file did not exist. The window is not theoretical — it is thousands of observations wide
+per sync, and `svelte-check`, `vite build` and Vitest are all readers of that file.
+
+**The fix.** Parallelise along the axis where nothing is shared: lint, format, the root
+`tsc` and each workspace run concurrently, while `check → test → build` within a
+workspace are `piped`. Warm, ten runs: 7.1s against `verify`'s 9.1s. Smaller than the
+5.9s the racy version reported — some of that number was concurrency the code could not
+actually support.
+
+**`root:` is not a working directory for `bun run`.** The first fix used lefthook's
+`root: apps/web/`. It scopes the staged file list, but `bun run check` still resolved
+the root `package.json` and fanned back out over every workspace — so both groups ran
+the whole test suite at once, which is what triggered the coverage collision above. The
+jobs use `bun run --filter '@house-elf/web' …` instead, which resolves the package
+directly.
+
+**Scoped to what is being pushed.** The per-workspace groups carry a `glob`, so a
+web-only push does not build the server. The shared inputs — the lockfile,
+`package.json`, `tsconfig.base.json`, `vitest.shared.ts`, `packages/**` — appear in
+every list, because they can break every workspace.
+
+The repetition is deliberate. YAML cannot concatenate sequences, so it cannot express
+"the shared list plus my own directory". It can be avoided by inverting the lists into
+"everything except the other workspaces" and factoring the common part out with an
+anchor, which was tried and reverted: it worked, but reading it required knowing both
+why the list was inverted and what `&code` referred to, to save six lines that change
+about once a year. Plain and repetitive beat clever and terse.
+
+Putting the shared inputs inside each workspace's own scope, rather than giving them a
+separate job that runs `verify`, is also deliberate. A push touching both the lockfile
+and `apps/web` would then have run that job concurrently with the web group — two
+SvelteKit syncs at once, reintroducing exactly the race above.
+
+Verified with `lefthook run pre-push --file`: a web file runs web alone (4.1s), a server
+file runs server alone (6.8s), `packages/shared/src/index.ts` and `bun.lock` each run
+all three (7.1s), and a docs-only push runs lint, format and the root `tsc` and nothing
+else — 0.5s, where previously it built and tested both apps.
+
+`lint`, `format` and the root `tsc` stay unscoped; together they are under two seconds
+and narrowing them would buy nothing while adding a way to miss something.
+
+The fallback is the safe one: with no upstream configured, lefthook does not compute an
+empty push list and skip everything — it runs the lot. Confirmed on `master`, which has
+a remote but no upstream.
 
 `verify` itself stays serial and stays the canonical one-command gate — cheapest checks
 first, so a failure surfaces fast, and CI keeps running it as a single command so the
 definition is exercised rather than only its decomposition.
 
-CI is split differently: two parallel jobs, `verify` and `e2e`, rather than five. A
+CI is split differently: two parallel jobs, `verify` and `e2e`, rather than per-stage. A
 five-way matrix would pay five checkouts and installs to parallelise stages that take
 under two seconds each. E2E is the case worth splitting — it shares no state with
 `verify` and is the longest pole, browsers plus a build plus a dev server, so running
@@ -718,6 +779,59 @@ allowed and writes `*.tsbuildinfo` beside each config. Honest numbers: root 1787
 Two things it does not fix. `svelte-check` is the largest part of `check` at 1312ms and
 has no incremental mode. And `bun run --filter '*'` already fans the workspaces out in
 parallel, so `check` was never the sum of its parts.
+
+### 2026-07-31 — the CI workflow triggered on a branch that does not exist
+
+**What was true:** it was written against `main`; the repository's only branch is
+`master`, and there is no remote configured at all. It would never have fired, so the
+claim that "CI must go green" was unfalsifiable.
+
+**Did:** pointed the trigger at `master` (`19ce74c`). The larger question — whether a
+single-developer project needs CI, and whether the host is GitHub or Codeberg — is
+deliberately parked until a remote exists. Everything the workflow does is
+`bun run verify`, so the logic is portable; only the `uses:` lines are host-specific.
+Forgejo Actions mirrors the syntax but resolves actions differently, and Codeberg's
+runner and service-container support needs checking rather than assuming.
+
+**Update, same day:** `origin` now exists (`github.com:nanbratan/house-elf`), so the
+host question is settled and the workflow can finally be falsified. `master` has no
+upstream yet — the first push will be the first real test of both CI and the pre-push
+hook's file selection.
+
+### 2026-07-31 — `dev` does not start Docker; `dev:all` does
+
+**Plan said:** T0.8 — "Root `dev` script brings up Postgres, then runs the Mastra server
+and the SvelteKit dev server".
+
+**What was decided:** two scripts instead of one. `dev` runs only the app servers;
+`dev:all` is `db:up && dev`. Starting containers is a side effect worth opting into,
+and it keeps `dev` usable when Postgres is already running — the common case.
+
+`db:up` gained `--wait` (Compose v5.1.2), so it returns only once both containers pass
+their health checks rather than once they exist. Without it `db:up && dev` would
+reintroduce the very race the sequencing exists to remove. Costs 636ms when the
+containers are already healthy.
+
+Not done, deliberately: no teardown on Ctrl-C, since that would wipe the tmpfs test
+database and make the next start pay a full init; and no starting of the Docker daemon
+itself, which is not a dev script's business.
+
+Worth stating plainly because it caused confusion: **nothing but Postgres runs in
+Docker.** Both apps run natively under Bun, so Vite HMR and `mastra dev`'s watcher are
+unaffected.
+
+**Verified by running it:** `bun run dev:all` waits for both containers to report
+healthy, then starts both servers with prefixed output. `http://localhost:5173/` and
+`/c/abc` return 200, Studio returns 200 on `:4111`, and `/api/agents` lists `general`
+on `anthropic/claude-haiku-4-5`. Ports documented in a new root `README.md`, which did
+not exist before. Corrected `10-m0-foundation.md`.
+
+**One defect found by running it**, which is the point of running it: Vite watches the
+project directory, and the coverage reporter writes HTML into it, so running the tests
+while `dev` was up produced a burst of page reloads — one per generated file. Fixed
+with `server.watch.ignored: ['**/coverage/**']` in `apps/web/vite.config.ts`. Confirmed
+by starting `dev`, running the coverage suite and counting zero coverage-triggered
+reloads, against dozens before.
 
 ### 2026-07-31 — CI Postgres must be the pgvector image
 

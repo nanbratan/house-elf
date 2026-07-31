@@ -39,23 +39,84 @@ pre-commit:
       glob: '*.{ts,svelte}'
       run: bun run test:related {staged_files}
 
-# `bun run verify`, decomposed. Same five stages, same scripts, run in parallel
-# instead of in sequence: they are independent, and serially they cost the sum of a
-# 5.3s build and four smaller stages rather than the max. Unscoped — this checks the
-# whole repo, not what you touched — but still cached, so the second run only pays for
-# what changed.
+# `bun run verify`, decomposed — but split by workspace, not by stage.
 #
-# CI runs `bun run verify` itself, so the single-command definition stays exercised.
+# The stages are not independent. `check`, `test` and `build` all run SvelteKit's
+# sync, and Kit's `write_if_changed` compares against a per-process Map, so every
+# fresh process rewrites the whole of `apps/web/.svelte-kit/` with a non-atomic
+# writeFileSync. Measured: while 12 syncs ran, a reader spinning on one generated file
+# saw it missing 5775 times and zero-length 400 times. Vitest is louder about the same
+# problem: it deletes and recreates `coverage/.tmp` and fails if a second run with the
+# same reportsDirectory touches it. Within a workspace those stages are therefore
+# piped; across workspaces, and against lint and format, nothing is shared.
+#
+# `--filter` rather than `root:`, because `root:` scopes the staged file list but does
+# not make `bun run` resolve that workspace's package.json — it found the root one and
+# fanned back out over every workspace, which is what caused the coverage collision.
+#
+# The per-workspace jobs only run when that workspace could have broken: a web-only
+# push does not build the server, and a docs-only push builds nothing. The shared
+# inputs are repeated in each list rather than factored out — YAML cannot concatenate
+# sequences, and every way of avoiding the repetition was harder to read than the
+# repetition. Six lines, changed about once a year.
+#
+# `lint`, `format` and the root `tsc` are unscoped; together they cost under two
+# seconds and narrowing them would only add ways to miss something.
+#
+# CI runs `bun run verify` itself, which is serial and unscoped, so the full gate is
+# still enforced somewhere unconditional.
 pre-push:
   parallel: true
   jobs:
-    - name: check
-      run: bun run check
-    - name: lint
-      run: bun run lint
     - name: format
       run: bun run format:check .
-    - name: test
-      run: bun run test
-    - name: build
-      run: bun run build
+
+    - name: lint
+      run: bun run lint
+
+    - name: types
+      run: bunx tsc --noEmit --incremental -p tsconfig.json
+
+    - name: shared
+      glob:
+        - 'packages/**'
+        - 'package.json'
+        - 'bun.lock'
+        - 'tsconfig.base.json'
+      run: bun run --filter '@house-elf/shared' check
+
+    - name: web
+      glob:
+        - 'apps/web/**'
+        - 'packages/**'
+        - 'package.json'
+        - 'bun.lock'
+        - 'tsconfig.base.json'
+        - 'vitest.shared.ts'
+      group:
+        piped: true
+        jobs:
+          - name: check
+            run: bun run --filter '@house-elf/web' check
+          - name: test
+            run: bun run --filter '@house-elf/web' test
+          - name: build
+            run: bun run --filter '@house-elf/web' build
+
+    - name: server
+      glob:
+        - 'apps/server/**'
+        - 'packages/**'
+        - 'package.json'
+        - 'bun.lock'
+        - 'tsconfig.base.json'
+        - 'vitest.shared.ts'
+      group:
+        piped: true
+        jobs:
+          - name: check
+            run: bun run --filter '@house-elf/server' check
+          - name: test
+            run: bun run --filter '@house-elf/server' test
+          - name: build
+            run: bun run --filter '@house-elf/server' build
