@@ -146,10 +146,11 @@ an existing codebase is how projects end up with no tests.
 
 ### T0.7 — Automation
 
-- `lefthook` with a pre-commit hook (`format:check`, `lint`, `test:unit` on staged
-  files) and a pre-push hook (full `verify`).
+- `lefthook` with a pre-commit hook (`format:check`, `lint`, and the tests related to
+  the staged files) and a pre-push hook (full `verify`). Everything in pre-commit is
+  cached or scoped to what changed — a slow hook is a skipped hook.
 - GitHub Actions workflow running `bun run verify` on push, with Postgres as a
-  service container.
+  service container. It must be the `pgvector` image, not stock `postgres`.
 - Verify the hooks fire and that a deliberately broken commit is rejected.
 
 ### T0.8 — Dev orchestration

@@ -19,6 +19,10 @@ test-results/
 blob-report/
 .playwright/
 
+# Tool caches — incremental state for tsc, ESLint and Prettier
+*.tsbuildinfo
+.eslintcache
+
 # Generated documents (CV renders — M4)
 *.pdf
 

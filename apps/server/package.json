@@ -8,9 +8,10 @@
 		"build": "mastra build",
 		"start": "mastra start",
 		"test": "vitest run --coverage",
+		"test:related": "vitest related --run --project unit",
 		"test:unit": "vitest run --project unit",
 		"test:watch": "vitest",
-		"check": "tsc --noEmit"
+		"check": "tsc --noEmit --incremental"
 	},
 	"dependencies": {
 		"@mastra/ai-sdk": "latest",

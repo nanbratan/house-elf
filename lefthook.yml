@@ -1,0 +1,61 @@
+# Git hooks. Installed by `bun install` via the root `prepare` script.
+#
+# Every job here runs a script from a package.json — the hooks decide *when* and over
+# *what*, never *how*. There is one definition of how to lint this repo and it is not
+# in this file.
+#
+# Escape hatch: `LEFTHOOK=0 git commit …`. Pre-push still catches you, and CI after
+# that.
+
+pre-commit:
+  parallel: true
+  jobs:
+    # Scoped to staged files, because a commit is the staged tree — unrelated work in
+    # progress elsewhere should not block it. Both tools take a file list, so the
+    # scripts are reused as-is with the paths appended.
+    #
+    # Caches: Prettier's default (node_modules/.cache/prettier), ESLint's default
+    # (.eslintcache), both git-ignored. `--cache-strategy content` beats the default
+    # `metadata` — a cache an mtime can fool does not belong in front of a commit.
+    - name: format
+      glob: '*.{ts,js,mjs,svelte,json,jsonc,css,md,yml,yaml,html}'
+      run: bun run format:check {staged_files}
+
+    - name: lint
+      glob: '*.{ts,js,mjs,svelte}'
+      run: bun run lint {staged_files}
+
+    # `vitest related` runs only the tests that import the staged files, directly or
+    # transitively. `root:` both filters the staged list to that workspace and runs
+    # there — the latter is required, because SvelteKit's Vite plugin resolves `$lib`
+    # and `$app` against the working directory.
+    - name: test-server
+      root: apps/server/
+      glob: '*.ts'
+      run: bun run test:related {staged_files}
+
+    - name: test-web
+      root: apps/web/
+      glob: '*.{ts,svelte}'
+      run: bun run test:related {staged_files}
+
+# `bun run verify`, decomposed. Same five stages, same scripts, run in parallel
+# instead of in sequence: they are independent, and serially they cost the sum of a
+# 5.3s build and four smaller stages rather than the max. Unscoped — this checks the
+# whole repo, not what you touched — but still cached, so the second run only pays for
+# what changed.
+#
+# CI runs `bun run verify` itself, so the single-command definition stays exercised.
+pre-push:
+  parallel: true
+  jobs:
+    - name: check
+      run: bun run check
+    - name: lint
+      run: bun run lint
+    - name: format
+      run: bun run format:check .
+    - name: test
+      run: bun run test
+    - name: build
+      run: bun run build

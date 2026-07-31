@@ -57,7 +57,7 @@ Session B:
 
 - [x] T0.5 Lint, format, types
 - [x] T0.6 Test infrastructure
-- [ ] T0.7 Automation
+- [x] T0.7 Automation
 - [ ] T0.8 Dev orchestration
 - [ ] **DoD verified**
 
@@ -629,6 +629,113 @@ Two review questions, answered rather than actioned. Vite 8.1.5 depends directly
 suite stays on a single `chromium` project: extra browsers buy cross-browser coverage
 this single-user app does not need, and the `chromium-headless-shell` channel saves
 negligible time while giving up `--headed` debugging.
+
+### 2026-07-31 — pre-commit runs `vitest related`, not `test:unit`
+
+**Plan said:** T0.7 — a pre-commit hook running "`format:check`, `lint`, `test:unit` on
+staged files".
+
+**What is true:** `test:unit` is a whole-workspace script; it cannot take a file list,
+so "on staged files" was only ever achievable for the first two. `vitest related --run
+<files>` is the primitive that does what the plan meant: it runs the tests whose module
+graph includes the changed files. Verified — staging `apps/server/src/env.ts` selects
+`src/env.test.ts` (4 tests), staging `apps/web/src/routes/+layout.svelte` selects
+`tests/app-shell.test.ts` (8 tests), across the source/test directory boundary.
+
+**Did:** four parallel pre-commit jobs — `format`, `lint`, `test-server`, `test-web`.
+The two test jobs use lefthook's `root:` option, which both filters the staged list to
+that workspace and runs the command there; the latter is not optional, since
+SvelteKit's Vite plugin resolves `$lib` and `$app` against the working directory (the
+same constraint that shaped T0.6). Corrected `10-m0-foundation.md`.
+
+### 2026-07-31 — everything in a git hook is cached or scoped
+
+**Not in the plan.** A slow hook is a skipped hook, so nothing in pre-commit runs over
+the whole repo: `prettier --check --cache`, `eslint --cache` (both writing to
+`node_modules/.cache/`, already git-ignored), and `vitest related` for the tests.
+Measured at 0.13–1.7s. The full unscoped gate is pre-push.
+
+**Caching is not only for the hooks.** `--cache` moved into the root `lint`, `format`
+and `format:check` scripts rather than being duplicated in `lefthook.yml`, so pre-push,
+local `bun run verify` and CI all share one warm cache. Unscoped and uncached were
+never the same property: pre-push still checks every file, it just stops re-deriving
+answers it already has. Measured here — lint 2200ms → 443ms, format 560ms → 173ms.
+
+**Cache locations:** Prettier's `--cache-location` was specified and then removed — its
+default is already `node_modules/.cache/prettier/.prettier-cache`, confirmed by
+deleting the directory and watching Prettier recreate exactly that path. ESLint uses
+its default `.eslintcache` too; both are git-ignored, alongside `*.tsbuildinfo`. Both
+use `--cache-strategy content` over the default `metadata`: a cache an mtime can fool
+does not belong in front of a commit.
+
+**The hooks call scripts, never commands.** `lefthook.yml` contains no tool
+invocations — every job is `bun run <script>`. The hooks decide _when_ and over _what_,
+package.json decides _how_, so there is one definition of how to lint this repo. That
+needed two small changes: `format:check` no longer hard-codes `.` (callers pass a
+target, so hook-supplied paths scope the run instead of adding to a whole-repo one, and
+`verify` passes `.` explicitly), and each app gained a `test:related` script. `lint`
+needs no target — ESLint defaults to the working directory, verified.
+
+**Why that is safe, checked rather than assumed:** ESLint keys entries on
+`hash(eslintVersion + nodeVersion + resolvedConfig)`
+(`lib/cli-engine/lint-result-cache.js:56`), so editing `eslint.config.js` invalidates
+them. Proven end to end — with a warm cache, adding an error to `env.ts`, a file the
+cache had already recorded as clean, still failed the lint. The residual gap is a
+plugin upgrade that adds rules without changing config, which is why the CI cache key
+includes `bun.lock`.
+
+Lefthook 2.1.10 uses `jobs:`, not the 1.x `commands:` map — confirmed against the
+`schema.json` the package ships rather than from memory. `bunx lefthook validate`
+passes. Hooks install from the root `prepare` script, so a fresh clone gets them from
+`bun install`; added `packageManager: bun@1.2.13` so CI pins the same Bun.
+
+**Proven, not assumed:** a file with two ESLint errors was staged and `git commit` was
+attempted for real. The commit was rejected and `HEAD` stayed on `92838e6`.
+
+### 2026-07-31 — the gate runs in parallel where the stages are independent
+
+**Not in the plan.** `verify` is five independent stages run with `&&`. Measured warm,
+serially: build 5.3s, check 1.8s, test 1.5s, lint 0.45s, format 0.17s — 10.3s total,
+against a 5.8s critical path. Pre-push now runs them as parallel lefthook jobs: 5.9s,
+bounded by the build, a 43% saving for no new dependency.
+
+`verify` itself stays serial and stays the canonical one-command gate — cheapest checks
+first, so a failure surfaces fast, and CI keeps running it as a single command so the
+definition is exercised rather than only its decomposition.
+
+CI is split differently: two parallel jobs, `verify` and `e2e`, rather than five. A
+five-way matrix would pay five checkouts and installs to parallelise stages that take
+under two seconds each. E2E is the case worth splitting — it shares no state with
+`verify` and is the longest pole, browsers plus a build plus a dev server, so running
+it after the other checks only added its cost to the wall clock.
+
+### 2026-07-31 — `--incremental` helps tsc, but tsc is not the bottleneck
+
+**Not in the plan.** Added to the root and server `tsc --noEmit` invocations, which is
+allowed and writes `*.tsbuildinfo` beside each config. Honest numbers: root 1787ms →
+1719ms (that project is three files), server 747ms → 611ms. Real but small.
+
+Two things it does not fix. `svelte-check` is the largest part of `check` at 1312ms and
+has no incremental mode. And `bun run --filter '*'` already fans the workspaces out in
+parallel, so `check` was never the sum of its parts.
+
+### 2026-07-31 — CI Postgres must be the pgvector image
+
+**Plan said:** "GitHub Actions workflow running `bun run verify` on push, with Postgres
+as a service container."
+
+**What is true:** the stock `postgres:17` image would fail the integration suite, which
+asserts `CREATE EXTENSION vector` works. The service container uses
+`pgvector/pgvector:pg17`, matching `infra/docker-compose.yml`.
+
+**Did:** `.github/workflows/verify.yml` — `verify` then E2E, with three caches: Bun's
+global module cache keyed on `bun.lock`, `node_modules/.cache` (ESLint, Prettier, Vite
+transforms) keyed on lockfile + branch with fallbacks, and the Playwright browsers
+keyed on `bun.lock`. The HTML report uploads on failure. No `.env` file is written;
+the connection strings are workflow `env`, which works because the integration-test
+loader treats the `.env` file as optional and falls through to the environment.
+`ANTHROPIC_API_KEY` is deliberately absent — nothing in `verify` calls a provider, and
+that stays true until M1.
 
 ## Open questions
 
