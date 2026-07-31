@@ -102,5 +102,8 @@ Performed manually in a browser:
 - The message renderer built here is the component you will live with for the rest of
   the project. It is worth spending time on. Everything else in M1 is throwaway
   scaffolding.
-- If AI SDK v6 typings are in play, `chatRoute()` needs `version: 'v6'`. Check which
-  major version of `ai` got installed and match it.
+- `chatRoute()`'s `version` option accepts only `'v5' | 'v6'`, but the installed `ai`
+  is **7.0.42** — a major this plan did not anticipate. For a text-only response the
+  two settings emit byte-identical chunks (verified in T1.1), so the default is left
+  in place and the choice is settled in T1.4 against the real `@ai-sdk/svelte`
+  client, where tool and approval parts can actually discriminate.

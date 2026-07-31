@@ -72,7 +72,7 @@ and 30624316521, ~1m10s each); and a full teardown — volumes and `node_modules
 
 ## M1 — Chat end to end → [11-m1-chat-e2e.md](11-m1-chat-e2e.md)
 
-- [ ] T1.1 Expose an AI SDK chat endpoint
+- [x] T1.1 Expose an AI SDK chat endpoint
 - [ ] T1.2 A tool worth watching
 - [ ] T1.3 SvelteKit proxy route
 - [ ] T1.4 Chat UI
@@ -398,6 +398,74 @@ idiomatic defaults, matching how `apps/web` was already scaffolded. The whole re
 reformatted once at T0.5, so this touches nearly every file; later diffs are clean.
 `prettier-plugin-tailwindcss` needs `tailwindStylesheet` pointed at
 `apps/web/src/routes/layout.css`, since Tailwind v4 has no config file for it to find.
+
+### 2026-07-31 — custom `apiRoutes` mount at the root, not under `/api`
+
+**Plan said:** nothing explicit, but the README's port table ("Studio at `/`, agent API
+at `/api`") invites the assumption that a custom route lands at `/api/chat/:agentId`.
+
+**What is true:** measured, not assumed. `POST /chat/general` → `200`,
+`content-type: text/event-stream`. `POST /api/chat/general` → `404 Not Found`. The
+`/api` prefix belongs to Mastra's _built-in_ routes (`/api/agents/:id/generate`);
+`server.apiRoutes` entries mount at the origin root. Mastra's own docs agree — their
+`useChat` example points a transport at `http://localhost:4111/chat`.
+
+Also worth knowing: `GET /chat/general` returns `200 text/html`, which looks like the
+route answering a wrong method but is Studio's SPA catch-all. Confirmed by the
+`content-type` and an HTML body. Not a defect.
+
+**Did:** recorded. T1.3's `MASTRA_URL` must therefore be the bare origin
+(`http://localhost:4111`) with the proxy targeting `/chat/${agentId}` — no `/api`.
+
+**Corrected:** nothing yet; T1.3 will state the URL shape when it lands.
+
+### 2026-07-31 — `ai@7` is installed; `chatRoute`'s `version` only knows v5 and v6
+
+**Plan said:** `11-m1-chat-e2e.md` — "If AI SDK v6 typings are in play, `chatRoute()`
+needs `version: 'v6'`. Check which major version of `ai` got installed and match it."
+
+**What is true:** the installed `ai` is **7.0.42**, so "match it" has no valid answer —
+`version` accepts only `'v5' | 'v6'`. `@mastra/ai-sdk@1.7.0` declares no `ai` peer
+dependency at all and vendors both v5 and v6 type trees under `dist/_types/`.
+
+Tested rather than reasoned about: the emitted chunk sequence was captured under both
+settings for the same prompt and diffed. **Identical** — `start`, `start-step`,
+`text-start`, `text-delta{id,delta}`, `text-end`, `finish-step`, `finish`, `[DONE]`.
+The `text-delta` shape also matches `UIMessageChunk` as declared in the installed
+`ai@7`'s `index.d.ts` (`{ type, id, delta, providerMetadata? }`). A text-only response
+cannot discriminate the two; the difference lives in tool and approval parts (the v6
+path has an `extractV6NativeApprovals` the v5 path does not).
+
+**Did:** left `version` unset (default `'v5'`) with a comment in
+`apps/server/src/mastra/index.ts` recording why, and deferred the decision to T1.4 when
+`@ai-sdk/svelte` is installed and tool parts exist to test against.
+
+**Corrected:** `11-m1-chat-e2e.md` — the v6 note now states the `ai@7` situation and
+points the decision at T1.4.
+
+### 2026-07-31 — streaming is progressive; first measurement was an artifact
+
+**What is true:** the first timing run spawned a `python3` process per SSE line, which
+added ~18 ms of latency per line and made the stream look like it arrived in two
+chunks. Re-measured with a single long-lived reader: text deltas arrive from 923 ms to
+2186 ms in roughly 200 ms increments. Streaming is genuinely incremental; the
+batching is provider/transport granularity, not buffering in our stack.
+
+**Did:** recorded, as a caution that a slow consumer can masquerade as a
+non-streaming server. Kept for T1.5, which has to make this same judgement again in
+the browser.
+
+### 2026-07-31 — agent errors surface as in-stream chunks, not HTTP status codes
+
+**What is true:** `POST /chat/general` with `{"messages": []}` returns **200** and a
+normal SSE stream whose payload contains
+`{"type":"error","errorText":"...AI_APICallError..."}`. An unknown agent
+(`/chat/nope`) is different — it fails before streaming starts, returning `500` with
+`{"error":"Internal Server Error"}` in ~10 ms and no detail leaked.
+
+**Did:** recorded. This is directly load-bearing for M1 DoD item 4 ("trigger an error
+→ the UI shows a readable error"): the UI must render `error` **parts**, not rely on a
+non-2xx response, and T1.3's proxy must not try to interpret status codes.
 
 ### 2026-07-31 — Prettier could not stabilise this file; Pre-flight restructured
 
