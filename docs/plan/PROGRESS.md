@@ -74,7 +74,7 @@ and 30624316521, ~1m10s each); and a full teardown — volumes and `node_modules
 
 - [x] T1.1 Expose an AI SDK chat endpoint
 - [x] T1.2 A tool worth watching
-- [ ] T1.3 SvelteKit proxy route
+- [x] T1.3 SvelteKit proxy route
 - [ ] T1.4 Chat UI
 - [ ] T1.5 Streaming quality
 - [ ] T1.6 Tests
@@ -995,6 +995,45 @@ Two consequences for T1.4: the renderer keys `tool-*` parts off the registration
 so renaming that key is a model- and UI-visible change; and the partial-input deltas
 are real, which is what the milestone means by "must render sensibly while arguments
 are still streaming in".
+
+### 2026-07-31 — the web app now has its own `.env`, as the root one predicted
+
+**What is true:** the root `.env.example` and `apps/web/vite.config.ts` both already
+said the SvelteKit app would get its own `apps/web/.env` when it first needed a
+variable, and that Kit resolves `$env/*` against `kit.env.dir`, which defaults to
+`apps/web`. T1.3 is that moment. Created `apps/web/.env.example` holding exactly one
+variable, `MASTRA_URL`.
+
+It is read through `$env/dynamic/private` — not `static`, so the origin can change at
+deploy time without a rebuild, and not `PUBLIC_`, so it never reaches the browser. The
+handler throws a 500 when it is unset rather than defaulting to `localhost:4111`: a
+silent fallback would turn a production misconfiguration into a connection error
+pointing at the wrong machine.
+
+### 2026-07-31 — proving the proxy does not buffer
+
+**What is true:** "streams through unchanged" is easy to assert and easy to get subtly
+wrong, so it is asserted two ways.
+
+In the unit test, by **identity**: the `ReadableStream` handed to the fake `fetch` must
+be the very object that comes back out (`expect(response.body).toBe(body)`). Nothing
+can have read it to completion on the way through. Comparing contents would have passed
+even for a fully buffered copy.
+
+In the browser-facing check, by **timing** — through the proxy, using a single
+long-lived reader, as the T1.1 lesson requires: first frame at 0 ms, then 854 ms,
+1078 ms, 1163 ms. Arrivals spread across the reply, not delivered in one lump at the
+end.
+
+Also confirmed live through `localhost:5173`: `content-type: text/event-stream`,
+`Transfer-Encoding: chunked`, and the full tool lifecycle (`tool-input-start` →
+deltas → `tool-input-available` → `tool-output-available`) arriving intact, plus a
+`500` from an unknown agent passed through unexamined.
+
+**Did:** the handler reads the request body in full (`await request.text()`) but never
+touches the response body. That asymmetry is deliberate and commented: the request is
+a complete JSON message list that has already arrived, so buffering it costs nothing,
+while the response is the thing that must stay live.
 
 ## Open questions
 
