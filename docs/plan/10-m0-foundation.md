@@ -155,9 +155,11 @@ an existing codebase is how projects end up with no tests.
 
 ### T0.8 — Dev orchestration
 
-- Root `dev` script brings up Postgres, then runs the Mastra server and the SvelteKit
-  dev server concurrently with clearly prefixed output.
-- Document the ports: web `5173`, Mastra `4111`, Postgres `5432`.
+- Root `dev` script runs the Mastra server and the SvelteKit dev server concurrently
+  with clearly prefixed output, assuming the database is already up. `dev:all` brings
+  Postgres up first and waits for it to be healthy.
+- Document the ports: web `5173`, Mastra `4111`, Postgres `5432` (dev) and `5433`
+  (test).
 
 ---
 

@@ -35,6 +35,15 @@ export default defineConfig(({ mode }) =>
 			conditions: mode === 'test' ? ['browser'] : []
 		},
 
+		server: {
+			watch: {
+				// The coverage reporter writes HTML into the project. Without this,
+				// running the tests while `dev` is up makes Vite reload the page once per
+				// generated file.
+				ignored: ['**/coverage/**']
+			}
+		},
+
 		test: {
 			name: 'web',
 			// `@testing-library/svelte` ships `.svelte.js` source that uses runes, so it
