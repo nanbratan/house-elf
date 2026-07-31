@@ -59,7 +59,16 @@ Session B:
 - [x] T0.6 Test infrastructure
 - [x] T0.7 Automation
 - [x] T0.8 Dev orchestration
-- [ ] **DoD verified**
+- [x] **DoD verified** — 2026-07-31
+
+Every item checked by running it, not by reading it: both Postgres containers start and
+accept connections; `bun run dev:all` brings them up and starts both servers with no
+errors; Studio lists `general` and returns a real streamed response; `bun run verify`
+passes; the coverage gate was proven to fail on purpose in T0.6; pre-commit rejected a
+real commit containing lint errors; `:5173` and `/c/anything` render the shell and their
+placeholders, and the sidebar toggle works; CI is green on `master` (runs 30624218672
+and 30624316521, ~1m10s each); and a full teardown — volumes and `node_modules` removed
+— rebuilt and passed from scratch.
 
 ## M1 — Chat end to end → [11-m1-chat-e2e.md](11-m1-chat-e2e.md)
 
