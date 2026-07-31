@@ -113,7 +113,7 @@ Summary of the toolchain:
 - **Lint:** ESLint 10 flat config, `typescript-eslint` (type-aware), `eslint-plugin-svelte`
 - **Format:** Prettier + Svelte and Tailwind plugins
 - **Types:** a single `typescript`, pinned to an exact version (D13)
-- **Tests:** Vitest 3, `@testing-library/svelte`, Playwright, v8 coverage with
+- **Tests:** Vitest 4, `@testing-library/svelte`, Playwright, v8 coverage with
   enforced thresholds
 - **Hooks:** lefthook (pre-commit fast subset, pre-push full verify)
 - **CI:** GitHub Actions running `bun run verify`

@@ -25,6 +25,7 @@
 		class:w-64={sidebarOpen}
 		class:border-r={sidebarOpen}
 		class:w-0={!sidebarOpen}
+		inert={!sidebarOpen}
 	>
 		<div class="flex h-12 shrink-0 items-center px-4">
 			<span class="text-sm font-semibold whitespace-nowrap">house-elf</span>
@@ -37,6 +38,7 @@
 					<li>
 						<a
 							href={resolve('/c/[id]', { id: conversation.id })}
+							aria-current={active ? 'page' : undefined}
 							class="block truncate rounded-md px-3 py-2 text-sm whitespace-nowrap transition-colors hover:bg-raised"
 							class:bg-accent-soft={active}
 							class:text-accent={active}

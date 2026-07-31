@@ -56,7 +56,7 @@ Session A:
 Session B:
 
 - [x] T0.5 Lint, format, types
-- [ ] T0.6 Test infrastructure
+- [x] T0.6 Test infrastructure
 - [ ] T0.7 Automation
 - [ ] T0.8 Dev orchestration
 - [ ] **DoD verified**
@@ -408,6 +408,227 @@ Deeply-indented continuation content inside a checkbox item will break
 rather than a content problem.
 
 **Corrected:** nothing — `PROGRESS.md` content only.
+
+### 2026-07-31 — Vitest 4, not 3
+
+**Plan said:** `01-decisions.md`, `02-conventions.md` and T0.6 all specify Vitest 3.
+
+**What is true:** Vitest 3 does not support the Vite 8 that `apps/web` already runs
+on. Vitest 4 is current and works with it. Nothing in the plan depends on a Vitest 3
+API; `projects`, `--project` and the v8 coverage provider all behave as described.
+
+**Corrected:** all three plan documents now say Vitest 4.
+
+### 2026-07-31 — `.ts` import extensions enabled repo-wide
+
+**Plan said:** nothing either way.
+
+**What is true:** the new test files import siblings as `./truncate.ts`, which
+matches how Bun resolves and how the files actually sit on disk, but `tsc` rejected it
+with TS5097 until `allowImportingTsExtensions` was set. Every project here is
+`noEmit`, so the flag has no downside.
+
+**Did:** added it to `tsconfig.base.json`.
+
+### 2026-07-31 — root-level TypeScript was unchecked; added a root tsconfig
+
+**What is true:** `bun run check` only ran per workspace, so `vitest.shared.ts`,
+`playwright.config.ts` and `tests/**` were type-checked by nothing. ESLint's
+`projectService` also refused to lint them for the same reason.
+
+**Did:** added a root `tsconfig.json` covering those files, and prefixed the root
+`check` script with `tsc --noEmit -p tsconfig.json`.
+
+**Watch out:** `apps/web` extends the SvelteKit-generated tsconfig, not
+`tsconfig.base.json`, so it does **not** inherit `noUncheckedIndexedAccess`. Files
+under `apps/web` are therefore checked more loosely than the rest of the repo, and a
+type-aware lint rule can disagree with `tsc` about whether an index lookup can be
+`undefined`. Not fixed here — it belongs with a web-side task.
+
+### 2026-07-31 — `test:unit` covers component tests too
+
+**Plan said:** T0.7's pre-commit hook runs `test:unit` and must stay "under a few
+seconds".
+
+**What is true:** running only the server's `unit` project would leave the web tests —
+the ones covering real behaviour — out of the pre-commit gate, while the whole suite
+runs in under a second. Only the server's `integration` project needs a container.
+
+**Did:** `test:unit` is `bun run --filter '*' test:unit`, which is every suite except
+the server's integration project.
+
+### 2026-07-31 — Mastra storage is composite; threads go through a domain store
+
+**Plan said:** nothing specific about the storage API shape.
+
+**What is true:** in `@mastra/pg` 1.55 `PostgresStore` extends `MastraCompositeStore`.
+There are no thread methods on the store itself — they live on a domain store reached
+via `await store.getStore('memory')`, which returns `MemoryPG | undefined`. Also,
+`init()` is only called automatically when the store is handed to the `Mastra` class;
+using it directly, as tests do, requires an explicit `await store.init()` or the
+tables never exist.
+
+**Corrected:** nothing — the plan never claimed otherwise. Recorded because M2 will
+need it.
+
+### 2026-07-31 — jsdom cannot see `inert`, and Playwright's role engine ignores it
+
+**What is true:** two separate gaps found while writing the sidebar tests. jsdom does
+not implement `inert`, so a component test asserting it fails even though the
+behaviour is correct. Playwright's `getByRole` respects `aria-hidden` but not `inert`,
+so a collapsed-but-inert link still matches a role query.
+
+**Did:** the `inert` guarantee is asserted in E2E via the attribute, and the
+visual-clipping guarantee via `toBeInViewport`, which uses a real IntersectionObserver
+and so honours the zero-width clipping ancestor. The component test file carries a
+comment saying where the assertion went, so it does not look forgotten.
+
+### 2026-07-31 — T0.4 defect: a collapsed sidebar was still keyboard-reachable
+
+**What is true:** collapsing set `w-0` with `overflow-hidden`. That hides the links
+from sighted users but leaves them with a layout box, in the tab order and in the
+accessibility tree — a keyboard user tabs into invisible links. The browser check at
+T0.4/T0.5 could not have caught this; the first E2E test did, immediately.
+
+**Did:** added `inert={!sidebarOpen}` to the `<aside>`. This is the third defect in
+the T0.4 shell found by tooling rather than by looking at it.
+
+### 2026-07-31 — E2E clicks need retrying, because `goto` resolves before hydration
+
+**What is true:** the first sidebar test failed for five seconds of retries while the
+sidebar stayed open. The click was landing on a button Vite had not yet made
+interactive — `page.goto` resolves as soon as the HTML arrives, and the dev server
+compiles client modules on demand. Playwright retries assertions but never retries
+clicks, so the click was a silent no-op and only the assertion after it failed.
+
+**Did:** `tests/e2e/shell.spec.ts` wraps the toggle click in `expect(...).toPass()`.
+Retrying is safe because the button renames itself on success, so the locator stops
+matching and it cannot double-toggle.
+
+**Watch out:** any future E2E test whose _first_ interaction is a click needs the same
+treatment. A plain `.click()` immediately after `goto` will pass or fail depending on
+how warm the dev server is.
+
+### 2026-07-31 — coverage thresholds proven to fail the build
+
+The plan asks for proof the gate is real. Running the suite with coverage widened to
+include the untested Mastra wiring dropped lines to 71.42% and exited **1** with
+`ERROR: Coverage for lines (71.42%) does not meet global threshold (80%)`. No files
+were edited to produce this, so there was nothing to revert.
+
+Per-directory thresholds for `tools`, `workflows` and the web `lib` are deliberately
+absent: Vitest errors when a threshold glob matches no files, so they land with the
+code they govern.
+
+### 2026-07-31 — `packages/shared` is an empty placeholder, and its test is gone
+
+**What is true:** the plan asked for "a unit test in `packages/shared`". Nothing is
+shared yet — M2 is the first milestone with a cross-app consumer — so satisfying that
+line meant inventing a function purely to have something to test. A test of a guessed
+API proves the runner works and nothing else, at the cost of code that has to be
+maintained and then deleted.
+
+**Did:** deleted `truncate.ts` and its test. `packages/shared/src/index.ts` is now
+`export {}` with a comment saying why. The unit layer is proven by
+`apps/server/src/env.test.ts`, which covers real code with real branches.
+[10-m0-foundation.md](10-m0-foundation.md) corrected in the same change, both in the
+task list and in the closing note.
+
+### 2026-07-31 — every workspace owns its Vitest config; shared policy lives in one file
+
+**What is true:** the plan implied one root `vitest.config.ts` with a project per test
+layer. That cannot include `apps/web`, because SvelteKit's Vite plugin
+([`src/exports/vite/index.js`](../../node_modules/@sveltejs/kit/src/exports/vite/index.js))
+sets `root: cwd` from `process.cwd()` and lists `root`, `$lib` and `$app` in
+`enforced_config` — it overrides whatever the config says. From the repo root that
+breaks `$lib` and sends it looking for `<repoRoot>/src/app.html`.
+
+Working around it meant hand-writing stubs for `$app/paths` and `$lib` — test-support
+code with branches of its own that nothing tests. If such a stub is wrong, the
+component tests agree with the bug instead of catching it. (An intermediate version
+deep-imported Kit's internal `resolve_route` by file path to avoid writing the logic;
+that traded invented logic for a reach past the package boundary plus an ambient
+`.d.ts`, which is no better.)
+
+A second intermediate state kept a root config for the server and a nested one for
+web. That worked but was asymmetric — two different rules for where a test config
+lives, and coverage settings restated in both.
+
+**Did:** made it symmetric. Every workspace owns its test config, and the policy they
+share lives in exactly one place.
+
+- `vitest.shared.ts` at the root exports coverage provider, reporters, universal
+  excludes and thresholds. Nothing in it names a directory.
+- `apps/server/vitest.config.ts` and `apps/web/vite.config.ts` each `mergeConfig` it
+  and add only what is specific to them: the `unit`/`integration` projects and the
+  Mastra exclusions for the server; jsdom, the Svelte plugin and the route exclusions
+  for web.
+- Each declares `test`, `test:unit` and `test:watch`, so the root scripts are
+  `bun run --filter '*' test` — the same shape as `dev`, `build` and `check` already
+  had. There is no root `vitest.config.ts`.
+- `tests/` at the root now holds only the Playwright E2E suite, which genuinely is
+  cross-workspace. `load-env.ts` moved to `apps/server/tests/setup/`.
+- `packages/shared` has no test config, because it has no tests. `--filter` skips a
+  workspace that lacks the script.
+
+Coverage is now reported and gated per workspace rather than as one repo-wide number.
+That is the more honest measure anyway — an 80% repo average can hide a 40% app.
+
+**Watch out:** two things were needed to make the plugin work under Vitest, both from
+the Svelte testing docs. `resolve.conditions` must be `['browser']` when
+`mode === 'test'`, or Svelte resolves to its SSR build and every rune throws
+`rune_outside_svelte`. And `@testing-library/svelte` ships `.svelte.js` source that
+uses runes, so it must be inlined via `test.server.deps.inline` rather than
+externalised, or it fails the same way.
+
+The only remaining test double is `$app/state`, via `vi.mock` in
+`apps/web/tests/setup/app-state.ts`. It holds a URL and hands it back — state, not
+logic, so there is nothing in it to be wrong. `$app/paths`, `$lib` and the project's
+runes compiler options are the real ones.
+
+### 2026-07-31 — `apps/web` tests default to jsdom, and can opt out
+
+A review question worth recording: not everything under `apps/web` is a component
+test — utilities will live there too. Rather than classify by directory, the web
+project defaults to `environment: 'jsdom'` (it is a browser app; that is the common
+case) and any test that genuinely wants plain Node opts out with a
+`// @vitest-environment node` docblock. That is a stock Vitest feature, so there is no
+naming convention to remember and no glob to keep in sync.
+
+### 2026-07-31 — env vars are scoped per app; the web app reads no `.env` yet
+
+**What is true:** Vite resolves `import.meta.env` from `envDir` and SvelteKit resolves
+`$env/*` from `kit.env.dir`, both defaulting to the config's own directory — so
+`apps/web` cannot see the repo-root `.env`. That was first treated as a gap and
+"fixed" by pointing both at the root. Verified it worked: with `kit.env.dir: '../../'`
+the root variables appear in `.svelte-kit/ambient.d.ts`; with the default they do not
+(4 matches versus 0).
+
+**Did:** reverted it. The default is the correct behaviour, not a gap. The SvelteKit
+app is a thin proxy to the Mastra server — it has no use for `DATABASE_URL` or
+`ANTHROPIC_API_KEY`, and handing its process those violates least privilege for no
+gain. There is also nothing to duplicate: the two apps' variables do not overlap, so
+the usual argument for a single shared file does not apply here.
+
+The root `.env` is therefore server-and-integration-tests scope, and `.env.example`
+now says so. `apps/web` gets its own `.env` + `.env.example` when it first needs a
+variable — likely the Mastra server URL in M1.
+
+**Watch out:** Kit's `$env/static/private` already refuses to be imported into client
+code, so this is defence in depth rather than the only thing standing between a secret
+and the browser. It still matters for the server process's ambient environment.
+
+**Open question for M1:** whether the root `.env` should move to `apps/server/.env`
+for the same reason. Everything in it today is the server's. Left alone for now
+because `mastra dev --env ../../.env` and the integration-test loader both point at
+the root, and T0.8 revisits dev orchestration anyway.
+
+Two review questions, answered rather than actioned. Vite 8.1.5 depends directly on
+`rolldown@1.1.5` — the Rust bundler is already what builds and what Vitest 4 uses;
+`rolldown-vite` was the transitional package and is no longer relevant. And the E2E
+suite stays on a single `chromium` project: extra browsers buy cross-browser coverage
+this single-user app does not need, and the `chromium-headless-shell` channel saves
+negligible time while giving up `--headed` debugging.
 
 ## Open questions
 

@@ -244,20 +244,20 @@ linting cannot. Given the coverage goals in D12, the extra seconds are worth it.
 
 ## D12 — Testing: Vitest + Playwright, with enforced coverage
 
-**Chosen:** Vitest 3 as the single test runner across the whole monorepo (via
+**Chosen:** Vitest 4 as the single test runner across the whole monorepo (via
 `projects` config), `@testing-library/svelte` on jsdom for component tests, Playwright
 for E2E, and v8 coverage with enforced thresholds.
 
 See [03-testing.md](03-testing.md) for the full strategy. Summary of the choices:
 
-| Concern            | Tool                                    | Why                                                                                                                         |
-| ------------------ | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Test runner        | **Vitest 3**                            | Shares Vite config, so aliases and plugins Just Work. Handles server, shared, and component tests in one `projects` config. |
-| Component tests    | **`@testing-library/svelte` + jsdom**   | What the official Svelte testing docs recommend. Fast, no browser download, large ecosystem, familiar API.                  |
-| E2E                | **Playwright**                          | No serious competitor. Also the home for the few assertions jsdom cannot make.                                              |
-| Deterministic LLMs | **`MockLanguageModelV2`** (`ai/test`)   | Lets agent behaviour be tested without network, cost, or flakiness. This is the key enabler for testing agents at all.      |
-| DB integration     | **Dedicated `postgres-test` container** | Real Postgres, real pgvector. Simpler and faster than Testcontainers.                                                       |
-| Coverage           | **`@vitest/coverage-v8`**               | Thresholds enforced in config; `bun run test` fails below them.                                                             |
+| Concern            | Tool                                    | Why                                                                                                                                                                                                           |
+| ------------------ | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test runner        | **Vitest 4**                            | Shares Vite config, so aliases and plugins Just Work. Handles server, shared, and component tests in one `projects` config. Vitest 3 was planned, but it does not support the Vite 8 `apps/web` already uses. |
+| Component tests    | **`@testing-library/svelte` + jsdom**   | What the official Svelte testing docs recommend. Fast, no browser download, large ecosystem, familiar API.                                                                                                    |
+| E2E                | **Playwright**                          | No serious competitor. Also the home for the few assertions jsdom cannot make.                                                                                                                                |
+| Deterministic LLMs | **`MockLanguageModelV2`** (`ai/test`)   | Lets agent behaviour be tested without network, cost, or flakiness. This is the key enabler for testing agents at all.                                                                                        |
+| DB integration     | **Dedicated `postgres-test` container** | Real Postgres, real pgvector. Simpler and faster than Testcontainers.                                                                                                                                         |
+| Coverage           | **`@vitest/coverage-v8`**               | Thresholds enforced in config; `bun run test` fails below them.                                                                                                                                               |
 
 **Rejected — `vitest-browser-svelte`.** Runs components in real Chromium, which is
 genuinely more faithful — runes, transitions, and real layout all behave correctly.

@@ -106,7 +106,7 @@ project dies. Do it once, deliberately, before any interesting code exists.
 Set this up **now**, before there is anything to test. Retrofitting a test setup onto
 an existing codebase is how projects end up with no tests.
 
-- Vitest 3 at the root using a `projects` config covering `apps/server`,
+- Vitest 4 at the root using a `projects` config covering `apps/server`,
   `apps/web`, and `packages/shared`.
 - `apps/web` project uses the `jsdom` environment with `@testing-library/svelte`,
   `@testing-library/jest-dom`, and `@testing-library/user-event`. Set
@@ -121,7 +121,11 @@ an existing codebase is how projects end up with no tests.
   point them at code that already exists rather than throwaway fixtures — T0.1–T0.5
   necessarily shipped untested, since the runner does not exist until this task, and
   this is where that debt gets paid.
-  - a unit test in `packages/shared`
+  - a unit test in `apps/server` (`env.ts` — real code with real branches). The
+    plan originally said `packages/shared`, but that package has no consumer until
+    M2, and the only way to put a test there was to invent a function to test.
+    `packages/shared` therefore stays an empty placeholder that proves the workspace
+    and TypeScript wiring, and nothing more.
   - a rune test in a `.svelte.test.ts` file (proves `$state` works under Vitest)
   - an integration test that writes to and reads from `postgres-test`
   - a component test covering the **T0.4 app shell** — the only real behaviour M0
@@ -183,4 +187,5 @@ an existing codebase is how projects end up with no tests.
 - Type-aware ESLint across a Bun monorepo with Svelte is the fiddliest part of M0.
   Budget time for it. If `projectService` misbehaves, fall back to explicit
   `project` paths per workspace.
-- Resist adding anything to `packages/shared` beyond what its one proving test needs.
+- Resist adding anything to `packages/shared` until something actually needs to be
+  shared. It is an empty `export {}` placeholder on purpose.

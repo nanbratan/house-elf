@@ -12,6 +12,10 @@ export default tseslint.config(
 			'**/.mastra/',
 			'**/build/',
 			'**/dist/',
+			// Generated test artefacts.
+			'**/coverage/',
+			'**/playwright-report/',
+			'**/test-results/',
 			'apps/web/static/',
 			// Vendored agent skills — third-party scripts, not this project's code.
 			'.agents/'

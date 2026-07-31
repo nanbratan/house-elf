@@ -7,6 +7,9 @@
 		"dev": "mastra dev --env ../../.env",
 		"build": "mastra build",
 		"start": "mastra start",
+		"test": "vitest run --coverage",
+		"test:unit": "vitest run --project unit",
+		"test:watch": "vitest",
 		"check": "tsc --noEmit"
 	},
 	"dependencies": {

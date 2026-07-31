@@ -9,13 +9,13 @@
 	],
 	"scripts": {
 		"dev": "bun run --filter '*' dev",
-		"check": "bun run --filter '*' check",
+		"check": "tsc --noEmit -p tsconfig.json && bun run --filter '*' check",
 		"lint": "eslint .",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
-		"test": "vitest run --coverage",
-		"test:unit": "vitest run --project unit",
-		"test:watch": "vitest",
+		"test": "bun run --filter '*' test",
+		"test:unit": "bun run --filter '*' test:unit",
+		"test:watch": "bun run --filter '*' test:watch",
 		"test:e2e": "playwright test",
 		"build": "bun run --filter '*' build",
 		"verify": "bun run check && bun run lint && bun run format:check && bun run test && bun run build",
@@ -24,14 +24,22 @@
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
+		"@playwright/test": "^1.62.1",
+		"@testing-library/dom": "^10.4.1",
+		"@testing-library/jest-dom": "^7.0.0",
+		"@testing-library/svelte": "^5.4.2",
+		"@testing-library/user-event": "^14.6.1",
+		"@vitest/coverage-v8": "^4.1.10",
 		"eslint": "^10.8.0",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.22.0",
 		"globals": "^17.8.0",
+		"jsdom": "^30.0.1",
 		"prettier": "^3.9.6",
 		"prettier-plugin-svelte": "^4.1.1",
 		"prettier-plugin-tailwindcss": "^0.8.1",
 		"typescript": "6.0.3",
-		"typescript-eslint": "^8.65.0"
+		"typescript-eslint": "^8.65.0",
+		"vitest": "^4.1.10"
 	}
 }
