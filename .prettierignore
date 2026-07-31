@@ -1,0 +1,11 @@
+node_modules
+.svelte-kit
+.mastra
+build
+dist
+bun.lock
+.env
+
+# Vendored agent skills — third-party content, kept byte-identical to upstream.
+.agents
+skills-lock.json

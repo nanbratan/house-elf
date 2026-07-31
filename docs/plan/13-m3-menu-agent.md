@@ -55,7 +55,7 @@ Start with **one** tool and only add more if a real conversation demands it:
 - `logMeal` — records what was eaten with an approximate macro breakdown, stored in
   working memory or a small dedicated table.
 
-Deliberately *not* building yet: recipe search, barcode scanning, external nutrition
+Deliberately _not_ building yet: recipe search, barcode scanning, external nutrition
 APIs, grocery lists. Add them when you actually miss them.
 
 ### T3.5 — Structured output where it helps
@@ -68,7 +68,7 @@ APIs, grocery lists. Add them when you actually miss them.
 
 ### T3.6 — Tests
 
-- **Integration:** semantic recall retrieves a seeded relevant message and does *not*
+- **Integration:** semantic recall retrieves a seeded relevant message and does _not_
   retrieve an irrelevant one.
 - **Integration:** the menu agent calls `logMeal` with a schema-valid payload, using a
   mocked model.

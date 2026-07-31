@@ -1,28 +1,37 @@
 {
-    "name": "house-elf",
-    "version": "0.0.0",
-    "private": true,
-    "type": "module",
-    "workspaces": [
-        "apps/*",
-        "packages/*"
-    ],
-    "scripts": {
-        "dev": "bun run --filter '*' dev",
-        "check": "bun run --filter '*' check",
-        "lint": "eslint .",
-        "format": "prettier --write .",
-        "format:check": "prettier --check .",
-        "test": "vitest run --coverage",
-        "test:unit": "vitest run --project unit",
-        "test:watch": "vitest",
-        "test:e2e": "playwright test",
-        "build": "bun run --filter '*' build",
-        "verify": "bun run check && bun run lint && bun run format:check && bun run test && bun run build",
-        "db:up": "docker compose -f infra/docker-compose.yml up -d",
-        "db:down": "docker compose -f infra/docker-compose.yml down"
-    },
-    "devDependencies": {
-        "typescript": "6.0.3"
-    }
+	"name": "house-elf",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
+	"scripts": {
+		"dev": "bun run --filter '*' dev",
+		"check": "bun run --filter '*' check",
+		"lint": "eslint .",
+		"format": "prettier --write .",
+		"format:check": "prettier --check .",
+		"test": "vitest run --coverage",
+		"test:unit": "vitest run --project unit",
+		"test:watch": "vitest",
+		"test:e2e": "playwright test",
+		"build": "bun run --filter '*' build",
+		"verify": "bun run check && bun run lint && bun run format:check && bun run test && bun run build",
+		"db:up": "docker compose -f infra/docker-compose.yml up -d",
+		"db:down": "docker compose -f infra/docker-compose.yml down"
+	},
+	"devDependencies": {
+		"@eslint/js": "^10.0.1",
+		"eslint": "^10.8.0",
+		"eslint-config-prettier": "^10.1.8",
+		"eslint-plugin-svelte": "^3.22.0",
+		"globals": "^17.8.0",
+		"prettier": "^3.9.6",
+		"prettier-plugin-svelte": "^4.1.1",
+		"prettier-plugin-tailwindcss": "^0.8.1",
+		"typescript": "6.0.3",
+		"typescript-eslint": "^8.65.0"
+	}
 }

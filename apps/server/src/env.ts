@@ -6,18 +6,18 @@
  */
 
 function required(name: string): string {
-    const value = process.env[name];
-    if (value === undefined || value.trim() === '') {
-        throw new Error(
-            `Missing required environment variable ${name}. ` +
-            `Copy .env.example to .env at the repo root and fill it in.`,
-        );
-    }
-    return value;
+	const value = process.env[name];
+	if (value === undefined || value.trim() === '') {
+		throw new Error(
+			`Missing required environment variable ${name}. ` +
+				`Copy .env.example to .env at the repo root and fill it in.`
+		);
+	}
+	return value;
 }
 
 export const env = {
-    databaseUrl: required('DATABASE_URL'),
-    /** Model router ID, "provider/model" — see .env.example. */
-    generalAgentModel: required('AGENT_GENERAL_MODEL'),
+	databaseUrl: required('DATABASE_URL'),
+	/** Model router ID, "provider/model" — see .env.example. */
+	generalAgentModel: required('AGENT_GENERAL_MODEL')
 } as const;

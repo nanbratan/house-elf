@@ -12,7 +12,7 @@ Intended agents over time (only the first two are in scope for this plan):
   dislikes, macros, and what was eaten recently.
 - **CV agent** — remembers the full career history so it never has to be
   re-explained; drafts and exports tailored CVs as PDF.
-- *Later, out of scope:* research assistant, browser automation, message triage,
+- _Later, out of scope:_ research assistant, browser automation, message triage,
   home automation, scheduling.
 
 ## Core design intent
@@ -102,5 +102,5 @@ non-trivial workflow, local Docker dev, single-VPS deploy, basic auth.
 
 **Explicitly out of scope for now:** multi-user, mobile app, voice, browser
 automation, message-platform integrations, evals in CI, multi-agent networks.
-Several of these are *interesting* and the architecture must not preclude them — but
+Several of these are _interesting_ and the architecture must not preclude them — but
 they are not built until there is a real need.

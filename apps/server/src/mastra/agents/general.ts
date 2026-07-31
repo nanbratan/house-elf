@@ -7,8 +7,8 @@ import { env } from '../../env';
  * Studio are wired together; it gains memory in M2 and tools in M1.
  */
 export const generalAgent = new Agent({
-    id: 'general',
-    name: 'General',
-    instructions: 'You are a helpful personal assistant. Answer concisely.',
-    model: env.generalAgentModel,
+	id: 'general',
+	name: 'General',
+	instructions: 'You are a helpful personal assistant. Answer concisely.',
+	model: env.generalAgentModel
 });

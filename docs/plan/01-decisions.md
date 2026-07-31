@@ -39,7 +39,7 @@ AI SDK UI lists SolidJS support as **community-only**; there is no maintained
 `@ai-sdk/solid` for v5+. Choosing Solid means hand-writing the `useChat` equivalent
 on top of `readUIMessageStream` from the framework-agnostic `ai` package — roughly
 150–300 lines that must correctly handle partial tool-call streaming, interleaved
-reasoning, aborts, and error recovery. That is real work on the *least* interesting
+reasoning, aborts, and error recovery. That is real work on the _least_ interesting
 part of the project, and it is work that must be re-done every time the stream
 protocol evolves. Svelte 5 runes are signal-based and share Solid's mental model
 closely enough that little is lost.
@@ -78,7 +78,7 @@ recall and RAG need **zero additional infrastructure**. One connection string, o
 backup, one container.
 
 **Rejected — libSQL/SQLite locally.** Zero-config and tempting, but it forces a
-migration to Postgres later *and* means local behaviour diverges from production.
+migration to Postgres later _and_ means local behaviour diverges from production.
 Since Postgres is one line of Docker Compose, the "simplicity" saving is illusory.
 
 **Rejected — dedicated vector DB (Qdrant/Chroma).** Better at scale; at personal
@@ -139,12 +139,12 @@ in the design blocks it.
 
 **Chosen, layered — introduce each layer only when a milestone needs it:**
 
-| Layer | What it does | Introduced |
-|---|---|---|
-| Message history | Recent turns in the thread | M1 |
-| Working memory | Durable structured profile, scoped per resource (user) | M2 |
-| Semantic recall | Embedding search over past messages via pgvector | M3 |
-| Explicit RAG | Ingested documents in a vector store | M4 |
+| Layer           | What it does                                           | Introduced |
+| --------------- | ------------------------------------------------------ | ---------- |
+| Message history | Recent turns in the thread                             | M1         |
+| Working memory  | Durable structured profile, scoped per resource (user) | M2         |
+| Semantic recall | Embedding search over past messages via pgvector       | M3         |
+| Explicit RAG    | Ingested documents in a vector store                   | M4         |
 
 **Why:** These solve different problems and each has a token cost. Working memory is
 what makes "stop re-explaining my career to it" actually work — it is a persistent
@@ -164,7 +164,7 @@ functional bug in the project — verify it explicitly in M2.
 Do **not** build session-derived resource IDs, user tables, or multi-user support.
 The constant is the design.
 
-Mastra also offers *observational memory*. Read the docs, note it, do not adopt it
+Mastra also offers _observational memory_. Read the docs, note it, do not adopt it
 before M4; it adds inference cost and its value is unclear at this scale.
 
 ---
@@ -250,14 +250,14 @@ for E2E, and v8 coverage with enforced thresholds.
 
 See [03-testing.md](03-testing.md) for the full strategy. Summary of the choices:
 
-| Concern | Tool | Why |
-|---|---|---|
-| Test runner | **Vitest 3** | Shares Vite config, so aliases and plugins Just Work. Handles server, shared, and component tests in one `projects` config. |
-| Component tests | **`@testing-library/svelte` + jsdom** | What the official Svelte testing docs recommend. Fast, no browser download, large ecosystem, familiar API. |
-| E2E | **Playwright** | No serious competitor. Also the home for the few assertions jsdom cannot make. |
-| Deterministic LLMs | **`MockLanguageModelV2`** (`ai/test`) | Lets agent behaviour be tested without network, cost, or flakiness. This is the key enabler for testing agents at all. |
-| DB integration | **Dedicated `postgres-test` container** | Real Postgres, real pgvector. Simpler and faster than Testcontainers. |
-| Coverage | **`@vitest/coverage-v8`** | Thresholds enforced in config; `bun run test` fails below them. |
+| Concern            | Tool                                    | Why                                                                                                                         |
+| ------------------ | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Test runner        | **Vitest 3**                            | Shares Vite config, so aliases and plugins Just Work. Handles server, shared, and component tests in one `projects` config. |
+| Component tests    | **`@testing-library/svelte` + jsdom**   | What the official Svelte testing docs recommend. Fast, no browser download, large ecosystem, familiar API.                  |
+| E2E                | **Playwright**                          | No serious competitor. Also the home for the few assertions jsdom cannot make.                                              |
+| Deterministic LLMs | **`MockLanguageModelV2`** (`ai/test`)   | Lets agent behaviour be tested without network, cost, or flakiness. This is the key enabler for testing agents at all.      |
+| DB integration     | **Dedicated `postgres-test` container** | Real Postgres, real pgvector. Simpler and faster than Testcontainers.                                                       |
+| Coverage           | **`@vitest/coverage-v8`**               | Thresholds enforced in config; `bun run test` fails below them.                                                             |
 
 **Rejected — `vitest-browser-svelte`.** Runs components in real Chromium, which is
 genuinely more faithful — runes, transitions, and real layout all behave correctly.
@@ -287,22 +287,22 @@ introduces new errors through improved inference. An unpinned TS means a `bun in
 can break the build without any code changing. Upgrade deliberately, as its own commit.
 
 **Why 6.0.3 specifically, and not `latest`:** as of 2026-07-30, `typescript@latest`
-on npm is **7.0.2** — TypeScript 7 has shipped, and it *is* the Go port, now
+on npm is **7.0.2** — TypeScript 7 has shipped, and it _is_ the Go port, now
 published under the main `typescript` package name rather than
 `@typescript/native-preview`. Installing `typescript@latest` today therefore
 silently swaps the compiler implementation. That is a trap, and this project must
 not fall into it yet, because **the two type-aware tools this plan depends on both
 refuse TypeScript 7**:
 
-| Tool | Version checked | Declared `typescript` peer range | Accepts 7? |
-|---|---|---|---|
-| `typescript-eslint` | 8.65.0 | `>=4.8.4 <6.1.0` | **No** |
-| `svelte-check` | 4.7.4 | `^5.0.0 \|\| ^6.0.0` | **No** |
+| Tool                | Version checked | Declared `typescript` peer range | Accepts 7? |
+| ------------------- | --------------- | -------------------------------- | ---------- |
+| `typescript-eslint` | 8.65.0          | `>=4.8.4 <6.1.0`                 | **No**     |
+| `svelte-check`      | 4.7.4           | `^5.0.0 \|\| ^6.0.0`             | **No**     |
 
 Both consume the compiler API, and the `microsoft/typescript-go` README still marks
 the **API row "not ready"** and the **language service "in progress"** — which is
 precisely why those peer ranges stop where they do. Type checking, emit, watch,
-build mode and project references are all "done"; the *embedding* API is not.
+build mode and project references are all "done"; the _embedding_ API is not.
 
 So `tsc` alone could be 7 today, but `bun run lint` and `bun run check` could not.
 `6.0.3` is the newest release the whole toolchain agrees on, and 6.0.x is the
@@ -319,7 +319,7 @@ admit `^7`. That is the single signal — it will only happen once the compiler 
 ready, so it subsumes watching the README. Then bump to 7 outright and get the speed
 for free; it is a one-line change.
 
-> Executing agent: before changing this pin, check the *actual published peer ranges*
+> Executing agent: before changing this pin, check the _actual published peer ranges_
 > rather than the README or a blog post:
 >
 > ```bash

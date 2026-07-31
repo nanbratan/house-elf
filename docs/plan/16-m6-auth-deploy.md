@@ -60,12 +60,12 @@ per-user data partitioning. That is work for a problem you do not have.
 
 `infra/docker-compose.prod.yml` with four services:
 
-| Service | Notes |
-|---|---|
-| `caddy` | Automatic TLS via Let's Encrypt. Only service with published ports (80/443). |
-| `web` | SvelteKit. Internal network only. |
-| `server` | Mastra. Internal network only — **never** publish 4111. |
-| `postgres` | Internal network only. Named volume. |
+| Service    | Notes                                                                        |
+| ---------- | ---------------------------------------------------------------------------- |
+| `caddy`    | Automatic TLS via Let's Encrypt. Only service with published ports (80/443). |
+| `web`      | SvelteKit. Internal network only.                                            |
+| `server`   | Mastra. Internal network only — **never** publish 4111.                      |
+| `postgres` | Internal network only. Named volume.                                         |
 
 Additional requirements:
 

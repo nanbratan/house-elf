@@ -14,14 +14,14 @@ coverage above threshold.** No exceptions, no "I'll add tests later."
 This is why most AI projects have no tests. The way out is to separate the two things
 you might be testing:
 
-| What you're testing | Deterministic? | How |
-|---|---|---|
-| Tool logic (compile PDF, parse, calculate) | Yes | Ordinary unit tests |
-| Whether the agent *calls* the right tool | Yes, with a mocked model | `MockLanguageModelV2` |
-| Whether memory persists and is scoped right | Yes | Integration tests against real Postgres |
-| Whether a workflow branches/suspends/resumes | Yes | Integration tests, mocked models |
-| UI rendering of stream parts | Yes | Component tests with synthetic streams |
-| Whether the CV it wrote is *good* | **No** | Not unit-testable. Use evals, or your eyes. |
+| What you're testing                          | Deterministic?           | How                                         |
+| -------------------------------------------- | ------------------------ | ------------------------------------------- |
+| Tool logic (compile PDF, parse, calculate)   | Yes                      | Ordinary unit tests                         |
+| Whether the agent _calls_ the right tool     | Yes, with a mocked model | `MockLanguageModelV2`                       |
+| Whether memory persists and is scoped right  | Yes                      | Integration tests against real Postgres     |
+| Whether a workflow branches/suspends/resumes | Yes                      | Integration tests, mocked models            |
+| UI rendering of stream parts                 | Yes                      | Component tests with synthetic streams      |
+| Whether the CV it wrote is _good_            | **No**                   | Not unit-testable. Use evals, or your eyes. |
 
 Only the last row is untestable. Everything else is ordinary software and gets
 ordinary tests.
@@ -119,20 +119,20 @@ handful of assertions jsdom cannot make. Target: fewer than ten, total.
 Enforced via `@vitest/coverage-v8` thresholds in config. `bun run test` **fails** if
 coverage drops below them.
 
-| Area | Line | Branch | Rationale |
-|---|---|---|---|
-| `packages/shared` | 100% | 100% | Tiny, pure, no excuse |
-| `apps/server/src/mastra/tools` | 90% | 85% | Real logic, real side effects |
-| `apps/server/src/mastra/workflows` | 85% | 80% | Branching is the point |
-| `apps/web/src/lib` | 85% | 80% | The renderer must not crash |
-| Global | 80% | 75% | Floor |
+| Area                               | Line | Branch | Rationale                     |
+| ---------------------------------- | ---- | ------ | ----------------------------- |
+| `packages/shared`                  | 100% | 100%   | Tiny, pure, no excuse         |
+| `apps/server/src/mastra/tools`     | 90%  | 85%    | Real logic, real side effects |
+| `apps/server/src/mastra/workflows` | 85%  | 80%    | Branching is the point        |
+| `apps/web/src/lib`                 | 85%  | 80%    | The renderer must not crash   |
+| Global                             | 80%  | 75%    | Floor                         |
 
 ### Deliberately excluded from coverage
 
 Listed explicitly in the Vitest config with a comment for each:
 
 - `src/mastra/index.ts` — pure wiring, no logic.
-- Agent definition files — they are prompts and config; the *behaviour* is tested via
+- Agent definition files — they are prompts and config; the _behaviour_ is tested via
   mocked-model integration tests instead.
 - SvelteKit `+layout`/`+page` boilerplate with no logic.
 - Generated files, type-only files.

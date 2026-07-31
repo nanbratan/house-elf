@@ -16,33 +16,31 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## Pre-flight
 
-- [x] **Scaffold check** — in `/tmp`, run `create-mastra` under Bun. Record the
-      directory structure it produces and the exact `@mastra/*` versions installed,
-      then delete it. T0.1 commits to a workspace layout; this is the cheap moment
-      to find out if the scaffold disagrees with it. Log the versions below —
-      later sessions read `node_modules/@mastra/*/dist/docs/` for version-exact API
-      docs.
+- [x] **Scaffold check** — in `/tmp`, run `create-mastra` under Bun, record the
+      directory structure and exact `@mastra/*` versions, then delete it. Results
+      below.
 
-      *Done 2026-07-30, `/tmp/he-spike` deleted. Also checked: `mastra dev` starts,
-      Studio renders at :4111 and lists the agent, and `typst compile` produces a
-      valid PDF (typst 0.15.1, installed via Homebrew). An agent **responding** is
-      only partially confirmed — no provider API key was available, so the call was
-      proven to reach Anthropic and be rejected with `invalid x-api-key`. The full
-      round trip is deferred to T0.3. Deviations logged below.*
+### Scaffold check results
 
-      **Structure produced** (default template, see decision log):
-      `src/mastra/index.ts`, `src/mastra/agents/agent.ts`,
-      `src/mastra/tools/*.ts`, `tsconfig.json`, `.env` / `.env.example`, `AGENTS.md`.
-      Flat and single-package — it does not disagree with the `apps/*` + `packages/*`
-      layout, it simply has no opinion about it.
+Done 2026-07-30, `/tmp/he-spike` deleted. Also checked: `mastra dev` starts, Studio
+renders at :4111 and lists the agent, and `typst compile` produces a valid PDF (typst
+0.15.1, installed via Homebrew). An agent **responding** is only partially confirmed —
+no provider API key was available, so the call was proven to reach Anthropic and be
+rejected with `invalid x-api-key`. The full round trip is deferred to T0.3.
 
-      **Versions installed** (2026-07-30):
-      `@mastra/core` 1.55.0 · `@mastra/server` 1.55.0 · `@mastra/deployer` 1.55.0 ·
-      `@mastra/memory` 1.24.0 · `@mastra/libsql` 1.18.0 ·
-      `@mastra/observability` 1.16.3 · `@mastra/duckdb` 1.5.2 ·
-      `@mastra/loggers` 1.2.0 · `@mastra/schema-compat` 1.3.4 ·
-      `mastra` CLI 1.21.0 · `zod` 4.4.3 · `typescript` 6.0.3 · no `ai` package.
-      Scaffold declares `engines: node >=22.13.0`; ran fine under Bun 1.2.13.
+**Structure produced** (default template, see decision log): `src/mastra/index.ts`,
+`src/mastra/agents/agent.ts`, `src/mastra/tools/*.ts`, `tsconfig.json`, `.env` /
+`.env.example`, `AGENTS.md`. Flat and single-package — it does not disagree with the
+`apps/*` + `packages/*` layout, it simply has no opinion about it.
+
+**Versions installed** (2026-07-30): `@mastra/core` 1.55.0 · `@mastra/server` 1.55.0 ·
+`@mastra/deployer` 1.55.0 · `@mastra/memory` 1.24.0 · `@mastra/libsql` 1.18.0 ·
+`@mastra/observability` 1.16.3 · `@mastra/duckdb` 1.5.2 · `@mastra/loggers` 1.2.0 ·
+`@mastra/schema-compat` 1.3.4 · `mastra` CLI 1.21.0 · `zod` 4.4.3 · `typescript`
+6.0.3 · no `ai` package. Scaffold declares `engines: node >=22.13.0`; ran fine under
+Bun 1.2.13.
+
+Later sessions read `node_modules/@mastra/*/dist/docs/` for version-exact API docs.
 
 ## M0 — Foundation → [10-m0-foundation.md](10-m0-foundation.md)
 
@@ -57,7 +55,7 @@ Session A:
 
 Session B:
 
-- [ ] T0.5 Lint, format, types
+- [x] T0.5 Lint, format, types
 - [ ] T0.6 Test infrastructure
 - [ ] T0.7 Automation
 - [ ] T0.8 Dev orchestration
@@ -309,11 +307,110 @@ browser.
 its component test, with the specific assertions, instead of a throwaway component.
 The debt is scheduled rather than remembered.
 
+### 2026-07-31 — D13's pin re-verified at T0.5; still 6.0.3
+
+Ran D13's own revisit check before installing anything. Unchanged:
+
+| Tool                | Version | Declared `typescript` peer | Accepts 7? |
+| ------------------- | ------- | -------------------------- | ---------- |
+| `typescript-eslint` | 8.65.0  | `>=4.8.4 <6.1.0`           | **No**     |
+| `svelte-check`      | 4.7.4   | `^5.0.0 \|\| ^6.0.0`       | **No**     |
+
+`6.0.3` remains the newest version the whole toolchain agrees on. No change.
+`svelte-check@4.7.4` also carries a direct `typescript: ^6.0.3` dependency, which the
+root pin dedupes — worth knowing if a future bump appears to do nothing.
+
+**Corrected:** nothing.
+
+### 2026-07-31 — ESLint 10, not 9
+
+**Plan said:** T0.5 and `02-conventions.md` — "ESLint 9 flat config".
+
+**What is true:** `eslint@latest` is **10.8.0**, and both type-aware plugins already
+admit it: `typescript-eslint@8.65.0` and `eslint-plugin-svelte@3.22.0` each declare
+`eslint: ^8.57 || ^9.0.0 || ^10.0.0`. ESLint 10 is flat-config-only, which is what the
+plan actually wanted; the "9" was just the current major when the plan was written.
+Nothing forced 9, so installing it deliberately would have been choosing staleness.
+
+**Did:** installed `eslint@10.8.0` + `@eslint/js@10.0.1`. Config is
+`eslint.config.js` (plain ESM, so no `jiti` needed). `projectService: true` resolved
+both workspaces on the first try — the plan's warning about falling back to explicit
+`project` paths did not materialise. `.js` files get `projectService: false` plus
+`disableTypeChecked`, since root config files belong to no tsconfig.
+
+**Corrected:** `10-m0-foundation.md` T0.5 and `02-conventions.md` toolchain summary.
+
+### 2026-07-31 — vendored `.agents/` must be excluded from lint and format
+
+**What is true:** the first `eslint .` failed on
+`.agents/skills/mastra/scripts/provider-registry.mjs` ("not found by the project
+service"), and the first `prettier --write .` rewrote five vendored skill files plus
+`skills-lock.json`. That content is third-party and tracked; reformatting it would
+produce permanent diff noise against upstream and defeat `skills-lock.json`.
+
+**Did:** added `.agents/` to `eslint.config.js` ignores and `.agents` +
+`skills-lock.json` to `.prettierignore`, then `git checkout --` to restore the files
+Prettier had already touched.
+
+**Corrected:** `10-m0-foundation.md` T0.5 now states the exclusion.
+
+### 2026-07-31 — T0.4's app shell had two real type/lint defects
+
+**What is true:** the T0.4 shell shipped before any type-aware linting existed, and
+type-aware lint immediately found two genuine bugs in it, not style nits:
+
+- `let { children } = $props()` left `children` implicitly `any`, so
+  `{@render children()}` tripped `@typescript-eslint/no-unsafe-call`.
+- `href="/c/{conversation.id}"` tripped `svelte/no-navigation-without-resolve`.
+
+**Did:** typed the props as `{ children: Snippet }` and switched the link to
+`resolve('/c/[id]', { id: conversation.id })` from `$app/paths`. Both are behaviour-
+preserving. Note `svelte-check` passed on this file both before and after — the
+type-aware ESLint pass caught what `check` did not, which is the argument for keeping
+both in `verify`.
+
+**Corrected:** nothing — this is T0.5 doing its job on T0.4's output.
+
+### 2026-07-31 — `docs/plan/` is tracked after all; open question closed
+
+**Previously recorded:** an open question claiming `docs/plan/` was added to
+`.gitignore` after T0.1, which would have made "fix the plan doc in the same commit"
+impossible.
+
+**What is true:** `.gitignore` contains no `docs/` entry, and `git status` lists every
+`docs/plan/*.md` file as tracked and modified. The concern was unfounded.
+
+**Did:** removed the open question. No `.gitignore` change was needed.
+
+### 2026-07-31 — Prettier style chosen (user decision)
+
+Tabs, single quotes, `printWidth` 100, `trailingComma: "none"` — the SvelteKit-
+idiomatic defaults, matching how `apps/web` was already scaffolded. The whole repo was
+reformatted once at T0.5, so this touches nearly every file; later diffs are clean.
+`prettier-plugin-tailwindcss` needs `tailwindStylesheet` pointed at
+`apps/web/src/routes/layout.css`, since Tailwind v4 has no config file for it to find.
+
+### 2026-07-31 — Prettier could not stabilise this file; Pre-flight restructured
+
+**What is true:** `format:check` failed on `PROGRESS.md` even immediately after
+`format`. The Pre-flight entry was a `- [x]` task-list item containing several
+follow-on paragraphs, and Prettier added **four more spaces of indentation on every
+run** — a genuine non-idempotency, not a one-off. `prettier --write` twice in a row
+produced two different files, so no amount of reformatting would ever converge.
+
+**Did:** moved the long-form detail out of the list item into a top-level
+`### Scaffold check results` section, leaving a one-line checkbox. Prettier reaches a
+fixpoint immediately.
+
+**Watch out:** when adding to this file, keep multi-paragraph prose at top level.
+Deeply-indented continuation content inside a checkbox item will break
+`format:check`, and therefore `verify`, in a way that looks like a Prettier bug
+rather than a content problem.
+
+**Corrected:** nothing — `PROGRESS.md` content only.
+
 ## Open questions
 
 Things needing a human answer. Remove once resolved.
 
-- **`docs/plan/` is git-ignored.** Added to `.gitignore` after T0.1. `PROGRESS.md` is
-  the documented source of truth for what is done, and `AGENTS.md` says to fix plan
-  documents "in the same commit" as the code — neither works if the directory is not
-  tracked. Recommend at minimum un-ignoring `PROGRESS.md`. Being updated regardless.
+- _(none)_

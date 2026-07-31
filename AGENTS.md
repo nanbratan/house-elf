@@ -7,11 +7,11 @@ This project is built from a written plan. **Read the plan before writing code.*
 
 ## Start here
 
-| If you are… | Read |
-|---|---|
-| Starting any session | [docs/plan/README.md](docs/plan/README.md), then [docs/plan/PROGRESS.md](docs/plan/PROGRESS.md) |
-| Implementing a milestone | The milestone file, plus `01-decisions.md`, `02-conventions.md`, `03-testing.md` |
-| Wondering why something was chosen | [docs/plan/01-decisions.md](docs/plan/01-decisions.md) — it records rejected alternatives too |
+| If you are…                        | Read                                                                                            |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Starting any session               | [docs/plan/README.md](docs/plan/README.md), then [docs/plan/PROGRESS.md](docs/plan/PROGRESS.md) |
+| Implementing a milestone           | The milestone file, plus `01-decisions.md`, `02-conventions.md`, `03-testing.md`                |
+| Wondering why something was chosen | [docs/plan/01-decisions.md](docs/plan/01-decisions.md) — it records rejected alternatives too   |
 
 `docs/plan/PROGRESS.md` is the source of truth for what is done. Update it as you go.
 
@@ -27,7 +27,7 @@ This project is built from a written plan. **Read the plan before writing code.*
    strings. Every model name in the plan is a placeholder. Model IDs live in env
    vars, never hardcoded.
 3. **One milestone at a time.** Do not start milestone N+1 until N's Definition of
-   Done is met and verified *by running the app*, not by reading the code.
+   Done is met and verified _by running the app_, not by reading the code.
 4. **Do not scaffold ahead.** If the current milestone does not need a file, do not
    create it. Premature abstraction is the main risk on a one-person project.
 5. **Every task ends green.** `bun run verify` (check, lint, format:check, test,
@@ -39,8 +39,9 @@ This project is built from a written plan. **Read the plan before writing code.*
 ## Toolchain
 
 Bun (not npm/node) · SvelteKit 2 + Svelte 5 runes · Tailwind v4 · Mastra · Postgres 17
-+ pgvector · Vitest 3 + `@testing-library/svelte` · Playwright · ESLint 9 + Prettier ·
-exact-pinned TypeScript.
+
+- pgvector · Vitest 3 + `@testing-library/svelte` · Playwright · ESLint 9 + Prettier ·
+  exact-pinned TypeScript.
 
 ```bash
 bun run dev       # everything

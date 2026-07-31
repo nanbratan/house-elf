@@ -34,7 +34,7 @@ Pick **one** based on what has actually been irritating you by now. Candidates:
 - **CV tailoring pipeline** — parse job description → extract required competencies →
   retrieve matching evidence → draft → **suspend for review** → render PDF.
 
-The meal plan is the better first choice: it exercises scheduling *and* suspend/resume,
+The meal plan is the better first choice: it exercises scheduling _and_ suspend/resume,
 and the output is genuinely useful weekly.
 
 ### T5.2 — Build the workflow
@@ -114,4 +114,4 @@ Workflows are deterministic given mocked models, so they test well.
 - Step 3 is the milestone. Everything else is scaffolding around proving durability.
 - Do not convert existing agent conversations into workflows. Agents and workflows
   coexist; the chat remains agent-driven.
-- Resist adding a workflow *builder* UI. You write workflows in TypeScript.
+- Resist adding a workflow _builder_ UI. You write workflows in TypeScript.

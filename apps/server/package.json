@@ -1,25 +1,25 @@
 {
-  "name": "@house-elf/server",
-  "version": "0.0.0",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "mastra dev --env ../../.env",
-    "build": "mastra build",
-    "start": "mastra start",
-    "check": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@mastra/ai-sdk": "latest",
-    "@mastra/core": "latest",
-    "@mastra/loggers": "latest",
-    "@mastra/memory": "latest",
-    "@mastra/pg": "latest",
-    "ai": "latest",
-    "zod": "^4"
-  },
-  "devDependencies": {
-    "@types/node": "latest",
-    "mastra": "latest"
-  }
+	"name": "@house-elf/server",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "mastra dev --env ../../.env",
+		"build": "mastra build",
+		"start": "mastra start",
+		"check": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@mastra/ai-sdk": "latest",
+		"@mastra/core": "latest",
+		"@mastra/loggers": "latest",
+		"@mastra/memory": "latest",
+		"@mastra/pg": "latest",
+		"ai": "latest",
+		"zod": "^4"
+	},
+	"devDependencies": {
+		"@types/node": "latest",
+		"mastra": "latest"
+	}
 }

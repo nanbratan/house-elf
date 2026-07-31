@@ -110,7 +110,7 @@ live in **[03-testing.md](03-testing.md)**. Read it before writing the first tes
 
 Summary of the toolchain:
 
-- **Lint:** ESLint 9 flat config, `typescript-eslint` (type-aware), `eslint-plugin-svelte`
+- **Lint:** ESLint 10 flat config, `typescript-eslint` (type-aware), `eslint-plugin-svelte`
 - **Format:** Prettier + Svelte and Tailwind plugins
 - **Types:** a single `typescript`, pinned to an exact version (D13)
 - **Tests:** Vitest 3, `@testing-library/svelte`, Playwright, v8 coverage with

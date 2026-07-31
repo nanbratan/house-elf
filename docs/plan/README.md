@@ -7,20 +7,20 @@ orchestration server, backed by Postgres + pgvector.
 
 These documents are written for an **executing AI agent**. Read them in this order:
 
-| # | Document | Purpose |
-|---|---|---|
-| 0 | [00-overview.md](00-overview.md) | Vision, scope, architecture, repo layout |
-| 1 | [01-decisions.md](01-decisions.md) | Every technology decision + rationale + rejected alternatives |
-| 2 | [02-conventions.md](02-conventions.md) | Coding standards, working agreement, quality gates |
-| 3 | [03-testing.md](03-testing.md) | Test strategy, tooling, coverage thresholds |
-| 4 | [10-m0-foundation.md](10-m0-foundation.md) | M0 — Repo, tooling, Docker, Mastra + SvelteKit skeletons |
-| 5 | [11-m1-chat-e2e.md](11-m1-chat-e2e.md) | M1 — One agent, streaming end to end |
-| 6 | [12-m2-threads-memory.md](12-m2-threads-memory.md) | M2 — Conversation list, persistence, memory |
-| 7 | [13-m3-menu-agent.md](13-m3-menu-agent.md) | M3 — Nutrition agent (first real use case) |
-| 8 | [14-m4-cv-agent.md](14-m4-cv-agent.md) | M4 — CV agent, RAG, Typst → PDF |
-| 9 | [15-m5-workflows.md](15-m5-workflows.md) | M5 — Workflows, HITL, schedules |
-| 10 | [16-m6-auth-deploy.md](16-m6-auth-deploy.md) | M6 — Auth and VPS deployment |
-| — | [PROGRESS.md](PROGRESS.md) | **Live state** — what is done, deviations, open questions |
+| #   | Document                                           | Purpose                                                       |
+| --- | -------------------------------------------------- | ------------------------------------------------------------- |
+| 0   | [00-overview.md](00-overview.md)                   | Vision, scope, architecture, repo layout                      |
+| 1   | [01-decisions.md](01-decisions.md)                 | Every technology decision + rationale + rejected alternatives |
+| 2   | [02-conventions.md](02-conventions.md)             | Coding standards, working agreement, quality gates            |
+| 3   | [03-testing.md](03-testing.md)                     | Test strategy, tooling, coverage thresholds                   |
+| 4   | [10-m0-foundation.md](10-m0-foundation.md)         | M0 — Repo, tooling, Docker, Mastra + SvelteKit skeletons      |
+| 5   | [11-m1-chat-e2e.md](11-m1-chat-e2e.md)             | M1 — One agent, streaming end to end                          |
+| 6   | [12-m2-threads-memory.md](12-m2-threads-memory.md) | M2 — Conversation list, persistence, memory                   |
+| 7   | [13-m3-menu-agent.md](13-m3-menu-agent.md)         | M3 — Nutrition agent (first real use case)                    |
+| 8   | [14-m4-cv-agent.md](14-m4-cv-agent.md)             | M4 — CV agent, RAG, Typst → PDF                               |
+| 9   | [15-m5-workflows.md](15-m5-workflows.md)           | M5 — Workflows, HITL, schedules                               |
+| 10  | [16-m6-auth-deploy.md](16-m6-auth-deploy.md)       | M6 — Auth and VPS deployment                                  |
+| —   | [PROGRESS.md](PROGRESS.md)                         | **Live state** — what is done, deviations, open questions     |
 
 Each milestone is intended to be one fresh agent session. Start by reading this file
 and `PROGRESS.md`, then the milestone doc plus docs 1–3. Update `PROGRESS.md` as you
@@ -35,7 +35,7 @@ work, not at the end.
 2. **Never invent model IDs.** Run
    `.agents/skills/mastra/scripts/provider-registry.mjs` to get valid
    `provider/model` strings. Model names in this plan are placeholders.
-3. **One milestone at a time.** Each milestone has an explicit *Definition of Done*.
+3. **One milestone at a time.** Each milestone has an explicit _Definition of Done_.
    Do not begin milestone N+1 until milestone N's DoD is met and verified by running
    the app, not by reading the code.
 4. **Do not scaffold ahead.** If a milestone does not need a file, do not create it.

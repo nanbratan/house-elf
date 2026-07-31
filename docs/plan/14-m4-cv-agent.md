@@ -68,7 +68,7 @@ tool.
 
 - **Input:** a Typst source string (Zod-validated, size-capped).
 - **Behaviour:** write to a temp file in an isolated temp directory, invoke `typst
-  compile` with a timeout, read the resulting PDF.
+compile` with a timeout, read the resulting PDF.
 - **Output:** on success, a document ID and a download URL. On failure, the
   compiler's stderr returned to the agent so it can fix its own markup.
 - **Security — this is the sharp edge:**
@@ -87,7 +87,7 @@ tool.
 - Give the agent a **reference example** of a good CV in Typst in its instructions —
   a complete, compiling document showing the idioms (a `#let` for section headers,
   a two-column header block, spacing conventions).
-- This is a *starting point, not a template*. State explicitly in the instructions
+- This is a _starting point, not a template_. State explicitly in the instructions
   that the agent may restructure it freely. The example exists so the agent writes
   valid Typst on the first try, not to constrain layout.
 
@@ -134,7 +134,7 @@ failure modes, real security surface.
 
 ## Notes for the executing agent
 
-- Iterate on the Typst reference example by hand first. Get *one* CV compiling and
+- Iterate on the Typst reference example by hand first. Get _one_ CV compiling and
   looking good before giving the agent the pen. Debugging "is it the agent or is it
   my Typst?" simultaneously is miserable.
 - Retrieval quality is mostly a chunking problem. If answers are vague, try larger

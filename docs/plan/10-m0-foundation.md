@@ -87,11 +87,17 @@ project dies. Do it once, deliberately, before any interesting code exists.
 
 ### T0.5 — Lint, format, types
 
-- ESLint 9 **flat config** at the root, with `typescript-eslint`
+- ESLint **10** flat config at the root, with `typescript-eslint`
   (`strictTypeChecked` + `stylisticTypeChecked`), `eslint-plugin-svelte`, and
-  `eslint-config-prettier` last. Type-aware linting needs `projectService` enabled —
-  verify it resolves both workspaces.
-- Prettier with `prettier-plugin-svelte` and `prettier-plugin-tailwindcss`.
+  `eslint-config-prettier` last. (The plan originally said ESLint 9; both plugins
+  now declare `eslint: ^8.57 || ^9 || ^10` — see the PROGRESS decision log.)
+  Type-aware linting needs `projectService` enabled — verify it resolves both
+  workspaces.
+- Prettier with `prettier-plugin-svelte` and `prettier-plugin-tailwindcss`. Set
+  `tailwindStylesheet` to `apps/web/src/routes/layout.css` — Tailwind v4 has no
+  config file for the plugin to find.
+- Exclude the vendored `.agents/` skills and `skills-lock.json` from **both** tools.
+  They are third-party content and must stay byte-identical to upstream.
 - `check` runs `tsc --noEmit` (server, shared) and `svelte-check` (web).
 - Format the repo. Verify `check`, `lint`, and `format:check` all exit 0.
 

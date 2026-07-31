@@ -1,7 +1,7 @@
 # M2 — Threads, Persistence & Memory
 
 **Goal:** Conversations survive restarts, are listed in a sidebar, and the agent
-remembers facts about you across *different* conversations.
+remembers facts about you across _different_ conversations.
 
 **Why this matters most:** this is the milestone that turns a chat toy into an
 assistant. The resource-vs-thread scoping decision made here determines whether
@@ -83,7 +83,7 @@ collapses. Verify this behaviour explicitly — it is the DoD's most important c
 This milestone has the highest-value tests in the project. Write them carefully.
 
 - **Integration:** working memory written in thread A is visible in thread B for the
-  same resource. *This is the test that protects the entire premise of the project.*
+  same resource. _This is the test that protects the entire premise of the project._
 - **Integration:** thread create / list / delete, and message ordering on reload.
 - **Integration:** message history round-trips through the Mastra → AI SDK conversion
   with tool-call and reasoning parts intact.
@@ -99,8 +99,8 @@ This milestone has the highest-value tests in the project. Write them carefully.
    (`docker compose down && up`, restart dev servers), reload — the conversation is
    in the sidebar with its history intact, including tool-call cards.
 2. Tell the agent "my name is X and I live in Y." Start a **brand-new conversation**.
-   Ask "where do I live?" → it answers correctly. *(This validates resource-scoped
-   working memory. If this fails, nothing else in this milestone matters.)*
+   Ask "where do I live?" → it answers correctly. _(This validates resource-scoped
+   working memory. If this fails, nothing else in this milestone matters.)_
 3. Threads are auto-titled sensibly.
 4. Deleting a thread removes it from the list and from the database.
 5. `bun run verify` passes. In particular, the cross-thread working-memory test
