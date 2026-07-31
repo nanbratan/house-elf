@@ -73,7 +73,7 @@ and 30624316521, ~1m10s each); and a full teardown — volumes and `node_modules
 ## M1 — Chat end to end → [11-m1-chat-e2e.md](11-m1-chat-e2e.md)
 
 - [x] T1.1 Expose an AI SDK chat endpoint
-- [ ] T1.2 A tool worth watching
+- [x] T1.2 A tool worth watching
 - [ ] T1.3 SvelteKit proxy route
 - [ ] T1.4 Chat UI
 - [ ] T1.5 Streaming quality
@@ -927,6 +927,74 @@ the connection strings are workflow `env`, which works because the integration-t
 loader treats the `.env` file as optional and falls through to the environment.
 `ANTHROPIC_API_KEY` is deliberately absent — nothing in `verify` calls a provider, and
 that stays true until M1.
+
+### 2026-07-31 — `bun run verify` breaks a running Studio until the dev server restarts
+
+**What is true:** `verify` ends in `mastra build`, which rewrites
+`apps/server/.mastra/output` — the same directory `mastra dev` serves Studio's static
+assets from. The build removes `output/studio/`, so a Studio tab that worked a moment
+earlier starts returning `500` with `{"error":"Internal Server Error"}`, and the dev
+log shows `ENOENT ... /output/studio/index.html`. The **API keeps working** throughout;
+only Studio's own UI breaks, which makes it look like a code fault rather than a
+clobbered directory.
+
+**Did:** restarted `mastra dev`, which regenerates the assets. Recorded rather than
+worked around — the fix is simply to restart the dev server after running `verify`.
+Worth knowing before debugging a "broken" Studio for the second time.
+
+### 2026-07-31 — `createTool()` differs from the plan's assumptions in three ways
+
+**What is true**, all found by `tsc` rather than by reading:
+
+- `execute` receives the **validated input directly** as its first parameter, not a
+  `{ context }` wrapper. Its second parameter is **required** when calling the tool
+  by hand, and that context has two non-optional members, `observe` and
+  `requestContext`. Mastra exports `noopObserve` from `@mastra/core/tools` and
+  `RequestContext` from `@mastra/core/request-context` for exactly this.
+- `execute` is **optional** on the resulting `Tool` type, so a direct call has to
+  narrow it first.
+- `tool.outputSchema` is a `StandardSchemaWithJSON`, **not** the Zod object that was
+  passed in — it has no `.parse()`. Tool schemas are Standard JSON Schema, so Valibot
+  and ArkType work too.
+
+Also worth noting: the editor's inline diagnostics reported this file clean while
+`tsc` reported five errors in it. `bun run check` is the authority, not the squiggles.
+
+**Did:** unit-tested the pure `currentTimeIn(timeZone, now)` function (the clock is a
+parameter, per `02-conventions.md`) and called `execute` once through a real context to
+cover the wiring. Added the `src/mastra/tools/**` coverage threshold (90/85) that
+`vitest.config.ts` had left a comment reserving; confirmed via the resolved config that
+it merges with, rather than replaces, the shared global 80/75.
+
+### 2026-07-31 — streamed tool parts are keyed by the agent's tool key, not the tool id
+
+**What is true:** the tool is declared with `id: 'get-current-time'`. Whatever key it is
+registered under in the agent's `tools` object becomes the `toolName` in the stream —
+the `id` never appears. Registered as a shorthand `{ getCurrentTimeTool }`, the model
+and the UI both saw `getCurrentTimeTool`, import-name warts and all.
+
+**Did:** registered it explicitly as `{ getCurrentTime: getCurrentTimeTool }` so the
+model-facing name is deliberate rather than a side effect of the import name, and
+corrected the agent instructions, which had been referring to the tool by its `id`
+(`get-current-time`) — a name the model never sees. Re-verified over curl that
+`toolName` is now `getCurrentTime`.
+
+That drift was the argument for deleting the sentence entirely: when and how to call a
+tool belongs in the tool's own `description`, beside the code, where it cannot fall out
+of step with the registration. `generalAgent`'s instructions are now one line of
+behaviour. Confirmed empirically that nothing was lost — with the sentence gone, "What
+time is it in Tokyo?" and the indirect "What day of the week is it today?" both still
+call `getCurrentTime`, and "What is the capital of France?" still does not.
+
+Observed lifecycle for "What time is it in Tokyo?": `tool-input-start` →
+`tool-input-delta` (×2, the JSON arriving in fragments: `{"timeZone": "Asia/Tokyo`
+then `"}`) → `tool-input-available` → `tool-output-available`, then a second
+`start-step` for the text answer.
+
+Two consequences for T1.4: the renderer keys `tool-*` parts off the registration key,
+so renaming that key is a model- and UI-visible change; and the partial-input deltas
+are real, which is what the milestone means by "must render sensibly while arguments
+are still streaming in".
 
 ## Open questions
 

@@ -45,7 +45,15 @@ export default mergeConfig(
 					// Per-directory thresholds for src/mastra/{tools,workflows} land with
 					// the code they govern (M1 onward). Vitest errors on a glob that matches
 					// nothing, so they cannot be declared before those directories exist.
-				]
+				],
+
+				thresholds: {
+					// Tools are real logic with real side effects (03-testing.md).
+					'src/mastra/tools/**': {
+						lines: 90,
+						branches: 85
+					}
+				}
 			}
 		}
 	})
