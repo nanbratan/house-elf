@@ -75,7 +75,7 @@ and 30624316521, ~1m10s each); and a full teardown — volumes and `node_modules
 - [x] T1.1 Expose an AI SDK chat endpoint
 - [x] T1.2 A tool worth watching
 - [x] T1.3 SvelteKit proxy route
-- [ ] T1.4 Chat UI
+- [ ] T1.4 Chat UI — part (a) done (streaming plain text + composer), part (b) to come
 - [ ] T1.5 Streaming quality
 - [ ] T1.6 Tests
 - [ ] **DoD verified**
@@ -1034,6 +1034,61 @@ deltas → `tool-input-available` → `tool-output-available`) arriving intact, 
 touches the response body. That asymmetry is deliberate and commented: the request is
 a complete JSON message list that has already arrived, so buffering it costs nothing,
 while the response is the thing that must stay live.
+
+### 2026-07-31 — T1.4 is two commits, and where the chat lives
+
+**What is true:** T1.4 as planned bundles "talk to the agent at all" with "render every
+part type well". Those fail differently, so they are split: (a) a `Chat` wired to the
+proxy rendering text parts only, proven in a browser; (b) the full part renderer,
+auto-scroll and error handling.
+
+The UI decisions, all confirmed with the user: the chat lives at **`/c/new`**, keeping
+the `/c/` namespace so M2 can swap the URL to `/c/<id>` on first message without moving
+files; messages are **Claude-style** — both roles full width, distinguished by a subtle
+background and a small role label, not by side; tool cards will **auto-expand while
+running and collapse to one line when done**, with a running indicator so a slow tool
+never looks frozen; scrolling up **stops the auto-follow** and offers a "jump to
+latest" button. The last two are part (b).
+
+### 2026-07-31 — `resolve.conditions: []` is not "the default"
+
+**What is true:** the browser crashed on `ReferenceError: process is not defined`, from
+`@vercel/oidc` reading `process.version` at module scope — reached via `ai` →
+`@ai-sdk/gateway`. The first fix attempted was a `window.process` shim in `app.html`.
+That was whack-a-mole: it merely advanced the crash to `os.platform is not a function`.
+It was reverted.
+
+The real cause was ours. `apps/web/vite.config.ts` carried
+`resolve: { conditions: mode === 'test' ? ['browser'] : [] }`. An empty array does not
+mean "leave Vite alone" — it **replaces** Vite's defaults, dropping `browser`. So
+`@vercel/oidc`, which ships `"browser": "./dist/index-browser.js"` in its exports map
+and whose browser build is a no-op, resolved to its Node build in the browser.
+
+**Did:** spread the key in only when it is needed —
+`...(mode === 'test' ? { resolve: { conditions: ['browser'] } } : {})` — so outside
+test the option is absent rather than empty. Lesson: for Vite resolution options,
+"absent" and "empty" are opposites.
+
+### 2026-07-31 — one copy of `ai` in the browser
+
+**What is true:** `@ai-sdk/svelte@5.0.44` declares an exact `ai@7.0.44` dependency
+(its dist-tags map majors: `ai-v5` → 3.x, `ai-v6` → 4.x, `latest` → ai v7). The root
+already had `ai@7.0.42` for the server via Mastra. `ai` is therefore pinned exactly at
+7.0.44 in `apps/web` so the app and its Svelte binding share one instance rather than
+shipping two subtly different stream parsers.
+
+### 2026-07-31 — a SIGKILLed esbuild binary, not a broken build
+
+**What is true:** `mastra build` began failing with `Mastra Build failed: The service
+was stopped`, which reads like a Mastra problem and is not. Running
+`node_modules/@esbuild/darwin-arm64/bin/esbuild --version` directly exited **137** —
+SIGKILL. macOS was killing the binary because its ad-hoc code signature no longer
+matched its contents after a `bun install` rewrote it.
+
+**Did:** `codesign --force --sign - node_modules/@esbuild/darwin-arm64/bin/esbuild`.
+Binary runs, build green. Worth remembering: any "the service was stopped" from esbuild
+on macOS should be checked by running the platform binary by hand before believing the
+tool that reported it.
 
 ## Open questions
 

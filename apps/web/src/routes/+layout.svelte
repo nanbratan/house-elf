@@ -31,6 +31,15 @@
 			<span class="text-sm font-semibold whitespace-nowrap">house-elf</span>
 		</div>
 
+		<div class="px-2 pb-2">
+			<a
+				href={resolve('/c/new')}
+				class="block rounded-md border border-line px-3 py-2 text-sm whitespace-nowrap transition-colors hover:bg-raised"
+			>
+				New chat
+			</a>
+		</div>
+
 		<nav class="flex-1 overflow-y-auto px-2 py-2">
 			<ul class="space-y-1">
 				{#each conversations as conversation (conversation.id)}

@@ -28,12 +28,15 @@ export default defineConfig(({ mode }) =>
 			})
 		],
 
-		resolve: {
-			// Under test there is no SSR pass, so Svelte must resolve to its client
-			// build — otherwise runes throw `rune_outside_svelte`. Outside test this must
-			// stay empty so the real SSR build is used. Per the Svelte testing docs.
-			conditions: mode === 'test' ? ['browser'] : []
-		},
+		// Under test there is no SSR pass, so Svelte must resolve to its client
+		// build — otherwise runes throw `rune_outside_svelte`. Per the Svelte
+		// testing docs.
+		//
+		// Outside test the key must be absent, not empty: `conditions: []` replaces
+		// Vite's defaults rather than leaving them alone, which silently drops
+		// `browser`. That made `@vercel/oidc` (pulled in by `ai`) resolve to its
+		// Node build and crash the browser with `process is not defined`.
+		...(mode === 'test' ? { resolve: { conditions: ['browser'] } } : {}),
 
 		server: {
 			watch: {
