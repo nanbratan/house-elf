@@ -57,7 +57,11 @@ export default defineConfig(({ mode }) =>
 			// docblock at the top of the file.
 			environment: 'jsdom',
 			include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
-			setupFiles: ['./tests/setup/testing-library.ts', './tests/setup/app-state.ts'],
+			setupFiles: [
+				'./tests/setup/testing-library.ts',
+				'./tests/setup/app-state.ts',
+				'./tests/setup/resize-observer.ts'
+			],
 
 			coverage: {
 				include: ['src/**/*.{ts,svelte}'],

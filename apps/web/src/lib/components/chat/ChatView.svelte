@@ -3,6 +3,7 @@
 	import { DefaultChatTransport } from 'ai';
 
 	import Composer from './Composer.svelte';
+	import StickToBottom from './StickToBottom.svelte';
 	import MessagePart from './MessagePart.svelte';
 
 	let { agentId }: { agentId: string } = $props();
@@ -23,36 +24,34 @@
 </script>
 
 <div class="flex h-full min-h-0 flex-col">
-	<div class="min-h-0 flex-1 overflow-y-auto">
-		<div class="mx-auto max-w-3xl px-4 py-6">
-			{#if empty}
-				<p class="py-16 text-center text-sm text-faint">Ask anything.</p>
-			{/if}
+	<StickToBottom>
+		{#if empty}
+			<p class="py-16 text-center text-sm text-faint">Ask anything.</p>
+		{/if}
 
-			{#each chat.messages as message (message.id)}
-				<article class="mb-6" data-role={message.role}>
-					<div class="mb-1 text-xs font-medium text-faint">
-						{message.role === 'user' ? 'You' : 'house-elf'}
-					</div>
+		{#each chat.messages as message (message.id)}
+			<article class="mb-6" data-role={message.role}>
+				<div class="mb-1 text-xs font-medium text-faint">
+					{message.role === 'user' ? 'You' : 'house-elf'}
+				</div>
 
-					<div
-						class="rounded-lg px-3 py-2 text-sm leading-relaxed"
-						class:bg-raised={message.role === 'user'}
-					>
-						{#each message.parts as part, index (index)}
-							<MessagePart {part} />
-						{/each}
-					</div>
-				</article>
-			{/each}
+				<div
+					class="rounded-lg px-3 py-2 text-sm leading-relaxed"
+					class:bg-raised={message.role === 'user'}
+				>
+					{#each message.parts as part, index (index)}
+						<MessagePart {part} />
+					{/each}
+				</div>
+			</article>
+		{/each}
 
-			{#if chat.error}
-				<p role="alert" class="rounded-lg border border-line px-3 py-2 text-sm text-muted">
-					{chat.error.message}
-				</p>
-			{/if}
-		</div>
-	</div>
+		{#if chat.error}
+			<p role="alert" class="rounded-lg border border-line px-3 py-2 text-sm text-muted">
+				{chat.error.message}
+			</p>
+		{/if}
+	</StickToBottom>
 
 	<Composer
 		status={chat.status}

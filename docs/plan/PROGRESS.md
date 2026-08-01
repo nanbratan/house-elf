@@ -76,8 +76,9 @@ and 30624316521, ~1m10s each); and a full teardown — volumes and `node_modules
 - [x] T1.2 A tool worth watching
 - [x] T1.3 SvelteKit proxy route
 - [ ] T1.4 Chat UI — part (a) done (streaming plain text + composer), part (b) chunk 1
-      done (markdown, code highlighting, tool cards, reasoning); chunk 2 (auto-scroll,
-      error + regenerate) to come
+      done (markdown, code highlighting, tool cards, reasoning), chunk 2 auto-scroll
+      done (sticks to the bottom, lets go when you scroll away, jump-to-latest);
+      error + regenerate to come
 - [ ] T1.5 Streaming quality
 - [ ] T1.6 Tests
 - [ ] **DoD verified**
@@ -1235,6 +1236,67 @@ protecting an assertion `ChatView` does not owe. What `ChatView` owes its childr
 is a part of the right kind in the right order, so the stub now prints the part and
 the tests read text. The three deeper stubs keep JSON, because `MessagePart`'s
 contract genuinely _is_ the props it passes on.
+
+### 2026-08-01 — sticking to the bottom with one rule instead of four
+
+The Svelte port of AI Elements answers "are we at the bottom?" four ways at once:
+a scroll listener, a `MutationObserver` on the subtree, an `IntersectionObserver`
+watching a 1 px sentinel it injects into the DOM, and a `ResizeObserver` — feeding
+two pieces of state, `isAtBottom` and `userHasScrolled`, that can disagree.
+
+`lib/state/stick-to-bottom.svelte.ts` keeps the behaviour and drops the machinery:
+
+- **One question, asked of the scroll position.** Distance from the bottom already
+  says whether the reader has taken over. Within 200 px is following; further is
+  not; scrolling back re-pins. There is no separate `userHasScrolled` flag to fall
+  out of step with what is on screen, and no sentinel node to inject and clean up.
+- **One signal for "there is more".** A `ResizeObserver` on the content box covers
+  every cause at once — a token, a whole message, an image loading, the window
+  narrowing and text reflowing — where the `MutationObserver` catches only DOM
+  changes and needs a `requestAnimationFrame` to see their effect.
+- **Two Svelte actions rather than a context.** The viewport and the content are
+  `use:` targets, so nothing is exported through `setContext`/`getContext` and the
+  wiring is visible in the markup.
+
+Chasing the bottom is instant; the jump button is smooth. A smooth scroll would
+still be animating when the next token lands, and the two would fight — but a
+deliberate journey back to the end should be visible.
+
+The scroller is `role="log"`, which is the correct role for a running transcript
+and gives the tests a handle that is not a CSS class.
+
+**Verified in a browser, because jsdom cannot judge this:** distance from the
+bottom stayed at 0 through a 20-item streamed list; a real wheel scroll up revealed
+the button; clicking it smooth-scrolled back and re-pinned. jsdom has no layout and
+no `ResizeObserver`, so `tests/setup/resize-observer.ts` installs an inert one
+globally and the tests swap in a controllable one.
+
+**The rules are tested where they live.** The first version put all eight tests on
+the component, which meant rendering a harness, a snippet and a `role="log"` lookup
+in order to ask whether 200 px from the bottom counts as the bottom. The threshold,
+the re-pinning and the two scroll behaviours belong to `stick-to-bottom.svelte.ts`
+and are now tested against a bare `document.createElement('div')`; the component
+substitutes a fake for the module and keeps four tests for the wiring only. Named
+for that split: `StickToBottom.svelte`, not `Conversation.svelte`, because handling
+the scroll is the whole of what it does.
+
+**A stub that cannot fail is worse than no test.** Faking `ResizeObserver` and the
+layout numbers risks tests that assert the fake. Two specific holes were found and
+closed: the fake now records what it was asked to `observe`, so deleting
+`observer.observe(node)` fails rather than passes; and the scroller is attached to
+an element already scrolled partway up, so the first measurement on mount is
+actually tested rather than agreeing with the `true` it was initialised to.
+
+Then the suite was checked the only way that means anything — by breaking the
+source ten ways (threshold moved, `if (pinned)` deleted, `auto` swapped for
+`smooth`, `observe` removed, listener never removed, observer never disconnected,
+`clientHeight` dropped from the arithmetic, first measurement skipped, the `{#if}`
+inverted, the two actions swapped) and confirming each one goes red. All ten were
+caught, and spot-checking two showed exactly one test failing, and the right one.
+
+This does mean the unit tests dispatch their own `scroll` events, and so could
+never have caught "nothing fires a scroll event here" — which is exactly the class
+of bug the browser check is for. `03-testing.md` now says where that line falls.
 
 ## Open questions
 

@@ -91,13 +91,25 @@ Feed these synthetic `UIMessage` fixtures — do not run a model.
 
 **Rune-heavy logic** (`.svelte.ts` files) is tested directly with `$state` /
 `$effect.root` / `flushSync`, without mounting a component. Prefer this: if logic can
-be extracted from a component and tested in isolation, extract it.
+be extracted from a component and tested in isolation, extract it. Where both exist,
+the `.svelte.ts` test owns the rules and the component test owns only the wiring —
+that the behaviour is attached to the right elements, and that what it decides
+reaches the screen. `stick-to-bottom` is the worked example: seven tests on the
+module, three on the component.
 
 > **jsdom's limit:** there is no layout engine, so `scrollHeight`, `scrollTop`,
 > `getBoundingClientRect`, and `IntersectionObserver` do not behave realistically.
-> Anything depending on real layout — notably the auto-scroll behaviour — goes in the
-> Playwright layer instead. Do not try to fake it with mocks; the test would assert
-> your mock, not your code.
+> Stubbing those numbers is fair when what is under test is our arithmetic — "is 200
+> px from the bottom still following?" is our rule, not the browser's. It is not fair
+> as evidence that scrolling works: that a `scroll` event fires at all, that
+> `scrollTo` moves anything, that a `ResizeObserver` notices. Those go to Playwright,
+> and to a real browser before the task is called done. A unit test that dispatches
+> its own `scroll` event cannot discover that nothing dispatches it in real life.
+
+**Where a test stubs something, make it fail.** A fake that only replays callbacks
+will happily pass code that never registered them. Break the source on purpose —
+move the constant, invert the condition, delete the subscription — and confirm the
+suite goes red, and red in the right test. Green proves nothing on its own.
 
 ### 4. E2E — Playwright, deliberately few
 
