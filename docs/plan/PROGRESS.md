@@ -75,7 +75,9 @@ and 30624316521, ~1m10s each); and a full teardown — volumes and `node_modules
 - [x] T1.1 Expose an AI SDK chat endpoint
 - [x] T1.2 A tool worth watching
 - [x] T1.3 SvelteKit proxy route
-- [ ] T1.4 Chat UI — part (a) done (streaming plain text + composer), part (b) to come
+- [ ] T1.4 Chat UI — part (a) done (streaming plain text + composer), part (b) chunk 1
+      done (markdown, code highlighting, tool cards, reasoning); chunk 2 (auto-scroll,
+      error + regenerate) to come
 - [ ] T1.5 Streaming quality
 - [ ] T1.6 Tests
 - [ ] **DoD verified**
@@ -1089,6 +1091,150 @@ matched its contents after a `bun install` rewrote it.
 Binary runs, build green. Worth remembering: any "the service was stopped" from esbuild
 on macOS should be checked by running the platform binary by hand before believing the
 tool that reported it.
+
+### 2026-07-31 — rendering model output: escape everything, highlight synchronously
+
+Four decisions taken while building the part-driven renderer (T1.4 part (b), chunk 1).
+
+**Sanitising.** All raw HTML in a model's markdown is escaped at the parser, and links
+whose scheme is not `http:`, `https:` or `mailto:` are rendered as plain text. No
+DOMPurify, no allow-list of "safe" tags. The model's output is untrusted input that
+lands in `{@html}`; the only cheap way to be sure is for the pipeline to be incapable
+of emitting markup the renderer did not write. Rejected: allowing a subset of HTML —
+it buys nothing a chat reply needs and turns every future escape from the sanitiser
+into an XSS.
+
+**`marked` 18 replaces the renderer, it does not merge it.** Passing a partial
+`renderer` in `parse()` options throws `this.renderer.paragraph is not a function`,
+because the object supplied becomes the renderer. Partial overrides have to go through
+`new Marked(options, { renderer })` (or `.use()`), which is what `src/lib/markdown.ts`
+does.
+
+**The highlighter is awaited at module scope.** `createHighlighterCore` is async but
+`HighlighterCore.codeToHtml` is not, so awaiting once at import time makes
+`renderMarkdown` synchronous — and that lets `Markdown.svelte` use a plain `$derived`
+instead of an `$effect` that assigns to `$state`. The Svelte MCP autofixer flagged the
+`$effect` version as malpractice and it was right: with an effect, every streamed token
+re-renders through a pending state that can flicker.
+
+**Theme: `catppuccin-mocha`, exported as `codeTheme`.** Chosen for legibility against
+the near-black canvas without being garish. It is the only place code colours are set,
+so swapping themes is a one-line change; the surrounding frame lives in `layout.css`.
+
+**Deviation from the plan: `source` parts are not built.** `11-m1-chat-e2e.md` lists a
+citation chip. Nothing in the app emits a source part yet, so it would be untested
+scaffolding — against the "do not scaffold ahead" rule. The milestone doc has been
+amended in this commit to defer it to M4. `reasoning` _is_ built, because M2's
+Definition of Done requires reasoning from previous turns to survive a reload.
+
+### 2026-08-01 — we are not the first people to build a chat UI
+
+**The question:** whether choosing Svelte was a mistake, given that Vercel's AI
+Elements already provides every component being hand-written here — and whether the
+project should move to React to use it.
+
+**Answer: stay on Svelte, but stop starting from a blank page.** Two things settled
+it. First, AI Elements is a _registry_, not a library: `npx ai-elements add` copies
+`.tsx` into your repo and you own it from then on. Adopting it means owning ~29 React
+files plus shadcn, Radix and CVA — the maintenance does not disappear, only the first
+draft does. Second, the genuinely hard part of M1 was Mastra's stream protocol meeting
+the client, and `@ai-sdk/svelte` had already solved that; AI Elements sits above that
+layer and never touched the risk. The frontend decision in `01-decisions.md` (D2)
+stands unchanged.
+
+**But the survey was worth it, and four things came back.** Both repos are cloned to
+`~/reference/` for future milestones. Vercel's is the source of truth; the unofficial
+Svelte port is only consulted for how a pattern translates into runes.
+
+**`remend`, not `streamdown`.** AI Elements renders markdown with `streamdown`, which
+is React ("a drop-in replacement for react-markdown"). But its self-healing half is
+published separately as `remend`: 12 KB, zero dependencies, no framework, Apache-2.0,
+`(text: string) => string`. Measured against our renderer, half-arrived text really
+did render its markup literally — `a **bol` showed the asterisks until the pair
+closed, then snapped into bold. Fenced code and tables were already fine. `remend` now
+runs in front of `marked`. Worth noting `streamdown` itself is built on `marked`, so
+the pipeline chosen here was not the naive one — only the repair step was missing.
+
+**The tool card had the wrong states.** Ours collapsed the two approval states into
+one and never handled `output-denied`. All seven are now enumerated in a `Record` keyed
+by the SDK's own union, so a state we have not considered is a compile error rather
+than a mislabelled card. Input and output are highlighted with the Shiki instance the
+markdown renderer already builds. Their `Tool` has no auto-expand behaviour, so ours
+was kept.
+
+**Reasoning now measures itself.** Ported from their `reasoning.tsx`: open while the
+model thinks, report the duration in seconds, and collapse one second after the last
+token so the final words stay readable. Writing to state from an `$effect` is
+deliberate here — elapsed time is not derivable from current state — and is the same
+approach they take with `useEffect`. Building it surfaced a real bug: keying `open` on
+`streaming` closed the pane the instant streaming stopped, so the linger never
+happened. It is keyed on having _started_ instead, and there is a test for it.
+
+**Enter and IME composition.** Their prompt input tracks `compositionstart` /
+`compositionend` in addition to reading `KeyboardEvent.isComposing`, because that flag
+is unreliable in some browsers. Ours read only the flag, which means Enter could have
+sent half-composed Japanese, Chinese or Korean. Both signals are now checked.
+
+**Attribution.** No source was copied — theirs is React — but the behaviours above came
+from reading their work, so `NOTICE.md` credits it. Apache-2.0.
+
+**Still deliberately not ported:** their `prompt-input` is 1,463 lines across ~60
+exports (attachments, slash commands, model selection, tabs). Our composer is 60 lines
+and does what M1 needs. `sources` and `inline-citation` are the M4 pieces; `canvas`,
+`node`, `edge` and `connection` are the M5 ones.
+
+### 2026-08-01 — a place for each file, decided once
+
+Review of the first chat components found three things drifting, all the same
+mistake in different clothes: naming a concept twice, and putting files wherever
+the last one landed.
+
+**Disclosure is one concept, so it has one module — and it is behaviour, not a
+type.** `ToolCard` and `ReasoningPart` had independently invented "open, closed,
+or follow whatever I am reporting on" — the card as `'auto' | 'closed' | 'open'`,
+the reasoning pane as a `boolean | undefined` where `undefined` quietly meant the
+same thing. Both now call `createExpansion(() => …)` from
+`lib/state/expansion.svelte.ts` and read `expansion.isOpen` / `expansion.toggle()`.
+This is Svelte's answer to a React hook: a module named `.svelte.ts` may use runes,
+so a factory can own `$state` and `$derived` and hand back getters. No `use`
+prefix — in Svelte `use:` means an action, so `useExpansion` would mislead. The
+three states stay private to the module; callers get a question and a verb.
+
+**A component does one thing.** The six-dot loader — markup, delay table,
+keyframes and the `prefers-reduced-motion` fallback — was a third of `ToolCard`
+and had nothing to do with tool calls. It is now `WorkingDots.svelte`.
+
+**Effects do not use flags to undo their own damage.** `ReasoningPart`'s timing
+effect reset `startedAt` to `null` both to mean "not started" and to mean "already
+handled". Splitting it in two made it worse, not better — two effects, four
+variables, and names (`measured`, `thoughtStartedHere`) that described the
+bookkeeping rather than the thought. The real fix was to notice _why_ the guards
+existed: an effect re-runs when reactive state it **reads** changes, and re-running
+fires its cleanup, which was cancelling the linger timer. So there is one effect
+again, it reads `streaming` and nothing else, and therefore runs exactly twice per
+thought — no guard needed. The four booleans collapse into one named `phase`
+(`absent → thinking → lingering → read`) plus a plain `startedAtMs`. Reactive state
+is for what renders; plain variables are for what an effect remembers.
+
+**Constants are not components.** `tool-state.ts` sat in `lib/components/chat/`
+because that is where it was used, not because it belonged there. It is now
+`lib/constants/tool-state.ts`.
+
+**Layout mirrors itself.** `src/lib/markdown.ts` was in the root of `lib/` because
+it was the first non-component thing written; it is now `lib/utils/markdown.ts`.
+`apps/web/tests/` was flat, which forced test files into awkward names to stay
+unique — `markdown.test.ts` versus `markdown-view.test.ts` for the module and the
+component that renders it. Tests now mirror `src/`: `tests/utils/`,
+`tests/components/chat/`, `tests/routes/`, with shared `tests/stubs/` and
+`tests/setup/`. Component tests are named for their component, `ToolCard.test.ts`.
+Vitest's `tests/**/*.test.ts` was already recursive, so no config change.
+
+**Stubs assert at the level of the contract.** The `MessagePart` stub serialised
+its props to JSON so `ChatView`'s tests could parse them back out — machinery
+protecting an assertion `ChatView` does not owe. What `ChatView` owes its children
+is a part of the right kind in the right order, so the stub now prints the part and
+the tests read text. The three deeper stubs keep JSON, because `MessagePart`'s
+contract genuinely _is_ the props it passes on.
 
 ## Open questions
 

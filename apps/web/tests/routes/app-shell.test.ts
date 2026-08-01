@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { createRawSnippet } from 'svelte';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import Layout from '../src/routes/+layout.svelte';
-import { setPathname } from './setup/app-state.ts';
+import Layout from '../../src/routes/+layout.svelte';
+import { setPathname } from '../setup/app-state.ts';
 
 /** `+layout.svelte` requires a children snippet; its content is irrelevant here. */
 const children = createRawSnippet(() => ({

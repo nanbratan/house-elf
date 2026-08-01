@@ -38,6 +38,8 @@ vi.mock('@ai-sdk/svelte', () => ({
 	}
 }));
 
+// `ChatView` only reaches for the transport, and the part renderer is stubbed,
+// so nothing here needs the real module.
 vi.mock('ai', () => ({
 	// A `function`, not an arrow: `ChatView` calls it with `new`.
 	DefaultChatTransport: vi.fn(function (this: unknown, options: { api?: string }) {
@@ -45,7 +47,13 @@ vi.mock('ai', () => ({
 	})
 }));
 
-const ChatView = (await import('../src/lib/components/chat/ChatView.svelte')).default;
+// What a part renders is `MessagePart`'s business. These tests are about the
+// frame around it: whose message it is, and which parts reach it.
+vi.mock('../../../src/lib/components/chat/MessagePart.svelte', async () => ({
+	default: (await import('../../stubs/MessagePartStub.svelte')).default
+}));
+
+const ChatView = (await import('../../../src/lib/components/chat/ChatView.svelte')).default;
 
 /** The nth message on screen. Throws rather than returning `undefined`. */
 function messageAt(index: number): HTMLElement {
@@ -54,9 +62,11 @@ function messageAt(index: number): HTMLElement {
 	return message;
 }
 
-/** The rendered text of one message, in document order. */
-function textsIn(message: HTMLElement): (string | null)[] {
-	return [...message.querySelectorAll('p')].map((paragraph) => paragraph.textContent);
+/** The parts handed to the renderer for one message, in document order. */
+function partsIn(message: HTMLElement): (string | null)[] {
+	return within(message)
+		.getAllByTestId('part')
+		.map((element) => element.textContent);
 }
 
 describe('chat view', () => {
@@ -94,17 +104,17 @@ describe('chat view', () => {
 		const user = messageAt(0);
 		expect(user).toHaveAttribute('data-role', 'user');
 		expect(within(user).getByText('You')).toBeInTheDocument();
-		expect(textsIn(user)).toStrictEqual(['Hello']);
+		expect(partsIn(user)).toStrictEqual(['text: Hello']);
 
 		const assistant = messageAt(1);
 		expect(assistant).toHaveAttribute('data-role', 'assistant');
 		expect(within(assistant).getByText('house-elf')).toBeInTheDocument();
-		expect(textsIn(assistant)).toStrictEqual(['Hi there']);
+		expect(partsIn(assistant)).toStrictEqual(['text: Hi there']);
 
 		expect(screen.queryByText('Ask anything.')).not.toBeInTheDocument();
 	});
 
-	it('renders every text part of a multi-part reply, in order', () => {
+	it('passes every part of a multi-part reply on, in order', () => {
 		mocks.state.messages = [
 			{
 				id: '1',
@@ -119,18 +129,13 @@ describe('chat view', () => {
 
 		render(ChatView, { props: { agentId: 'general' } });
 
-		// One message, both texts, in the order the model produced them, with the
-		// part this milestone cannot render yet contributing nothing in between.
-		expect(textsIn(messageAt(0))).toStrictEqual(['Before the tool.', 'After the tool.']);
-	});
-
-	it('ignores part types it does not understand rather than throwing', () => {
-		mocks.state.messages = [
-			{ id: '1', role: 'assistant', parts: [{ type: 'some-future-part-type' }] }
-		];
-
-		expect(() => render(ChatView, { props: { agentId: 'general' } })).not.toThrow();
-		expect(textsIn(messageAt(0))).toStrictEqual([]);
+		// Nothing is filtered on the way down: deciding what a part looks like,
+		// including that some render as nothing, belongs one level lower.
+		expect(partsIn(messageAt(0))).toStrictEqual([
+			'text: Before the tool.',
+			'tool-getCurrentTime',
+			'text: After the tool.'
+		]);
 	});
 
 	it('surfaces an error to assistive technology as well as on screen', () => {

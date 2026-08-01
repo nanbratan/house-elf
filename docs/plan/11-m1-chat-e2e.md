@@ -53,7 +53,9 @@ deterministic, and easy to trigger on demand.
   - `tool-*` — a collapsible card showing tool name, a status indicator
     (pending / running / done / error), the input arguments, and the result. Must
     render sensibly while arguments are still streaming in partial.
-  - `source` — a small citation chip.
+  - `source` — a small citation chip. **Deferred past M1**: nothing in the app
+    emits a source part yet (no retrieval, no web search), so the chip would be
+    untestable scaffolding. Build it when M4 gives it something to cite.
   - unknown types — render nothing, do not throw.
 - Composer: textarea, Enter to send, Shift+Enter for newline, Stop button while
   streaming.

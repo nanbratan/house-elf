@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const env: Record<string, string | undefined> = {};
 vi.mock('$env/dynamic/private', () => ({ env }));
 
-const { POST } = await import('../src/routes/api/chat/[agentId]/+server');
+const { POST } = await import('../../src/routes/api/chat/[agentId]/+server');
 
 /**
  * `POST` expects a full SvelteKit `RequestEvent`. It reads four fields, so the

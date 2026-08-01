@@ -1,15 +1,21 @@
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import Composer from '../src/lib/components/chat/Composer.svelte';
+import Composer from '../../../src/lib/components/chat/Composer.svelte';
 
 function renderComposer(status: 'ready' | 'submitted' | 'streaming' | 'error' = 'ready') {
 	const onsend = vi.fn();
 	const onstop = vi.fn();
-	render(Composer, { props: { status, onsend, onstop } });
+	const { container, unmount } = render(Composer, { props: { status, onsend, onstop } });
 
-	return { onsend, onstop, textarea: screen.getByRole('textbox', { name: 'Message' }) };
+	return {
+		onsend,
+		onstop,
+		container,
+		unmount,
+		textarea: screen.getByRole('textbox', { name: 'Message' })
+	};
 }
 
 describe('composer', () => {
@@ -42,6 +48,36 @@ describe('composer', () => {
 
 			expect(onsend).not.toHaveBeenCalled();
 		});
+
+		describe('typing a language that needs an input method editor', () => {
+			// Japanese, Chinese and Korean are typed phonetically, and the IME offers
+			// a list of candidate characters. Enter picks the highlighted candidate —
+			// it means "yes, that word", not "send". Treating it as send fires the
+			// message on the first word of every sentence.
+			it('does not send the Enter that accepts a candidate', async () => {
+				const user = userEvent.setup();
+				const { onsend, textarea } = renderComposer();
+
+				await user.type(textarea, 'にほんご');
+				await fireEvent.compositionStart(textarea);
+				// Deliberately the unhelpful case: the browser omits `isComposing`.
+				await fireEvent.keyDown(textarea, { key: 'Enter' });
+
+				expect(onsend).not.toHaveBeenCalled();
+			});
+
+			it('sends once composition has ended', async () => {
+				const user = userEvent.setup();
+				const { onsend, textarea } = renderComposer();
+
+				await user.type(textarea, 'にほんご');
+				await fireEvent.compositionStart(textarea);
+				await fireEvent.compositionEnd(textarea);
+				await fireEvent.keyDown(textarea, { key: 'Enter' });
+
+				expect(onsend).toHaveBeenCalledExactlyOnceWith('にほんご');
+			});
+		});
 	});
 
 	describe('while a reply is arriving', () => {
@@ -62,6 +98,19 @@ describe('composer', () => {
 			await user.click(screen.getByRole('button', { name: 'Stop' }));
 
 			expect(onstop).toHaveBeenCalledOnce();
+		});
+
+		it('shows that a request is in flight before any of the reply exists', () => {
+			// Between pressing Enter and the first token there is nothing on screen.
+			// Without this the app looks frozen for as long as the model takes to
+			// start.
+			const { container, unmount } = renderComposer('submitted');
+			expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+			unmount();
+
+			// Once text is arriving, the movement is redundant.
+			const streaming = renderComposer('streaming');
+			expect(streaming.container.querySelector('.animate-pulse')).not.toBeInTheDocument();
 		});
 
 		it('refuses to send a second message while the first is still streaming', async () => {

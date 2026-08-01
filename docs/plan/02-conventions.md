@@ -79,6 +79,28 @@ manual verification steps. Perform them.
   (`text`, `reasoning`, `tool-*`, `source`) so new part types degrade gracefully
   rather than crashing.
 
+### Web file layout
+
+- `src/lib/components/<area>/` holds components and nothing else. Constants go to
+  `src/lib/constants/`, plain modules to `src/lib/utils/`, reusable reactive
+  behaviour to `src/lib/state/` as `*.svelte.ts`. Nothing lives in the root of
+  `src/lib/` — the first file to need a folder creates it rather than settling
+  there.
+- Shared reactive behaviour is Svelte's answer to a hook: a `.svelte.ts` module
+  exporting a `create*` factory that owns `$state`/`$derived` and returns getters.
+  No `use` prefix — `use:` means an action in Svelte.
+- `apps/web/tests/` mirrors `src/`: `tests/components/<area>/`, `tests/utils/`,
+  `tests/routes/`, plus shared `tests/stubs/` and `tests/setup/`.
+- A component's test is named for the component: `ToolCard.svelte` →
+  `tests/components/chat/ToolCard.test.ts`. Mirrored paths keep names unambiguous,
+  so no test needs a suffix to stay unique.
+- A string constant repeated across components (states, modes, keys) gets a named
+  `as const` object in its own module, `satisfies` the upstream type where one
+  exists. Do not spell the same literal in two files.
+- An `$effect` should read only what it must. Every reactive value it reads is a
+  reason for it to re-run, and re-running fires its cleanup — so a timer inside an
+  effect that reads its own writes will cancel itself.
+
 ### Environment variables
 
 - All secrets in `.env` at repo root, loaded by Bun. Never committed.

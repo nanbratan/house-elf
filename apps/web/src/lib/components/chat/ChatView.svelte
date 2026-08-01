@@ -3,6 +3,7 @@
 	import { DefaultChatTransport } from 'ai';
 
 	import Composer from './Composer.svelte';
+	import MessagePart from './MessagePart.svelte';
 
 	let { agentId }: { agentId: string } = $props();
 
@@ -39,12 +40,7 @@
 						class:bg-raised={message.role === 'user'}
 					>
 						{#each message.parts as part, index (index)}
-							{#if part.type === 'text'}
-								<!-- Markdown, tool cards and the rest arrive with the part
-								     renderer. Plain text first, so the streaming itself is
-								     proven before anything is layered on top. -->
-								<p class="whitespace-pre-wrap">{part.text}</p>
-							{/if}
+							<MessagePart {part} />
 						{/each}
 					</div>
 				</article>
