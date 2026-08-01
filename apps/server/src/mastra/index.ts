@@ -5,6 +5,12 @@ import { PostgresStore } from '@mastra/pg';
 
 import { env } from '../env';
 import { generalAgent } from './agents/general';
+import { describeChatError } from './chat-error';
+
+const logger = new PinoLogger({
+	name: 'house-elf',
+	level: 'info'
+});
 
 export const mastra = new Mastra({
 	agents: { general: generalAgent },
@@ -18,7 +24,13 @@ export const mastra = new Mastra({
 			chatRoute({
 				path: '/chat/:agentId',
 				sendReasoning: true,
-				sendSources: true
+				sendSources: true,
+				// The default serializer streams the provider's error to the browser,
+				// stack trace and upstream URL included. Detail belongs in the log.
+				onError: (error) => {
+					logger.error('Chat generation failed', { error });
+					return describeChatError(error);
+				}
 			})
 		]
 	},
@@ -26,8 +38,5 @@ export const mastra = new Mastra({
 		id: 'house-elf-storage',
 		connectionString: env.databaseUrl
 	}),
-	logger: new PinoLogger({
-		name: 'house-elf',
-		level: 'info'
-	})
+	logger
 });

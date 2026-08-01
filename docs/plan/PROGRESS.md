@@ -78,7 +78,7 @@ and 30624316521, ~1m10s each); and a full teardown — volumes and `node_modules
 - [x] T1.4 Chat UI
 - [x] T1.5 Streaming quality
 - [x] T1.6 Tests
-- [ ] **DoD verified**
+- [x] **DoD verified**
 
 ## M1.5 — Choosing the model → [11b-m1.5-model-selection.md](11b-m1.5-model-selection.md)
 
@@ -1473,9 +1473,39 @@ One correction survives the deletion: the accessor is `listTools()`, not
 `getTools()`, and the M1 doc's `MockLanguageModelV2` is now `V3`, since the installed
 `ai` ships V3 and V4 only.
 
+### 2026-08-01 — the error screen was telling the browser where our files live
+
+DoD step 4, the one path never exercised: swap the Anthropic key for a bad one and
+see what the UI does. It did not crash or go blank — a `role="alert"` appeared, with
+**Try again**, and the composer stayed usable. Underneath that sentence it printed
+the provider's error object verbatim: `AI_APICallError`, the upstream URL, and a
+stack trace full of absolute paths into this machine's home directory.
+
+Unreadable for the person waiting, and once M6 puts this on the internet, it is a
+stack trace served to strangers. `chatRoute` takes `onError: (error) => string`,
+which decides what enters the stream, so the fix belongs there: the client gets a
+sentence, the log keeps everything.
+
+Categorised rather than generic, because the actions differ — a rejected key is
+fixed, a rate limit is waited out, a 5xx is retried. `describeChatError` reads
+`statusCode` and `name` defensively off an unknown value and never returns anything
+derived from the error's own text.
+
+**Confirmed by doing it again**: the browser showed "The model provider rejected our
+credentials. Check the API key in the server environment." and nothing else, while
+the server log still held the full `authentication_error` with its `request_id`. Key
+restored, normal reply confirmed after.
+
+The unit tests assert the absence of `x-api-key`, `node_modules`, `file:///`,
+`api.anthropic.com` and `AI_APICallError` in the output — the leak, not the wording,
+which will change.
+
+Also settled while here: the duplicate dev processes in Open questions were a
+22-hour-old vite serving :5173 against a fresh Mastra on :4111. Both pairs killed and
+one clean `bun run dev` started before any of the above was measured.
+
 ## Open questions
 
 Things needing a human answer. Remove once resolved.
 
-- **Two `mastra dev` and two `vite dev` processes are running.** Harmless so far,
-  but worth a cleanup before trusting any further timing measurements.
+- _(none)_
