@@ -11,9 +11,14 @@ This project is built from a written plan. **Read the plan before writing code.*
 | ---------------------------------- | ----------------------------------------------------------------------------------------------- |
 | Starting any session               | [docs/plan/README.md](docs/plan/README.md), then [docs/plan/PROGRESS.md](docs/plan/PROGRESS.md) |
 | Implementing a milestone           | The milestone file, plus `01-decisions.md`, `02-conventions.md`, `03-testing.md`                |
+| Writing any code                   | [.github/instructions/](.github/instructions/) — how we write code, and how we test it          |
 | Wondering why something was chosen | [docs/plan/01-decisions.md](docs/plan/01-decisions.md) — it records rejected alternatives too   |
 
 `docs/plan/PROGRESS.md` is the source of truth for what is done. Update it as you go.
+
+The rules in `.github/instructions/` load automatically in VS Code. Other agents
+should read them directly — they are the working agreement, not suggestions. When the
+user teaches you a new one, capture it: `.github/skills/capture-convention/SKILL.md`.
 
 ## Non-negotiable rules
 
@@ -24,8 +29,8 @@ This project is built from a written plan. **Read the plan before writing code.*
    the installed version exactly.
 2. **Never invent model IDs.** Run
    `.agents/skills/mastra/scripts/provider-registry.mjs` for valid `provider/model`
-   strings. Every model name in the plan is a placeholder. Model IDs live in env
-   vars, never hardcoded.
+   strings. Every model name in the plan is a placeholder. The allowlist in
+   `apps/server/src/mastra/models.ts` is the only place ids are written down.
 3. **One milestone at a time.** Do not start milestone N+1 until N's Definition of
    Done is met and verified _by running the app_, not by reading the code.
 4. **Do not scaffold ahead.** If the current milestone does not need a file, do not
