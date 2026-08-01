@@ -77,7 +77,7 @@ and 30624316521, ~1m10s each); and a full teardown — volumes and `node_modules
 - [x] T1.3 SvelteKit proxy route
 - [x] T1.4 Chat UI
 - [x] T1.5 Streaming quality
-- [ ] T1.6 Tests
+- [x] T1.6 Tests
 - [ ] **DoD verified**
 
 ## M1.5 — Choosing the model → [11b-m1.5-model-selection.md](11b-m1.5-model-selection.md)
@@ -1440,6 +1440,38 @@ delete the stub. Two corrections came out of checking this: the plan's
 `MockLanguageModelV2` does not exist in the installed `ai` (V3 and V4 only), and
 Mastra publishes no E2E or UI-testing guidance at all — its testing docs are entirely
 evals — so the approach is our call rather than a documented one.
+
+### 2026-08-01 — a test that only proves Mastra is Mastra
+
+T1.6 asked for an integration test: the agent calls `getCurrentTime` with the right
+argument, against a mock model, no network. It was written, it passed, and two
+mutations — removing the tool registration, emptying its description — each failed
+it. Then it was deleted.
+
+The mutations prove the assertions work, not that the test is worth its cost. Ask
+instead what part of it is ours. Mastra parsing a tool call and running the tool is
+Mastra's behaviour, covered by Mastra's own suite. What belongs to us is that the
+tool is registered, that its schema field names match what `execute` reads, and that
+its description is not empty. The middle one is a compile error — `createTool` types
+`execute` from `inputSchema`, and `check` runs on every task. The first and last are
+two properties.
+
+Against that: a hand-built mock of a provider spec we do not own. `finishReason`
+turned out to be `{ unified, raw }` rather than a string, and `result.toolCalls[]`
+entries are chunk-shaped (`{ type, runId, from, payload: { toolName, args } }`)
+rather than the AI SDK's flat `{ toolName, input }` — discoveries that cost more than
+the coverage returned. It is the same objection that killed the hand-written SSE
+stub, one layer down.
+
+`currentTimeIn` keeps its own unit tests from T1.2, which cover the logic that is
+actually ours. Registration and description get real coverage in
+[M1.5](11b-m1.5-model-selection.md)'s E2E, where a scripted model drives the whole
+pipeline and a missing tool shows up as the agent failing to answer — the symptom
+that matters.
+
+One correction survives the deletion: the accessor is `listTools()`, not
+`getTools()`, and the M1 doc's `MockLanguageModelV2` is now `V3`, since the installed
+`ai` ships V3 and V4 only.
 
 ## Open questions
 

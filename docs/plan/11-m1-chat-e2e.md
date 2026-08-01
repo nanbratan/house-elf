@@ -76,8 +76,9 @@ deterministic, and easy to trigger on demand.
 - **Component:** composer key handling and Stop-button visibility.
 - **E2E:** auto-scroll follows the stream and stops once the user scrolls up
   (needs real layout — see [03-testing.md](03-testing.md)).
-- **Integration:** the agent calls `getCurrentTime` with the right argument, using
-  `MockLanguageModelV2` — no network.
+- ~~**Integration:** the agent calls `getCurrentTime` with the right argument~~ —
+  **dropped.** Whether Mastra calls a registered tool is Mastra's behaviour, tested
+  by Mastra. See the decision log.
 - **Unit:** the `getCurrentTime` tool's timezone handling, including an invalid zone.
 - **E2E:** send a message against a stubbed model and observe a streamed response.
 
