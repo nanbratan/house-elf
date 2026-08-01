@@ -65,7 +65,8 @@ deterministic, and easy to trigger on demand.
 ### T1.5 — Streaming quality
 
 - Confirm tokens appear progressively, not in one chunk.
-- Confirm the Stop button actually aborts server-side generation (check server logs).
+- Confirm the Stop button aborts generation: the text stops growing in the browser,
+  and the proxy's forwarded abort signal is asserted in a test.
 - Confirm a mid-stream page refresh does not corrupt anything.
 
 ### T1.6 — Tests
@@ -89,8 +90,8 @@ Performed manually in a browser:
 1. Send "hello" → response streams in token by token.
 2. Ask "what time is it in Tokyo?" → the tool card appears, shows the timezone
    argument, shows the result, and the agent's answer follows.
-3. Send a long request, press Stop mid-stream → generation halts and the server log
-   shows the abort.
+3. Send a long request, press Stop mid-stream → generation halts and the reply stops
+   growing.
 4. Trigger an error (e.g. temporarily use an invalid API key) → the UI shows a
    readable error rather than a blank screen or a crash.
 5. Ask for something requiring a code block → it renders with syntax highlighting.

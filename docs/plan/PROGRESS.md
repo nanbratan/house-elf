@@ -76,7 +76,7 @@ and 30624316521, ~1m10s each); and a full teardown — volumes and `node_modules
 - [x] T1.2 A tool worth watching
 - [x] T1.3 SvelteKit proxy route
 - [x] T1.4 Chat UI
-- [ ] T1.5 Streaming quality
+- [x] T1.5 Streaming quality
 - [ ] T1.6 Tests
 - [ ] **DoD verified**
 
@@ -1326,8 +1326,51 @@ This does mean the unit tests dispatch their own `scroll` events, and so could
 never have caught "nothing fires a scroll event here" — which is exactly the class
 of bug the browser check is for. `03-testing.md` now says where that line falls.
 
+### 2026-08-01 — the stream is chunkier than the UI, and it is not the UI's fault
+
+T1.5 asks for three confirmations. All three are done, with numbers rather than
+impressions.
+
+**Tokens arrive progressively.** A 1,565-character reply painted in 18 separate DOM
+updates, first paint at 1.0s, median 184ms between updates.
+
+That works out at ~100 characters per update on a suspiciously regular cadence, so
+the obvious follow-up was whether the UI was the thing batching. It is not. Reading
+the raw stream off the proxy gave 21 network chunks at a 211ms median gap, and
+`curl` straight to Mastra on :4111 put text deltas at 0.625, 0.853, 1.062, 1.275,
+1.482 … — every ~210ms. The UI paints what it is given, as fast as it is given it.
+
+What produces that ~210ms cadence is **not established**. It could be Anthropic's
+delta size or something in Mastra's pipeline; a regular timer smells like batching,
+but that is a guess and is recorded here as one.
+
+**A mid-stream refresh loses the thread and nothing else.** Reloading 1.8s into a
+stream gave no page errors, no stuck spinner, no phantom alert, and a usable
+composer. The in-flight POST ended `net::ERR_ABORTED`, which is correct. The empty
+transcript afterwards is expected — persistence is M2.
+
+**Stop aborts, and the plan asked for weaker evidence than we have.** In the
+browser, text froze mid-sentence at 999 characters and stayed frozen through four
+further seconds, the Stop button went away, the composer came back, and the request
+ended `net::ERR_ABORTED`.
+
+The milestone said to confirm this by reading the server log. That was dropped, and
+`11-m1-chat-e2e.md` is corrected to match. A dev-server log line is poor evidence:
+an aborted request may log nothing at all, so absence proves nothing, and it is a
+one-shot eyeball nobody repeats. The link we actually own is asserted on every test
+run instead — `chat-proxy.test.ts` aborts a client controller and checks the
+_upstream_ signal flips to `aborted`. Client abort → forwarded signal is proven;
+what Mastra then does with a dead socket is the framework's responsibility.
+
+Smoothing the cadence was considered and deferred: `chatRoute` takes an
+`experimentalTransform` option and `@mastra/ai-sdk` exports a `smoothStream()`
+factory for it, which would re-pace the existing backlog word by word. It is
+cosmetic, it slightly delays the final token, and it would mask the ~210ms question
+rather than answer it. Not done.
+
 ## Open questions
 
 Things needing a human answer. Remove once resolved.
 
-- _(none)_
+- **Two `mastra dev` and two `vite dev` processes are running.** Harmless so far,
+  but worth a cleanup before trusting any further timing measurements.
