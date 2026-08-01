@@ -3,6 +3,7 @@
 	import { DefaultChatTransport } from 'ai';
 
 	import Composer from './Composer.svelte';
+	import ErrorNotice from './ErrorNotice.svelte';
 	import StickToBottom from './StickToBottom.svelte';
 	import MessagePart from './MessagePart.svelte';
 
@@ -47,9 +48,7 @@
 		{/each}
 
 		{#if chat.error}
-			<p role="alert" class="rounded-lg border border-line px-3 py-2 text-sm text-muted">
-				{chat.error.message}
-			</p>
+			<ErrorNotice error={chat.error} onretry={() => chat.regenerate()} />
 		{/if}
 	</StickToBottom>
 

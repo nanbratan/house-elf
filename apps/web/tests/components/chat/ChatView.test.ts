@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => {
 	return {
 		state,
 		sendMessage: vi.fn(),
+		regenerate: vi.fn(),
 		stop: vi.fn(),
 		transportOptions: [] as { api?: string }[]
 	};
@@ -25,6 +26,7 @@ const mocks = vi.hoisted(() => {
 vi.mock('@ai-sdk/svelte', () => ({
 	Chat: class {
 		sendMessage = mocks.sendMessage;
+		regenerate = mocks.regenerate;
 		stop = mocks.stop;
 		get messages() {
 			return mocks.state.messages;
@@ -51,6 +53,12 @@ vi.mock('ai', () => ({
 // frame around it: whose message it is, and which parts reach it.
 vi.mock('../../../src/lib/components/chat/MessagePart.svelte', async () => ({
 	default: (await import('../../stubs/MessagePartStub.svelte')).default
+}));
+
+// Likewise the wording of a failure and how it is presented: `ChatView`'s share is
+// which failure, and what the retry does.
+vi.mock('../../../src/lib/components/chat/ErrorNotice.svelte', async () => ({
+	default: (await import('../../stubs/ErrorNoticeStub.svelte')).default
 }));
 
 const ChatView = (await import('../../../src/lib/components/chat/ChatView.svelte')).default;
@@ -138,12 +146,44 @@ describe('chat view', () => {
 		]);
 	});
 
-	it('surfaces an error to assistive technology as well as on screen', () => {
-		mocks.state.error = new Error('Upstream is down');
+	describe('after a failed reply', () => {
+		beforeEach(() => {
+			mocks.state.error = new Error('Upstream is down');
+			mocks.state.status = 'error';
+			mocks.state.messages = [{ id: '1', role: 'user', parts: [{ type: 'text', text: 'Hello' }] }];
+		});
 
-		render(ChatView, { props: { agentId: 'general' } });
+		it('hands the failure to the notice, and shows nothing when there is none', () => {
+			const { unmount } = render(ChatView, { props: { agentId: 'general' } });
 
-		expect(screen.getByRole('alert')).toHaveTextContent('Upstream is down');
+			expect(screen.getByTestId('error-notice')).toHaveTextContent('Upstream is down');
+
+			unmount();
+			mocks.state.error = undefined;
+			render(ChatView, { props: { agentId: 'general' } });
+
+			expect(screen.queryByTestId('error-notice')).not.toBeInTheDocument();
+		});
+
+		it('asks the same question again when the notice requests a retry', async () => {
+			const user = userEvent.setup();
+			render(ChatView, { props: { agentId: 'general' } });
+
+			await user.click(screen.getByRole('button', { name: 'Retry' }));
+
+			// No message id: the SDK keeps a trailing user message and re-asks, so
+			// the reader does not have to retype anything.
+			expect(mocks.regenerate).toHaveBeenCalledExactlyOnceWith();
+		});
+
+		it('leaves the composer usable, so the reader can move on instead', async () => {
+			const user = userEvent.setup();
+			render(ChatView, { props: { agentId: 'general' } });
+
+			await user.type(screen.getByRole('textbox', { name: 'Message' }), 'Never mind{Enter}');
+
+			expect(mocks.sendMessage).toHaveBeenCalledExactlyOnceWith({ text: 'Never mind' });
+		});
 	});
 
 	it('hands a composed message to the chat', async () => {

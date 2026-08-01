@@ -75,10 +75,7 @@ and 30624316521, ~1m10s each); and a full teardown — volumes and `node_modules
 - [x] T1.1 Expose an AI SDK chat endpoint
 - [x] T1.2 A tool worth watching
 - [x] T1.3 SvelteKit proxy route
-- [ ] T1.4 Chat UI — part (a) done (streaming plain text + composer), part (b) chunk 1
-      done (markdown, code highlighting, tool cards, reasoning), chunk 2 auto-scroll
-      done (sticks to the bottom, lets go when you scroll away, jump-to-latest);
-      error + regenerate to come
+- [x] T1.4 Chat UI
 - [ ] T1.5 Streaming quality
 - [ ] T1.6 Tests
 - [ ] **DoD verified**
@@ -1293,6 +1290,37 @@ source ten ways (threshold moved, `if (pinned)` deleted, `auto` swapped for
 `clientHeight` dropped from the arithmetic, first measurement skipped, the `{#if}`
 inverted, the two actions swapped) and confirming each one goes red. All ten were
 caught, and spot-checking two showed exactly one test failing, and the right one.
+
+### 2026-08-01 — a failure is part of the conversation, not a dead end
+
+T1.4 asked for "show the error, offer regenerate". Four decisions in how:
+
+**Two sentences, in that order.** `error.message` is frequently "Failed to fetch",
+which explains nothing to the person reading it and is the first thing you want in
+a bug report. So the alert leads with "That reply did not arrive." and keeps the
+raw text underneath in smaller, fainter print.
+
+**The alert sits in the transcript**, where the reply would have been, rather than
+floating over the page. The failure belongs to the exchange it interrupted, and
+scrolling back should find it there.
+
+**Nothing to dismiss.** `AbstractChat.setStatus` clears `state.error` on every new
+request (verified in `node_modules/ai/dist/index.js`), so both Try again and simply
+typing something else clear the warning. An explicit `clearError()` call and a
+dismiss button would both be redundant.
+
+**Try again re-asks rather than asking the reader to retype.** `regenerate()` with
+no message id trims back to the last message and keeps it if it was the user's, so
+the original question is re-sent as it stood.
+
+The composer was already left usable in the `error` status — `Composer`'s `busy`
+only covers `submitted` and `streaming` — and there is now a test saying so, since
+it was true by accident rather than on purpose.
+
+**Verified in a browser** by intercepting the proxy route with a 500, sending a
+message, then removing the fault and pressing Try again: the original question was
+re-asked without retyping, the alert cleared itself, and a real reply streamed in.
+The invalid-API-key path from the milestone's manual checklist is still to do.
 
 This does mean the unit tests dispatch their own `scroll` events, and so could
 never have caught "nothing fires a scroll event here" — which is exactly the class
