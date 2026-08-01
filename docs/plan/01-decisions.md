@@ -120,8 +120,9 @@ personal data on infrastructure under your control.
 
 **Chosen:** Configure Anthropic, OpenAI, and Google Gemini directly, plus OpenRouter
 as a gateway for experimentation. The model is **chosen per request**, sent from the
-UI, and validated against a server-side allowlist. Environment variables supply the
-_default_ model per agent, not the only possible one.
+UI, and validated against a server-side allowlist. There is **no server-side
+default** — a request that names no model is rejected, and the client owns the
+initial selection.
 
 **Why:** Mastra's model router uses `"provider/model"` strings and reads standard
 provider env vars, so multi-provider support is essentially free. Mastra's `Agent`
@@ -142,7 +143,11 @@ server resolves a name from a known set, or rejects it.
 **Superseded:** the original decision set model IDs per agent through environment
 variables only, on the grounds that swapping a model should be "a restart rather
 than a commit". Per-request selection is strictly better and Mastra supports it
-natively. Env vars stay as the source of defaults.
+natively. A later revision kept env vars as the source of per-agent defaults; that
+is superseded too. A default on the server is a second, invisible way to spend
+money: a client that drops the field bills the wrong model instead of failing, and
+nobody notices until the invoice. The server rejects; the picker decides what to
+select first.
 
 **Not doing:** Local models (Ollama / LM Studio). Confirmed not currently running
 locally. Mastra can add an OpenAI-compatible provider later in a few lines; nothing

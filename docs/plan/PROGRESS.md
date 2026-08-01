@@ -82,7 +82,7 @@ and 30624316521, ~1m10s each); and a full teardown — volumes and `node_modules
 
 ## M1.5 — Choosing the model → [11b-m1.5-model-selection.md](11b-m1.5-model-selection.md)
 
-- [ ] T1.5.1 The allowlist
+- [x] T1.5.1 The allowlist
 - [ ] T1.5.2 The agent resolves its model per request
 - [ ] T1.5.3 Carry the choice through the proxy
 - [ ] T1.5.4 The picker
@@ -1503,6 +1503,90 @@ which will change.
 Also settled while here: the duplicate dev processes in Open questions were a
 22-hour-old vite serving :5173 against a fresh Mastra on :4111. Both pairs killed and
 one clean `bun run dev` started before any of the above was measured.
+
+### 2026-08-01 — the model id type gives no protection, so the list is all there is
+
+T1.5.1. Three things found by reading the installed packages rather than the plan.
+
+**`ModelRouterModelId` is not a closed union.** It looks like one —
+`provider-types.generated.d.ts` enumerates every provider's models as string
+literals — but it ends `| (string & {})`, so **every** string satisfies it. Typing
+the allowlist against it would have looked like a compile-time guarantee and been
+none. The runtime list in `src/mastra/models.ts` is the only boundary, which is
+exactly what D6 says it is; recorded here so nobody later mistakes the type for a
+second one.
+
+**The registry knows which models are deprecated.** `provider-registry.json` carries
+`deprecatedModels` per provider alongside `models`, and lists `claude-opus-4-1` and
+its dated snapshot there. The `provider-registry.mjs` script does not surface that —
+its `--provider anthropic` output prints all 15 entries undifferentiated — so
+"exclude anything the registry does not report as available" needs the JSON, not the
+script.
+
+**So the allowlist tests read that JSON.** The one rule of this milestone that cannot
+be checked by reading code is that no id was invented. `models.test.ts` resolves
+`@mastra/core/package.json`, loads `dist/provider-registry.json` beside it, and
+asserts every allowlist id exists under its provider and is not deprecated. Proven by
+mutation: adding `anthropic/claude-imaginary-9` failed exactly that test, and adding
+the deprecated `anthropic/claude-opus-4-1` failed it plus the "rejects an id it does
+not offer" case. Reverted; `bun run verify` exits 0 with `models.ts` at 100%.
+
+**Nine models, chosen by the user:** Opus 5, 4.8, 4.7, 4.6, 4.5; Sonnet 5, 4.6, 4.5;
+Haiku 4.5. Dated snapshots are pins of the undated alias beside them and add nothing
+to compare; `claude-opus-4-1` is deprecated; `claude-fable-5` was dropped by
+preference. The picker groups **by family**.
+
+**Not built yet, deliberately:** the entry has no field for a model _value_. Every id
+here is its own router string, so a field that always equalled `id` would be
+scaffolding for T1.5.5's scripted model. It lands with that model.
+
+**Corrected:** `11b-m1.5-model-selection.md` T1.5.2 — the embedded docs are under
+`dist/docs/references/`, not `dist/docs/`, and the request-context file is
+`references/docs-server-request-context.md`.
+
+**Also worth knowing:** `bun run format <paths>` does not scope the run. The script
+hard-codes `.`, so extra arguments are appended to a whole-repo format rather than
+replacing it. Harmless, but it is not the scoping `format:check` has.
+
+### 2026-08-01 — no default on the server; naming nothing is an error (user decision)
+
+**Plan said:** T1.5.1 — "One entry is the default, sourced from `AGENT_GENERAL_MODEL`
+as today", and D6 — "Env vars stay as the source of defaults". The first version of
+`models.ts` did exactly that: `resolveModel(undefined)` returned `defaultModel`, and
+the env var was validated against the allowlist at import.
+
+**Decided instead:** the server has no default at all. `resolveModel` throws for
+`undefined` and `null` just as it does for an unknown id, and `models.ts` no longer
+imports `env`. The client picks the initial selection, so every request carries a
+model.
+
+**Why it is the better boundary, not just a preference.** A default is a second way
+to spend money that nobody chose and nothing shows. If the picker regresses and stops
+sending the field, a defaulting server answers normally on a model the reader did not
+pick — the failure is invisible until the invoice. Throwing turns that same bug into a
+visible error on the first message. It is the same argument that put the allowlist
+there in the first place, applied to the empty case.
+
+**Studio is probably fine — corrected.** An earlier note here claimed Studio's chat on
+`:4111` would break. The docs say otherwise: Studio's message box has its own model
+picker, and the server takes a request-scoped `model` override that bypasses the
+agent's configured model entirely (`reference-agents-getLLM.md`, and
+`docs-server-mastra-server.md`: "pass `model` to override the agent's configured model
+for a single request. If you omit `model`, Mastra uses the model already configured on
+the agent"). So Studio breaks only in the case where it sends no model and falls
+through to our callback. **Verify this by using Studio at T1.5.2** rather than trusting
+the paragraph you are reading.
+
+`AGENT_GENERAL_MODEL` still exists and is still read by `env.ts`, because
+`agents/general.ts` has not been converted yet. It goes away in T1.5.2, along with its
+`.env.example` line and the two `env.test.ts` cases that cover it.
+
+**The client's default is Haiku 4.5** (user's choice), persisted in browser storage so
+a reload keeps whatever was last picked. Cheapest of the nine, so an accidental send
+costs the least. Detail for T1.5.4.
+
+**Corrected:** `01-decisions.md` D6 (both the decision and its _Superseded_ note),
+and `11b-m1.5-model-selection.md` T1.5.1, T1.5.2, T1.5.4 and DoD item 4.
 
 ## Open questions
 
