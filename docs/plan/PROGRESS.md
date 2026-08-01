@@ -80,6 +80,16 @@ and 30624316521, ~1m10s each); and a full teardown — volumes and `node_modules
 - [ ] T1.6 Tests
 - [ ] **DoD verified**
 
+## M1.5 — Choosing the model → [11b-m1.5-model-selection.md](11b-m1.5-model-selection.md)
+
+- [ ] T1.5.1 The allowlist
+- [ ] T1.5.2 The agent resolves its model per request
+- [ ] T1.5.3 Carry the choice through the proxy
+- [ ] T1.5.4 The picker
+- [ ] T1.5.5 A scripted model for the E2E
+- [ ] T1.5.6 Documentation
+- [ ] **DoD verified**
+
 ## M2 — Threads and memory → [12-m2-threads-memory.md](12-m2-threads-memory.md)
 
 - [ ] T2.1 Memory configuration
@@ -1367,6 +1377,69 @@ Smoothing the cadence was considered and deferred: `chatRoute` takes an
 factory for it, which would re-pace the existing backlog word by word. It is
 cosmetic, it slightly delays the final token, and it would mask the ~210ms question
 rather than answer it. Not done.
+
+### 2026-08-01 — stubbing the stream at `fetch`, so the E2E can hold it still
+
+T1.6's auto-scroll E2E needs a streaming reply, and the Playwright run starts the
+SvelteKit dev server only — there is no Mastra behind it — so the stream has to come
+from somewhere else.
+
+**Not a route fulfilment.** `route.fulfill()` delivers a body whole. A transcript
+that grows in one jump cannot distinguish "follows a stream" from "lands at the end
+of one", and the interesting case — text arriving _while the reader is elsewhere_ —
+cannot be staged at all.
+
+**So `fetch` is patched in an init script**, exposing `window.__chat.emit()` and
+`.finish()`. The test decides when each delta lands, which removes the timing
+guesswork entirely: nothing is waited out, so there is nothing to flake. The chunk
+shape was copied from a real response off the running server rather than invented,
+so a change in Mastra's stream protocol will surface here.
+
+This does skip the SvelteKit proxy, which is deliberate — the proxy is thin and has
+its own tests, and these tests are about layout, which is the one thing jsdom cannot
+judge.
+
+`tsconfig.json` gained `"lib": ["ES2022", "DOM"]`: E2E code now runs partly inside
+the browser via `page.evaluate`, which `shell.spec.ts` never needed.
+
+**Mutated to prove it fails.** Removing the `scroll` listener failed exactly one
+test, `lets a reader scroll back without dragging them down again` — and that is the
+mutation the unit tests provably cannot catch, since they dispatch their own scroll
+events. Dropping the `if (pinned)` guard so the view always chases the bottom failed
+the same single test, at the "clicking Jump to latest returns to the end" step. Two
+for two, right test both times.
+
+### 2026-08-01 — the model belongs to the request, not the environment
+
+D6 said model IDs live in environment variables, reasoning that swapping a model
+should be "a restart rather than a commit". That undersold how often the swap
+happens: asking two models the same question is the ordinary case, and an env var
+makes it a restart _and_ a lost conversation.
+
+Mastra's `Agent` takes `model` as either a value or a function of the request
+context (`reference-agents-agent.md`), so per-request selection is native — no
+restart, no rebuild. D6 has been rewritten; env vars now supply defaults rather than
+the only option.
+
+**With one condition.** The model name becomes user input on a path that spends
+money and reaches every configured provider, so the server resolves it against an
+allowlist or rejects it. The AI SDK's own reference implementation passes the request
+body's `model` straight into `streamText()`; that is demo code. Mastra takes the
+stricter line and documents it — request context is client-influencable, so it
+reserves keys whose server-derived values always win over client-provided ones.
+
+This became [M1.5](11b-m1.5-model-selection.md) rather than extra M1 tasks: it
+changes the request path M1 has only just finished proving, and M2 will start
+persisting messages, so it is better settled before there is a table full of them.
+
+The same allowlist then solves T1.6's other complaint. The auto-scroll E2E currently
+hand-writes Mastra's SSE frames inside a patched `fetch` — a protocol we do not own,
+which can drift while the test stays green. A gated scripted model, built on
+`MockLanguageModelV3` from `ai/test`, lets Playwright run the real Mastra server and
+delete the stub. Two corrections came out of checking this: the plan's
+`MockLanguageModelV2` does not exist in the installed `ai` (V3 and V4 only), and
+Mastra publishes no E2E or UI-testing guidance at all — its testing docs are entirely
+evals — so the approach is our call rather than a documented one.
 
 ## Open questions
 

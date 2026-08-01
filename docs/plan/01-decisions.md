@@ -119,12 +119,30 @@ personal data on infrastructure under your control.
 ## D6 — LLM providers via Mastra's model router
 
 **Chosen:** Configure Anthropic, OpenAI, and Google Gemini directly, plus OpenRouter
-as a gateway for experimentation. Model IDs are set per-agent via environment
-variables so a model can be swapped without a code change.
+as a gateway for experimentation. The model is **chosen per request**, sent from the
+UI, and validated against a server-side allowlist. Environment variables supply the
+_default_ model per agent, not the only possible one.
 
 **Why:** Mastra's model router uses `"provider/model"` strings and reads standard
-provider env vars, so multi-provider support is essentially free. Per-agent env-var
-model IDs make A/B-ing models a restart rather than a commit.
+provider env vars, so multi-provider support is essentially free. Mastra's `Agent`
+accepts `model` as either a value or a function of the request context, so choosing
+per request needs no restart and no rebuild — which is the point. Comparing two
+models on the same question is the common case, and an env var makes that a restart
+and a lost conversation.
+
+**The allowlist is not optional.** The model name is user input arriving over the
+network on a path that spends money and can reach every configured provider. The AI
+SDK's own reference implementation passes the client's string straight to
+`streamText()`; that is demo code, and copying it would let anyone naming an
+endpoint pick the most expensive model available. Mastra takes the stricter line and
+says so: request context is client-influencable, so it reserves keys whose
+server-derived values "always take precedence over any client-provided value". The
+server resolves a name from a known set, or rejects it.
+
+**Superseded:** the original decision set model IDs per agent through environment
+variables only, on the grounds that swapping a model should be "a restart rather
+than a commit". Per-request selection is strictly better and Mastra supports it
+natively. Env vars stay as the source of defaults.
 
 **Not doing:** Local models (Ollama / LM Studio). Confirmed not currently running
 locally. Mastra can add an OpenAI-compatible provider later in a few lines; nothing
