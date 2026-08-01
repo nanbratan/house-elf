@@ -56,6 +56,12 @@ Fast, no I/O, no containers. This is where most tests live.
 
 Run with `bun run test:unit`. Should complete in seconds.
 
+Stub the framework, never the platform. A hand-made `clone()` or a fake `Request` is
+how a test stays green through a real bug. Web primitives — `Request`, `Response`,
+`URL` — are free and behave correctly, so use the real thing and stub only the thin
+framework wrapper around it. Pulling in a framework as a devDependency purely to test
+our own glue is the other extreme: it buys little and breaks when the framework moves.
+
 ### 2. Integration — against real Postgres
 
 A `postgres-test` service in `infra/docker-compose.yml` on a different port, with its

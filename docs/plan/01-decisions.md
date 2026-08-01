@@ -120,9 +120,11 @@ personal data on infrastructure under your control.
 
 **Chosen:** Configure Anthropic, OpenAI, and Google Gemini directly, plus OpenRouter
 as a gateway for experimentation. The model is **chosen per request**, sent from the
-UI, and validated against a server-side allowlist. There is **no server-side
-default** — a request that names no model is rejected, and the client owns the
-initial selection.
+UI, and validated against a server-side allowlist. **The chat route has no default**
+— a request that names no model is rejected there, and the client owns the initial
+selection. The agent itself still carries a model, because Studio reads it to
+describe the agent; the route's guard runs first, so that model is never what the app
+silently falls back to.
 
 **Why:** Mastra's model router uses `"provider/model"` strings and reads standard
 provider env vars, so multi-provider support is essentially free. Mastra's `Agent`
@@ -131,23 +133,25 @@ per request needs no restart and no rebuild — which is the point. Comparing tw
 models on the same question is the common case, and an env var makes that a restart
 and a lost conversation.
 
-**The allowlist is not optional.** The model name is user input arriving over the
-network on a path that spends money and can reach every configured provider. The AI
-SDK's own reference implementation passes the client's string straight to
-`streamText()`; that is demo code, and copying it would let anyone naming an
-endpoint pick the most expensive model available. Mastra takes the stricter line and
-says so: request context is client-influencable, so it reserves keys whose
-server-derived values "always take precedence over any client-provided value". The
-server resolves a name from a known set, or rejects it.
+**What the allowlist is actually for.** Not security: anyone who can reach the route
+can name the most expensive model on the list. It catches our own bugs — a
+real-but-retired id that would bill silently, a provider prefix pointing at a vendor
+we have not configured, and a garbage string that would otherwise fail mid-stream
+instead of returning a 400 naming the alternatives. The picker needs the list either
+way; enforcing it costs about twenty lines. It is enforced in middleware on `/chat/*`
+rather than in the agent, because `chatRoute` passes an unrecognised body field
+straight into `agent.stream()`, where `model` is a request-scoped override — see
+PROGRESS.md for the proof.
 
 **Superseded:** the original decision set model IDs per agent through environment
 variables only, on the grounds that swapping a model should be "a restart rather
 than a commit". Per-request selection is strictly better and Mastra supports it
 natively. A later revision kept env vars as the source of per-agent defaults; that
-is superseded too. A default on the server is a second, invisible way to spend
+is superseded too. A default on the request path is a second, invisible way to spend
 money: a client that drops the field bills the wrong model instead of failing, and
-nobody notices until the invoice. The server rejects; the picker decides what to
-select first.
+nobody notices until the invoice. The route rejects; the picker decides what to
+select first. Removing the agent's model as well went one step too far and broke
+Studio, which is corrected above.
 
 **Not doing:** Local models (Ollama / LM Studio). Confirmed not currently running
 locally. Mastra can add an OpenAI-compatible provider later in a few lines; nothing

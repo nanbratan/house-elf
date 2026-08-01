@@ -2,7 +2,7 @@
  * Environment access for the server.
  *
  * Read once, at startup, and fail loudly rather than letting an undefined
- * connection string or model ID surface as a confusing error deep inside Mastra.
+ * connection string surface as a confusing error deep inside Mastra.
  */
 
 function required(name: string): string {
@@ -17,7 +17,5 @@ function required(name: string): string {
 }
 
 export const env = {
-	databaseUrl: required('DATABASE_URL'),
-	/** Model router ID, "provider/model" — see .env.example. */
-	generalAgentModel: required('AGENT_GENERAL_MODEL')
+	databaseUrl: required('DATABASE_URL')
 } as const;

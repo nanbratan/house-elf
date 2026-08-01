@@ -83,7 +83,7 @@ and 30624316521, ~1m10s each); and a full teardown — volumes and `node_modules
 ## M1.5 — Choosing the model → [11b-m1.5-model-selection.md](11b-m1.5-model-selection.md)
 
 - [x] T1.5.1 The allowlist
-- [ ] T1.5.2 The agent resolves its model per request
+- [x] T1.5.2 Reject an unnamed or unknown model at the chat route
 - [ ] T1.5.3 Carry the choice through the proxy
 - [ ] T1.5.4 The picker
 - [ ] T1.5.5 A scripted model for the E2E
@@ -1587,6 +1587,98 @@ costs the least. Detail for T1.5.4.
 
 **Corrected:** `01-decisions.md` D6 (both the decision and its _Superseded_ note),
 and `11b-m1.5-model-selection.md` T1.5.1, T1.5.2, T1.5.4 and DoD item 4.
+
+### 2026-08-01 — the chat route hands the body's `model` straight to the provider
+
+`chatRoute` is not a closed door. `handleChatStream` destructures the fields it knows
+about and spreads the rest into `agent.stream()`:
+
+```js
+const { messages, resumeData, runId, requestContext, trigger, ...rest } = params;
+```
+
+`model` is not in that list, and `AgentExecutionOptions.model` is a documented
+request-scoped override. So a `model` field in the request body reaches the provider
+without the agent's own `model` ever being consulted. Found by reading
+`node_modules/@mastra/ai-sdk/dist/index.js:10414`, and believed only after curl:
+
+```
+POST /chat/general {"model":"anthropic/claude-does-not-exist-9", …}
+→ Upstream LLM API error, provider "anthropic", modelId "claude-does-not-exist-9",
+  AI_APICallError: not_found_error "model: claude-does-not-exist-9"
+```
+
+That is the request leaving the building. **The lesson is that validating inside the
+agent would have guarded a door the request walks past** — the plan's original design
+would have shipped feeling safe and being open.
+
+The guard is therefore a Hono middleware, `requireKnownModel`, scoped to `/chat/*` and
+running before the route. It is deliberately not global: `/api/*` and Studio stay
+unguarded, because Studio picks its own model and is not a path the app takes.
+
+**Reading the body in middleware broke every valid request.** `await c.req.json()`
+consumes the one-shot request stream, so the route handler got nothing and returned a
+bare 500 with an empty log line. My inline comment claiming Hono caches the parsed
+body was wrong. Diagnosed by isolation — swapping the agent's model back to a static
+value left the 500 in place, which put the blame on the middleware rather than the
+agent. Fixed with `c.req.raw.clone().json()`.
+
+**The first tests for this middleware were worthless, and the bug proves it.** They
+stubbed the Hono context by hand, so they stayed green through the body-consumption
+bug — a hand-made `clone()` cannot reproduce a one-shot stream — and what they really
+asserted was that `resolveModel` throws, which `models.test.ts` already covers.
+
+Rewriting them against a real Hono app fixed that but bought a devDependency on Hono
+just to test our own glue — something to break the next time Mastra bumps it. The
+settled version stubs only the framework wrapper and uses a **real `Request`** as
+`c.req.raw`, which has real one-shot body semantics. Two unit tests: the body is still
+readable afterwards, and a disallowed model returns 400 instead of calling `next`.
+Nothing asserts wording. Dropping the `.clone()` fails the first and only the first;
+disabling the guard fails the second and only the second. **Stub the framework, never
+the platform** — now a rule in `03-testing.md`.
+
+**The server had no file-layout rule, so files piled up in the root of `src/mastra/`.**
+The conventions doc was prescriptive for the web and silent here. It now names
+`middleware/` alongside `agents/` and `tools/`, and says that domain modules which are
+not a Mastra primitive — `models.ts`, `chat-error.ts` — stay at the root rather than
+being swept into a `utils/` junk drawer. One file does not earn a folder; the second
+of its kind does. `require-known-model.ts` moved to `src/mastra/middleware/`, where
+M6's auth middleware will join it.
+
+### 2026-08-01 — the agent keeps a model, because Studio reads it (user decision)
+
+The previous entry's "no default anywhere" was applied to the agent as well: its
+`model` became a callback that threw. **That broke Studio**, and not subtly — Studio
+resolves an agent's model just to _describe_ it, so the agent became undescribable and
+the UI rendered **"Agent not found"**. The model picker that was supposed to save it is
+inside a page you can no longer reach. The server log showed
+`Error calling handler … at Agent.resolveModelSelection`, plus warnings from
+"Error getting LLM for agent" and "Error getting model list for agent".
+
+I proposed accepting that. The user rejected it, correctly: the no-default rule exists
+to stop _our chat route_ spending money by accident, and Studio is not our chat route.
+Breaking a working tool to uphold a rule aimed elsewhere is not a trade worth making.
+
+So `generalAgent.model` is `resolveModel('anthropic/claude-haiku-4-5').id` — a real
+model, resolved through the allowlist so that dropping that id from the list fails the
+server at boot instead of quietly at request time. It cannot become an invisible
+default for the app, because `requireKnownModel` rejects an unnamed model at the door
+before the agent is consulted. It is what Studio displays, and what Studio uses if its
+picker sends nothing.
+
+**Verified in a browser, not by curl.** Studio's agent page lists the agent, its picker
+shows Anthropic / `claude-haiku-4-5`, and sending "Reply with the single word STUDIO."
+returned "STUDIO.". The earlier curl against `/api/agents/general` returned 200 while
+the page was still rendering "Agent not found" — an HTTP check would have missed the
+whole failure.
+
+**The allowlist is not a security control, and the docs no longer say it is.** Anyone
+who can reach the route can name `anthropic/claude-opus-5`, which is on the list. What
+it actually catches is our own bugs: a real-but-retired id like `claude-opus-4-1` that
+would otherwise bill silently, a wrong provider prefix pointing at a vendor we have not
+configured, and a garbage string that would otherwise die mid-stream instead of
+returning a 400 that names the alternatives. The list has to exist for the picker
+regardless; enforcing it is about twenty lines on top.
 
 ## Open questions
 

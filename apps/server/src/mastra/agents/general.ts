@@ -1,6 +1,6 @@
 import { Agent } from '@mastra/core/agent';
 
-import { env } from '../../env';
+import { resolveModel } from '../models';
 import { getCurrentTimeTool } from '../tools/get-current-time';
 
 /**
@@ -14,7 +14,18 @@ export const generalAgent = new Agent({
 	// the code — not here, where it would drift. Instructions are for behaviour
 	// that spans the whole agent.
 	instructions: 'You are a helpful personal assistant. Answer concisely.',
-	model: env.generalAgentModel,
+	// Every request through /chat/* names its own model, and Mastra applies that
+	// as a per-request override without mutating the agent — so this value is not
+	// what the app runs on. It is what Studio reads to describe the agent, and
+	// what Studio falls back to if its own picker sends nothing. A throwing
+	// callback here makes the agent undescribable and Studio reports "Agent not
+	// found", which is too high a price for a rule aimed at our own route.
+	//
+	// It cannot become an invisible default for the app: requireKnownModel
+	// rejects an unnamed model at the door, before the agent is consulted.
+	// Resolved through the allowlist so that dropping this id from the list
+	// fails the server at boot instead of quietly here.
+	model: resolveModel('anthropic/claude-haiku-4-5').id,
 	// The key, not the tool's `id`, is the name the model calls and the name that
 	// appears in the stream's `toolName`. Keep it clean.
 	tools: { getCurrentTime: getCurrentTimeTool }

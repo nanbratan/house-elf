@@ -42,7 +42,6 @@ jobs:
       # and reads the environment, so setting the variables here is enough.
       DATABASE_URL: postgres://houseelf:houseelf@localhost:5432/houseelf_test
       TEST_DATABASE_URL: postgres://houseelf:houseelf@localhost:5432/houseelf_test
-      AGENT_GENERAL_MODEL: anthropic/claude-haiku-4-5
 
     steps:
       - uses: actions/checkout@v7

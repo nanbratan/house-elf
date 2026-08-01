@@ -62,6 +62,11 @@ manual verification steps. Perform them.
 
 - One agent per file in `src/mastra/agents/`, default-exported.
 - One tool per file in `src/mastra/tools/`.
+- One middleware per file in `src/mastra/middleware/`.
+- A file whose kind has a folder goes in it. Domain modules that are not a Mastra
+  primitive — the model allowlist, error shaping — stay at the root of
+  `src/mastra/` rather than being swept into a `utils/` junk drawer. The first
+  second-of-its-kind creates a folder; one file does not.
 - `src/mastra/index.ts` only wires things together — no logic.
 - Agent instructions live in the agent file as a template literal, not in a separate
   prompt file, until there are more than ~5 agents.
