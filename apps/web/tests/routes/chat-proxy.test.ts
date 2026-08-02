@@ -9,8 +9,8 @@ vi.mock('$env/dynamic/private', () => ({ env }));
 const { POST } = await import('../../src/routes/api/chat/[agentId]/+server');
 
 /**
- * `POST` expects a full SvelteKit `RequestEvent`. It reads four fields, so the
- * tests supply those four rather than constructing a real event.
+ * `POST` expects a full SvelteKit `RequestEvent`. It reads three fields, so the
+ * tests supply those three rather than constructing a real event.
  */
 function callPost(options: {
 	agentId: string;
@@ -52,10 +52,14 @@ describe('POST /api/chat/[agentId]', () => {
 		env.MASTRA_URL = 'http://mastra.test:4111';
 	});
 
-	it('forwards the request to the agent chat route on the Mastra origin', async () => {
+	it('forwards the whole request body, including the selected model', async () => {
+		const body = JSON.stringify({
+			messages: [],
+			model: 'anthropic/claude-haiku-4-5'
+		});
 		const fetchSpy = vi.fn().mockResolvedValue(new Response('ok'));
 
-		await callPost({ agentId: 'general', request: chatRequest(), fetch: fetchSpy });
+		await callPost({ agentId: 'general', request: chatRequest(body), fetch: fetchSpy });
 
 		expect(fetchSpy).toHaveBeenCalledOnce();
 		const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
@@ -64,6 +68,15 @@ describe('POST /api/chat/[agentId]', () => {
 		// route is mounted at the origin root.
 		expect(url).toBe('http://mastra.test:4111/chat/general');
 		expect(init.method).toBe('POST');
+		expect(init.body).toBe(body);
+	});
+
+	it('does not choose a model when the request omits one', async () => {
+		const fetchSpy = vi.fn().mockResolvedValue(new Response('ok'));
+
+		await callPost({ agentId: 'general', request: chatRequest(), fetch: fetchSpy });
+
+		const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
 		expect(init.body).toBe('{"messages":[]}');
 	});
 

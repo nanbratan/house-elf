@@ -84,7 +84,7 @@ and 30624316521, ~1m10s each); and a full teardown — volumes and `node_modules
 
 - [x] T1.5.1 The allowlist
 - [x] T1.5.2 Reject an unnamed or unknown model at the chat route
-- [ ] T1.5.3 Carry the choice through the proxy
+- [x] T1.5.3 Carry the choice through the proxy
 - [ ] T1.5.4 The picker
 - [ ] T1.5.5 A scripted model for the E2E
 - [ ] T1.5.6 Documentation
@@ -1679,6 +1679,26 @@ would otherwise bill silently, a wrong provider prefix pointing at a vendor we h
 configured, and a garbage string that would otherwise die mid-stream instead of
 returning a 400 that names the alternatives. The list has to exist for the picker
 regardless; enforcing it is about twenty lines on top.
+
+### 2026-08-02 — the proxy already carried the model without knowing it
+
+T1.5.3 needed no production change. The proxy has always forwarded the request body
+as raw text, so `model` already survives byte-for-byte and the proxy neither validates
+nor interprets it.
+
+The plan's claim that "a request without it still works" had become false after the
+user chose no server default in T1.5.1. The proxy still forwards such a request, but
+the Mastra route correctly rejects it. The test now says what this layer owns: a
+selected model survives unchanged, and an omitted model stays omitted rather than
+being invented here.
+
+Both tests are mutation-proven. Rebuilding the body with only `messages` fails only
+the selected-model test; injecting Haiku when `model` is absent fails only the
+no-default test. The original transparent implementation is restored.
+
+**Corrected:** `11b-m1.5-model-selection.md` T1.5.3. Also removed its two remaining
+claims that the allowlist is a security boundary; the T1.5.2 decision log had already
+rejected that framing, but this file still contradicted it.
 
 ## Open questions
 
