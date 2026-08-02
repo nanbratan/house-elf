@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { renderMarkdown } from '$lib/utils/markdown';
 
-	let { text }: { text: string } = $props();
+	interface MarkdownProps {
+		text: string;
+	}
+
+	let { text }: MarkdownProps = $props();
 
 	// Synchronous: the highlighter is loaded when this module is imported, so a
 	// streamed message re-renders without a pending state to flicker through.

@@ -14,6 +14,7 @@
 		"check": "tsc --noEmit --incremental"
 	},
 	"dependencies": {
+		"@house-elf/shared": "workspace:*",
 		"@mastra/ai-sdk": "latest",
 		"@mastra/core": "latest",
 		"@mastra/loggers": "latest",

@@ -85,9 +85,17 @@ and 30624316521, ~1m10s each); and a full teardown — volumes and `node_modules
 - [x] T1.5.1 The allowlist
 - [x] T1.5.2 Reject an unnamed or unknown model at the chat route
 - [x] T1.5.3 Carry the choice through the proxy
-- [ ] T1.5.4 The picker
+- [x] T1.5.4 The picker
 - [ ] T1.5.5 A scripted model for the E2E
 - [ ] T1.5.6 Documentation
+- [ ] **DoD verified**
+
+## M1.6 — Thinking on demand → [11c-m1.6-polish.md](11c-m1.6-polish.md)
+
+- [ ] T1.6.1 Thinking is a toggle, not a model property
+- [ ] T1.6.2 A quieter focus ring on the composer
+- [ ] T1.6.3 Clicking the composer's empty space focuses the input
+- [ ] T1.6.4 Documentation
 - [ ] **DoD verified**
 
 ## M2 — Threads and memory → [12-m2-threads-memory.md](12-m2-threads-memory.md)
@@ -1699,6 +1707,75 @@ no-default test. The original transparent implementation is restored.
 **Corrected:** `11b-m1.5-model-selection.md` T1.5.3. Also removed its two remaining
 claims that the allowlist is a security boundary; the T1.5.2 decision log had already
 rejected that framing, but this file still contradicted it.
+
+### 2026-08-02 — the picker takes AI Elements' interaction, not its component tree
+
+T1.5.4. The official React AI Elements `PromptInput` and `ModelSelector` are the UX
+source of truth: textarea above a footer row, compact current-model trigger beside
+Send, then a searchable grouped command dialog. The community Svelte port was useful
+as a translation reference, not as a design authority. Its wrapper count would have
+added indirection without changing this app's one picker.
+
+**Did:** one presentational `ModelPicker.svelte` directly composes bits-ui's Dialog
+and Command primitives; `Composer` owns the footer arrangement; `ChatView` owns the
+choice, browser persistence and the per-message body. bits-ui earned the dependency
+for focus trapping, dismissal, filtering, keyboard navigation and ARIA state. Provider
+logos, copied registry wrappers and a picker component family did not. The installed
+lock resolves bits-ui 2.18.1.
+
+The catalog is still server-owned. Mastra exposes `MODEL_CATALOG` at `GET /models`;
+SvelteKit fetches it privately during page load and validates it with the shared Zod
+schema before rendering. The route returned all nine allowlisted models in a live
+curl, with Haiku 4.5 as `initialModelId`. There is still no chat-route default.
+
+**Browser proof:** the footer and dialog rendered at `/c/new`; search narrowed nine
+models to the Sonnet group; ArrowDown + Enter selected Sonnet 4.6; reload restored it;
+clearing storage restored Haiku 4.5. An intercepted real browser submission carried
+`"model":"anthropic/claude-sonnet-4-6"` beside the AI SDK message body. Inspection
+also caught a real accessibility bug: the checkmark showed Haiku while Command exposed
+Opus as `aria-selected`. A red regression test preceded seeding Command's value from
+the current model; the browser then exposed Haiku as both checked and selected.
+
+**Mutation-proven, one focused failure each:** disconnect the catalog route from
+`MODEL_CATALOG`; remove page-load schema parsing; recommend Opus instead of Haiku;
+send the initial model after a user chooses another; remove the browser-storage write;
+disable keyboard search; discard server-only fixture entries from the rendered groups.
+Every mutation was reverted before the gate.
+
+**Build surprise:** Mastra's optimizer emitted an empty compiled workspace module
+for an unused runtime re-export of `MODEL_FAMILIES`, then its final bundler failed
+because that generated module did not contain the re-export. Deleting the generated
+cache reproduced it, so it was not stale state. The server only needs shared types;
+the one server test that needs the runtime family tuple now imports it from
+`@house-elf/shared` directly. Removing the otherwise-unused runtime re-export kept
+the boundary simpler and a clean-cache `mastra build` then succeeded.
+
+### 2026-08-02 — stubs became one component keyed by symbol; two Svelte rules captured
+
+**Plan said:** nothing about how component stubs are written; each test grew its own.
+
+**What was true:** eight near-identical stub components had drifted into inventing
+markup the real components do not have — buttons a test could click, props serialised
+into `data-` attributes and parsed back. Tests were asserting against fiction.
+
+**What was done:** one `tests/stubs/Stub.svelte` records the props it was given into a
+module-level registry; eight four-line wrappers supply an identity. Identity is a
+`Symbol`, not a string, so two stubs cannot collide, and the symbols live in
+`tests/stubs/keys.ts` rather than `<script module>` blocks — TypeScript cannot type a
+named export from a `.svelte` file imported by a `.ts` file, and every such import
+raised `no-unsafe-argument`. Tests now read props and invoke callbacks directly.
+`afterEach` resets the registry, because module state outlives the components.
+
+Two conventions were added to `typescript.instructions.md` — props get a named type,
+handlers are named functions — and applied across all nine existing components, not
+only the one being edited at the time. The rule's own example had to be corrected to
+`interface`: `consistent-type-definitions` rejects a `type` alias for an object shape.
+
+**Also corrected:** `ModelPicker.test.ts` called `cleanup()` itself. Removing it left
+7/7 green — the setup file's `afterEach` already covers it, and a test file's own
+hooks run first. The file's `afterEach` now closes any open dialog instead, because
+bits-ui's scroll lock leaves `overflow: hidden` on `document.body` and restores it on
+a deferred timer.
 
 ## Open questions
 

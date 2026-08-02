@@ -17,7 +17,11 @@
 	// will arrive as providers add them. Anything unrecognised renders nothing
 	// rather than throwing, so a new part type degrades to a gap, not a blank
 	// message. `source` parts land here until something in the app emits one.
-	let { part }: { part: UIMessagePart<UIDataTypes, UITools> } = $props();
+	interface MessagePartProps {
+		part: UIMessagePart<UIDataTypes, UITools>;
+	}
+
+	let { part }: MessagePartProps = $props();
 </script>
 
 {#if isTextUIPart(part)}

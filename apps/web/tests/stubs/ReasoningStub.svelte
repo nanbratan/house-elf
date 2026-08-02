@@ -1,6 +1,8 @@
 <script lang="ts">
-	// See MarkdownStub.svelte.
+	import { reasoningStub } from './keys';
+	import Stub from './Stub.svelte';
+
 	const props: Record<string, unknown> = $props();
 </script>
 
-<div data-testid="reasoning" data-props={JSON.stringify(props)}></div>
+<Stub key={reasoningStub} {...props} />

@@ -72,3 +72,28 @@ Bun only — never `npm`, `pnpm`, `yarn`, or `npx`. Use `bunx` for one-off tools
 ## Svelte
 
 Svelte 5 runes only. No `export let`, no legacy stores.
+
+### Props get a named type
+
+Declare component props as a named type above the `$props()` call, never inline in
+the destructuring. Inline annotations become unreadable past two props, and a named
+type can be exported and reused by whoever renders the component. An `interface`,
+because `consistent-type-definitions` rejects a `type` alias for an object shape.
+
+```svelte
+interface ModelPickerProps {
+	models: readonly SelectableModel[];
+	selectedModelId: string;
+	onselect: (modelId: string) => void;
+}
+
+let { models, selectedModelId, onselect }: ModelPickerProps = $props();
+```
+
+### Handlers are named functions
+
+Pass named functions to component props. An inline arrow is fine only for a trivial
+forward such as `onstop={() => chat.stop()}`; anything with a body, arguments to
+marshal, or more than one statement gets a named function declared in the script
+block. The markup should read as a list of what is wired, not as where the logic
+lives.

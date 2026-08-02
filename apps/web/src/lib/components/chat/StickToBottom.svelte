@@ -3,10 +3,18 @@
 
 	import { createStickToBottom } from '$lib/state/stick-to-bottom.svelte';
 
-	let { children }: { children: Snippet } = $props();
+	interface StickToBottomProps {
+		children: Snippet;
+	}
+
+	let { children }: StickToBottomProps = $props();
 
 	const stick = createStickToBottom();
 	const { viewport, content } = stick;
+
+	function jumpToLatest() {
+		stick.scrollToEnd();
+	}
 </script>
 
 <div class="relative min-h-0 flex-1">
@@ -28,9 +36,7 @@
 			type="button"
 			class="absolute bottom-4 left-1/2 flex size-8 -translate-x-1/2 items-center justify-center rounded-full border border-line bg-raised text-content shadow-lg transition-colors hover:bg-surface"
 			aria-label="Jump to latest"
-			onclick={() => {
-				stick.scrollToEnd();
-			}}
+			onclick={jumpToLatest}
 		>
 			<svg
 				viewBox="0 0 24 24"

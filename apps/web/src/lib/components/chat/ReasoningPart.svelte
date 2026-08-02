@@ -1,7 +1,12 @@
 <script lang="ts">
 	import { createExpansion } from '$lib/state/expansion.svelte';
 
-	let { text, streaming }: { text: string; streaming: boolean } = $props();
+	interface ReasoningPartProps {
+		text: string;
+		streaming: boolean;
+	}
+
+	let { text, streaming }: ReasoningPartProps = $props();
 
 	/** How long the pane stays open after the model stops thinking. */
 	const LINGER_MS = 1000;
@@ -64,6 +69,10 @@
 
 		return `Thought for ${String(thoughtSeconds)} second${thoughtSeconds === 1 ? '' : 's'}`;
 	});
+
+	function toggle() {
+		expansion.toggle();
+	}
 </script>
 
 <div class="my-2 text-xs text-faint">
@@ -72,9 +81,7 @@
 		class="rounded px-1 py-0.5 transition-colors hover:text-muted"
 		class:animate-pulse={streaming}
 		aria-expanded={expansion.isOpen}
-		onclick={() => {
-			expansion.toggle();
-		}}
+		onclick={toggle}
 	>
 		{label}
 	</button>

@@ -60,7 +60,7 @@ export default defineConfig(({ mode }) =>
 			setupFiles: [
 				'./tests/setup/testing-library.ts',
 				'./tests/setup/app-state.ts',
-				'./tests/setup/resize-observer.ts'
+				'./tests/setup/dom-layout.ts'
 			],
 
 			coverage: {

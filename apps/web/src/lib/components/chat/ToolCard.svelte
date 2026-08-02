@@ -9,7 +9,12 @@
 
 	// `isToolUIPart` narrows to either shape, and they share every field this card
 	// reads, so both are accepted rather than handled twice.
-	let { name, part }: { name: string; part: ToolUIPart | DynamicToolUIPart } = $props();
+	interface ToolCardProps {
+		name: string;
+		part: ToolUIPart | DynamicToolUIPart;
+	}
+
+	let { name, part }: ToolCardProps = $props();
 
 	/**
 	 * Listed exhaustively rather than with a fallback, so a state the SDK adds is a
@@ -54,6 +59,10 @@
 
 		return { text: JSON.stringify(value, null, 2), lang: 'json' };
 	}
+
+	function toggle() {
+		expansion.toggle();
+	}
 </script>
 
 {#snippet section(title: string, value: unknown)}
@@ -78,9 +87,7 @@
 		type="button"
 		class="flex h-9 w-full items-center gap-2 px-3 text-left transition-colors hover:bg-raised"
 		aria-expanded={expansion.isOpen}
-		onclick={() => {
-			expansion.toggle();
-		}}
+		onclick={toggle}
 	>
 		{#if busy}
 			<WorkingDots />

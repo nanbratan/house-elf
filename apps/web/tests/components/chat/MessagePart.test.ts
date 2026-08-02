@@ -1,6 +1,9 @@
-import { render, screen } from '@testing-library/svelte';
+import { render } from '@testing-library/svelte';
 import type { UIDataTypes, UIMessagePart, UITools } from 'ai';
 import { describe, expect, it, vi } from 'vitest';
+
+import { markdownStub, reasoningStub, toolCardStub } from '../../stubs/keys';
+import { stubProps, type StubKey } from '../../stubs/stub-props';
 
 /**
  * The children are stubbed. This component is a switch and nothing else, so the
@@ -29,21 +32,21 @@ function renderPart(part: unknown) {
 }
 
 /** The props the chosen child was rendered with. */
-function propsOf(testId: 'markdown' | 'reasoning' | 'tool-card'): Record<string, unknown> {
-	return JSON.parse(screen.getByTestId(testId).dataset.props ?? '{}') as Record<string, unknown>;
+function propsOf(stub: StubKey): Record<string, unknown> {
+	return stubProps(stub);
 }
 
 describe('message part', () => {
 	it('sends text to the markdown renderer', () => {
 		renderPart({ type: 'text', text: 'a **bold** claim' });
 
-		expect(propsOf('markdown')).toStrictEqual({ text: 'a **bold** claim' });
+		expect(propsOf(markdownStub)).toStrictEqual({ text: 'a **bold** claim' });
 	});
 
 	it('sends reasoning on, telling it whether the thought is still arriving', () => {
 		renderPart({ type: 'reasoning', text: 'Check the time zone.', state: 'streaming' });
 
-		expect(propsOf('reasoning')).toStrictEqual({
+		expect(propsOf(reasoningStub)).toStrictEqual({
 			text: 'Check the time zone.',
 			streaming: true
 		});
@@ -52,7 +55,7 @@ describe('message part', () => {
 	it('marks finished reasoning as no longer streaming', () => {
 		renderPart({ type: 'reasoning', text: 'Check the time zone.', state: 'done' });
 
-		expect(propsOf('reasoning')).toMatchObject({ streaming: false });
+		expect(propsOf(reasoningStub)).toMatchObject({ streaming: false });
 	});
 
 	it('takes a tool name from the part type', () => {
@@ -63,7 +66,7 @@ describe('message part', () => {
 			input: { timeZone: 'Asia/Tokyo' }
 		});
 
-		expect(propsOf('tool-card')).toMatchObject({ name: 'getCurrentTime' });
+		expect(propsOf(toolCardStub)).toMatchObject({ name: 'getCurrentTime' });
 	});
 
 	it('takes a dynamic tool name from beside the type, where the SDK puts it', () => {
@@ -75,7 +78,7 @@ describe('message part', () => {
 			input: {}
 		});
 
-		expect(propsOf('tool-card')).toMatchObject({ name: 'searchTheWeb' });
+		expect(propsOf(toolCardStub)).toMatchObject({ name: 'searchTheWeb' });
 	});
 
 	describe('part types this milestone does not render', () => {

@@ -1,15 +1,19 @@
 <script lang="ts">
+	import type { SelectableModel } from '@house-elf/shared';
 	import type { ChatStatus } from 'ai';
 
-	let {
-		status,
-		onsend,
-		onstop
-	}: {
+	import ModelPicker from './ModelPicker.svelte';
+
+	interface ComposerProps {
 		status: ChatStatus;
 		onsend: (text: string) => void;
 		onstop: () => void;
-	} = $props();
+		models: readonly SelectableModel[];
+		selectedModelId: string;
+		onmodelselect: (modelId: string) => void;
+	}
+
+	let { status, onsend, onstop, models, selectedModelId, onmodelselect }: ComposerProps = $props();
 
 	let text = $state('');
 
@@ -37,56 +41,63 @@
 		event.preventDefault();
 		send();
 	}
-</script>
 
-<form
-	class="border-t border-line bg-canvas px-4 py-3"
-	onsubmit={(event) => {
+	function onsubmit(event: SubmitEvent) {
 		event.preventDefault();
 		send();
-	}}
->
-	<div class="mx-auto flex max-w-3xl items-end gap-2">
+	}
+
+	function oncompositionstart() {
+		composing = true;
+	}
+
+	function oncompositionend() {
+		composing = false;
+	}
+</script>
+
+<form class="border-t border-line bg-canvas px-4 py-3" {onsubmit}>
+	<div class="mx-auto max-w-3xl overflow-hidden rounded-xl border border-line bg-raised">
 		<textarea
 			bind:value={text}
 			{onkeydown}
-			oncompositionstart={() => {
-				composing = true;
-			}}
-			oncompositionend={() => {
-				composing = false;
-			}}
+			{oncompositionstart}
+			{oncompositionend}
 			rows="1"
 			placeholder="Send a message…"
 			aria-label="Message"
-			class="max-h-48 min-h-11 flex-1 resize-none rounded-lg border border-line bg-raised px-3 py-2.5 text-sm placeholder:text-faint"
+			class="max-h-48 min-h-12 w-full resize-none bg-transparent px-3 pt-3 pb-2 text-sm outline-none placeholder:text-faint"
 		></textarea>
 
-		{#if busy}
-			<button
-				type="button"
-				onclick={onstop}
-				class="flex h-11 shrink-0 items-center gap-2 rounded-lg border border-line px-4 text-sm text-muted transition-colors hover:bg-raised hover:text-content"
-			>
-				<!-- The only sign anything is happening between pressing Enter and the
-				     first token arriving: pulsing while the request is in flight, steady
-				     once the reply is actually coming. The label stays "Stop" in both
-				     states, because that is what the button does. -->
-				<span
-					class="size-1.5 rounded-full bg-accent"
-					class:animate-pulse={status === 'submitted'}
-					aria-hidden="true"
-				></span>
-				Stop
-			</button>
-		{:else}
-			<button
-				type="submit"
-				disabled={!canSend}
-				class="h-11 shrink-0 rounded-lg bg-accent px-4 text-sm font-medium text-canvas transition-opacity disabled:opacity-40"
-			>
-				Send
-			</button>
-		{/if}
+		<div class="flex items-center justify-end gap-1.5 px-2 pb-2">
+			<ModelPicker {models} {selectedModelId} onselect={onmodelselect} />
+
+			{#if busy}
+				<button
+					type="button"
+					onclick={onstop}
+					class="flex h-8 shrink-0 items-center gap-2 rounded-md border border-line px-3 text-xs text-muted transition-colors hover:bg-canvas hover:text-content"
+				>
+					<!-- The only sign anything is happening between pressing Enter and the
+					     first token arriving: pulsing while the request is in flight, steady
+					     once the reply is actually coming. The label stays "Stop" in both
+					     states, because that is what the button does. -->
+					<span
+						class="size-1.5 rounded-full bg-accent"
+						class:animate-pulse={status === 'submitted'}
+						aria-hidden="true"
+					></span>
+					Stop
+				</button>
+			{:else}
+				<button
+					type="submit"
+					disabled={!canSend}
+					class="h-8 shrink-0 rounded-md bg-accent px-3 text-xs font-medium text-canvas transition-opacity disabled:opacity-40"
+				>
+					Send
+				</button>
+			{/if}
+		</div>
 	</div>
 </form>

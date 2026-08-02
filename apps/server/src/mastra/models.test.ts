@@ -2,10 +2,11 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 
+import { MODEL_FAMILIES } from '@house-elf/shared';
 import { describe, expect, it } from 'vitest';
 
 import {
-	MODEL_FAMILIES,
+	INITIAL_MODEL_ID,
 	SELECTABLE_MODELS,
 	UnknownModelError,
 	findModel,
@@ -44,6 +45,10 @@ describe('the model allowlist', () => {
 		// spending money on a model nobody asked for is the wrong way to report it.
 		expect(() => resolveModel(undefined)).toThrow(UnknownModelError);
 		expect(() => resolveModel(null)).toThrow(/^No model was named, and there is no default\./);
+	});
+
+	it('sets Haiku 4.5 as the picker initial selection', () => {
+		expect(INITIAL_MODEL_ID).toBe('anthropic/claude-haiku-4-5');
 	});
 
 	it('lists every option it would have accepted, so a rejection is actionable', () => {

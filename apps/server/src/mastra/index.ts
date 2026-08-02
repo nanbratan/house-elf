@@ -7,6 +7,7 @@ import { env } from '../env';
 import { generalAgent } from './agents/general';
 import { describeChatError } from './chat-error';
 import { requireKnownModel } from './middleware/require-known-model';
+import { modelCatalogRoute } from './model-catalog-route';
 
 const logger = new PinoLogger({
 	name: 'house-elf',
@@ -20,6 +21,7 @@ export const mastra = new Mastra({
 		// straight to the provider.
 		middleware: [requireKnownModel],
 		apiRoutes: [
+			modelCatalogRoute,
 			// Dynamic form: every agent registered above is reachable without a new
 			// route. Reasoning and sources are off by default; the UI renders both.
 			// `version` is left at its default ('v5'). For a text-only response the

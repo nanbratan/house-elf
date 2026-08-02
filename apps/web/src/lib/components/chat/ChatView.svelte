@@ -1,13 +1,23 @@
 <script lang="ts">
+	import type { ModelCatalog } from '@house-elf/shared';
 	import { Chat } from '@ai-sdk/svelte';
 	import { DefaultChatTransport } from 'ai';
+	import { untrack } from 'svelte';
 
+	import { createModelSelection } from '$lib/state/model-selection.svelte';
 	import Composer from './Composer.svelte';
 	import ErrorNotice from './ErrorNotice.svelte';
 	import StickToBottom from './StickToBottom.svelte';
 	import MessagePart from './MessagePart.svelte';
 
-	let { agentId }: { agentId: string } = $props();
+	interface ChatViewProps {
+		agentId: string;
+		modelCatalog: ModelCatalog;
+	}
+
+	let { agentId, modelCatalog }: ChatViewProps = $props();
+
+	const modelSelection = untrack(() => createModelSelection(modelCatalog));
 
 	// The URL is relative, so the browser sends it to whatever origin served the
 	// page. Only the SvelteKit server knows where Mastra actually lives.
@@ -22,6 +32,22 @@
 	);
 
 	const empty = $derived(chat.messages.length === 0);
+
+	function retry() {
+		void chat.regenerate();
+	}
+
+	function selectModel(modelId: string) {
+		modelSelection.select(modelId);
+	}
+
+	function send(text: string) {
+		void chat.sendMessage({ text }, { body: { model: modelSelection.selectedModelId } });
+	}
+
+	function stop() {
+		void chat.stop();
+	}
 </script>
 
 <div class="flex h-full min-h-0 flex-col">
@@ -48,13 +74,16 @@
 		{/each}
 
 		{#if chat.error}
-			<ErrorNotice error={chat.error} onretry={() => chat.regenerate()} />
+			<ErrorNotice error={chat.error} onretry={retry} />
 		{/if}
 	</StickToBottom>
 
 	<Composer
 		status={chat.status}
-		onsend={(text: string) => chat.sendMessage({ text })}
-		onstop={() => chat.stop()}
+		models={modelCatalog.models}
+		selectedModelId={modelSelection.selectedModelId}
+		onmodelselect={selectModel}
+		onsend={send}
+		onstop={stop}
 	/>
 </div>

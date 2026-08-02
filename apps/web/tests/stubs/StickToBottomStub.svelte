@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { errorNoticeStub } from './keys';
+	import { stickToBottomStub } from './keys';
 	import Stub from './Stub.svelte';
 
 	const props: Record<string, unknown> = $props();
 </script>
 
-<Stub key={errorNoticeStub} {...props} />
+<Stub key={stickToBottomStub} {...props} />

@@ -33,6 +33,32 @@ A status code returned by a stubbed `json()` is the stub's value, not the code's
 Before writing an `expect`, ask: could this fail if the implementation were wrong?
 If the answer is no, delete it.
 
+## Test Svelte components at their own boundary
+
+For Svelte component units, render the component under test directly and replace
+every in-repo child component with a minimal stub. Test leaf behavior at the leaf;
+parent tests cover only parent-owned behavior and the child contract (props and
+callbacks). Do not repeat a grandchild interaction through each ancestor.
+Cross-component user flows belong in E2E tests.
+
+## A stub renders nothing and invents nothing
+
+A child stub records the props it was handed and renders a bare marker element. It
+never grows buttons, labels, or text of its own — invented markup is an assumption
+about the child that no real component has to honour, and a test that clicks it is
+testing the stub.
+
+To exercise a callback the parent passed down, read it back from the recorded props
+and call it. Do not add an affordance to the stub so the test has something to click.
+
+```ts
+render(ChatView, props);
+stubProps('composer').onsend('hello');
+```
+
+The one exception is a `children` snippet: a stub that receives one must render it,
+or the parent's own markup disappears from the test.
+
 ## The test contains no logic
 
 No branches, loops, or computation in a test body. A test is setup, action,

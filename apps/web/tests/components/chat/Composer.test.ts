@@ -1,17 +1,49 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
+import type { SelectableModel } from '@house-elf/shared';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import Composer from '../../../src/lib/components/chat/Composer.svelte';
+import { modelPickerStub } from '../../stubs/keys';
+import { stubCallback, stubProps } from '../../stubs/stub-props';
 
-function renderComposer(status: 'ready' | 'submitted' | 'streaming' | 'error' = 'ready') {
+vi.mock('../../../src/lib/components/chat/ModelPicker.svelte', async () => ({
+	default: (await import('../../stubs/ModelPickerStub.svelte')).default
+}));
+
+const Composer = (await import('../../../src/lib/components/chat/Composer.svelte')).default;
+
+const models = [
+	{ id: 'anthropic/claude-opus-5', label: 'Opus 5', family: 'opus', generation: '5' },
+	{
+		id: 'anthropic/claude-sonnet-4-6',
+		label: 'Sonnet 4.6',
+		family: 'sonnet',
+		generation: '4.6'
+	},
+	{
+		id: 'anthropic/claude-haiku-4-5',
+		label: 'Haiku 4.5',
+		family: 'haiku',
+		generation: '4.5'
+	}
+] as const;
+
+function renderComposer(
+	status: 'ready' | 'submitted' | 'streaming' | 'error' = 'ready',
+	selectedModelId = 'anthropic/claude-haiku-4-5',
+	availableModels: readonly SelectableModel[] = models
+) {
 	const onsend = vi.fn();
 	const onstop = vi.fn();
-	const { container, unmount } = render(Composer, { props: { status, onsend, onstop } });
+	const onmodelselect = vi.fn();
+	const { container, unmount } = render(Composer, {
+		props: { status, onsend, onstop, models: availableModels, selectedModelId, onmodelselect }
+	});
 
 	return {
 		onsend,
 		onstop,
+		onmodelselect,
 		container,
 		unmount,
 		textarea: screen.getByRole('textbox', { name: 'Message' })
@@ -143,6 +175,50 @@ describe('composer', () => {
 			await user.click(screen.getByRole('button', { name: 'Send' }));
 
 			expect(onsend).toHaveBeenCalledExactlyOnceWith('hello');
+		});
+
+		it('can send a new message after the previous request failed', async () => {
+			const user = userEvent.setup();
+			const { onsend, textarea } = renderComposer('error');
+
+			await user.type(textarea, 'Never mind{Enter}');
+
+			expect(onsend).toHaveBeenCalledExactlyOnceWith('Never mind');
+		});
+	});
+
+	describe('model picker contract', () => {
+		it('passes the catalog and selected id down, and passes selections back up', () => {
+			const { onmodelselect } = renderComposer('ready', 'catalog/haiku', [
+				{ id: 'catalog/opus', label: 'Server Opus', family: 'opus', generation: 'catalog-a' },
+				{
+					id: 'catalog/haiku',
+					label: 'Server Haiku',
+					family: 'haiku',
+					generation: 'catalog-c'
+				}
+			]);
+
+			const { models, selectedModelId } = stubProps(modelPickerStub);
+			expect(models).toStrictEqual([
+				{
+					id: 'catalog/opus',
+					label: 'Server Opus',
+					family: 'opus',
+					generation: 'catalog-a'
+				},
+				{
+					id: 'catalog/haiku',
+					label: 'Server Haiku',
+					family: 'haiku',
+					generation: 'catalog-c'
+				}
+			]);
+			expect(selectedModelId).toBe('catalog/haiku');
+
+			stubCallback(modelPickerStub, 'onselect')('catalog/opus');
+
+			expect(onmodelselect).toHaveBeenCalledExactlyOnceWith('catalog/opus');
 		});
 	});
 });

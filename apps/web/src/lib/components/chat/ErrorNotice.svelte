@@ -1,5 +1,10 @@
 <script lang="ts">
-	let { error, onretry }: { error: Error; onretry: () => void } = $props();
+	interface ErrorNoticeProps {
+		error: Error;
+		onretry: () => void;
+	}
+
+	let { error, onretry }: ErrorNoticeProps = $props();
 </script>
 
 <!-- Inside the transcript rather than over it: the failure belongs to the exchange

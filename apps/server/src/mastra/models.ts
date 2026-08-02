@@ -1,3 +1,5 @@
+import type { ModelCatalog, SelectableModel } from '@house-elf/shared';
+
 /**
  * The server-side model allowlist.
  *
@@ -13,8 +15,8 @@
  * `deprecated` by the registry; neither is offered.
  *
  * Note that Mastra's `ModelRouterModelId` ends in `(string & {})`, so it accepts
- * any string and gives no compile-time protection here. This list is the only
- * boundary there is.
+ * any string and gives no compile-time protection here. This list is the runtime
+ * check that catches bad ids before they reach a provider.
  *
  * There is no server-side default. A request either names a model or it is
  * rejected — a default here would be a second, invisible way to spend money,
@@ -22,23 +24,16 @@
  * model instead of failing. Choosing the initial selection is the picker's job.
  */
 
-/** Anthropic's three model families, ordered most to least capable. */
-export const MODEL_FAMILIES = ['opus', 'sonnet', 'haiku'] as const;
+export type { ModelFamily, SelectableModel } from '@house-elf/shared';
 
-export type ModelFamily = (typeof MODEL_FAMILIES)[number];
+const initialModel = {
+	id: 'anthropic/claude-haiku-4-5',
+	label: 'Haiku 4.5',
+	family: 'haiku',
+	generation: '4.5'
+} as const satisfies SelectableModel;
 
-export interface SelectableModel {
-	/** The `provider/model` router id. This is also the key the client sends. */
-	readonly id: string;
-	/** Shown on the picker's trigger, where there is no group heading for context. */
-	readonly label: string;
-	/** Groups the picker. */
-	readonly family: ModelFamily;
-	/** Shown inside a group, where the family is already the heading. */
-	readonly generation: string;
-}
-
-/** Ordered newest first within each family; families in `MODEL_FAMILIES` order. */
+/** Ordered newest first within each family: Opus, Sonnet, then Haiku. */
 export const SELECTABLE_MODELS: readonly SelectableModel[] = [
 	{ id: 'anthropic/claude-opus-5', label: 'Opus 5', family: 'opus', generation: '5' },
 	{ id: 'anthropic/claude-opus-4-8', label: 'Opus 4.8', family: 'opus', generation: '4.8' },
@@ -48,8 +43,16 @@ export const SELECTABLE_MODELS: readonly SelectableModel[] = [
 	{ id: 'anthropic/claude-sonnet-5', label: 'Sonnet 5', family: 'sonnet', generation: '5' },
 	{ id: 'anthropic/claude-sonnet-4-6', label: 'Sonnet 4.6', family: 'sonnet', generation: '4.6' },
 	{ id: 'anthropic/claude-sonnet-4-5', label: 'Sonnet 4.5', family: 'sonnet', generation: '4.5' },
-	{ id: 'anthropic/claude-haiku-4-5', label: 'Haiku 4.5', family: 'haiku', generation: '4.5' }
+	initialModel
 ];
+
+/** The picker's first-visit choice. Request resolution still has no default. */
+export const INITIAL_MODEL_ID = initialModel.id;
+
+export const MODEL_CATALOG = {
+	initialModelId: INITIAL_MODEL_ID,
+	models: SELECTABLE_MODELS
+} satisfies ModelCatalog;
 
 const byId = new Map(SELECTABLE_MODELS.map((model) => [model.id, model]));
 

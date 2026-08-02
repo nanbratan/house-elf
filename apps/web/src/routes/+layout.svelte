@@ -6,9 +6,17 @@
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
 
-	let { children }: { children: Snippet } = $props();
+	interface LayoutProps {
+		children: Snippet;
+	}
+
+	let { children }: LayoutProps = $props();
 
 	let sidebarOpen = $state(true);
+
+	function toggleSidebar() {
+		sidebarOpen = !sidebarOpen;
+	}
 
 	// Static placeholders until M2 wires the sidebar to real threads.
 	const conversations = [
@@ -65,7 +73,7 @@
 		<header class="flex h-12 shrink-0 items-center gap-3 border-b border-line px-3">
 			<button
 				type="button"
-				onclick={() => (sidebarOpen = !sidebarOpen)}
+				onclick={toggleSidebar}
 				aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
 				aria-expanded={sidebarOpen}
 				class="rounded-md p-2 text-muted transition-colors hover:bg-raised hover:text-content"

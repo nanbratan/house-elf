@@ -1,6 +1,4 @@
-import { error } from '@sveltejs/kit';
-
-import { env } from '$env/dynamic/private';
+import { mastraUrl } from '$lib/server/mastra';
 
 import type { RequestHandler } from './$types';
 
@@ -17,14 +15,7 @@ import type { RequestHandler } from './$types';
  * misleading; the UI reads the parts.
  */
 export const POST: RequestHandler = async ({ params, request, fetch }) => {
-	const origin = env.MASTRA_URL;
-	if (!origin) {
-		// A deployment misconfiguration, not a user error. Loud, and never silently
-		// falling back to a default origin.
-		error(500, 'MASTRA_URL is not set. See apps/web/.env.example.');
-	}
-
-	const upstream = await fetch(`${origin}/chat/${params.agentId}`, {
+	const upstream = await fetch(`${mastraUrl()}/chat/${params.agentId}`, {
 		method: 'POST',
 		headers: { 'content-type': request.headers.get('content-type') ?? 'application/json' },
 		// The request body is a complete JSON message list, so reading it in full
