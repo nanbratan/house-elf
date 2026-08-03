@@ -98,6 +98,24 @@ and 30624316521, ~1m10s each); and a full teardown — volumes and `node_modules
 - [x] T1.6.4 Documentation
 - [x] **DoD verified**
 
+## M1.7 — Any OpenRouter model → [11d-m1.7-openrouter.md](11d-m1.7-openrouter.md)
+
+Plan reviewed against the live OpenRouter API on 2026-08-03 and substantially
+corrected before any code — see the decision-log entry of that date.
+
+- [ ] T1.7.0 OpenRouter becomes the transport
+- [ ] T1.7.1 Server-side catalog fetch
+- [ ] T1.7.2 Shared schema rewrite
+- [ ] T1.7.4 Grouped, searchable model picker (model choice only)
+- [ ] T1.7.5 Documentation
+- [ ] T1.7.6 Pinned / favorite models
+- [ ] T1.7.7 Per-model settings: the server contract
+- [ ] T1.7.8 The settings picker
+- [ ] **DoD verified**
+
+T1.7.3 (provider icons) was removed during the review, not skipped. Numbering of
+the surviving tasks is left alone so the plan doc and this list agree.
+
 ## M2 — Threads and memory → [12-m2-threads-memory.md](12-m2-threads-memory.md)
 
 - [ ] T2.1 Memory configuration
@@ -108,6 +126,11 @@ and 30624316521, ~1m10s each); and a full teardown — volumes and `node_modules
 - [ ] T2.6 New conversation page
 - [ ] T2.7 Tests
 - [ ] **DoD verified** — incl. the cross-thread working-memory check
+
+## M2.5 — Web search → [12b-m2.5-web-search.md](12b-m2.5-web-search.md)
+
+Stub only. Raised during M1.7 and deliberately deferred; the document records why
+and what is already verified. Needs a planning session before any task list.
 
 ## M3 — Menu agent → [13-m3-menu-agent.md](13-m3-menu-agent.md)
 
@@ -1842,6 +1865,147 @@ directly and a second keyboard path would be redundant.
 made vitest report a misleading "invalid JS syntax" parse error pointing at an
 unrelated file's `</script>` tag. `bunx svelte-kit sync` regenerates it; the
 directory holds real generated files vitest depends on, not disposable cache.
+
+### 2026-08-03 — M1.7's plan was reviewed against the live API and largely rewritten
+
+No code yet. The M1.7 document quoted an OpenRouter response shape that had been
+misread, and several tasks were built on it. Everything below was re-fetched from
+`GET https://openrouter.ai/api/v1/models` (337 models, 52 real providers) and
+`/api/v1/providers`, and the plan doc corrected in place.
+
+**What the doc said, and what is true:**
+
+- The `reasoning` object was shown as always carrying `mandatory`,
+  `default_enabled`, `supported_efforts` and `default_effort`. It is present on
+  213 models, but only `mandatory` is universal — `default_enabled` 85,
+  `supported_efforts` 86, `default_effort` 86, `supports_max_tokens` 8. 127 of
+  them are `{ mandatory: false }` and nothing more.
+- `supported_efforts: null` was said to mean "any string accepted". It **never**
+  occurs — zero of 213. Absent means a plain on/off. The schema takes optional
+  fields, not nullable ones, and T1.7.7 no longer designs for a null case.
+- Filtering to chat models on `output_modalities` including `"text"` would have
+  been a **no-op**: all 337 entries match. The default listing is already LLM-only.
+  The filter was deleted from T1.7.1.
+- `openrouter/auto` and `auto-beta` were said to omit their capability fields.
+  They do not — both carry `architecture`, `context_length` (2,000,000) and
+  `supported_parameters`. What they lack is a `reasoning` object; their `pricing`
+  is the sentinel `"-1"`. There are also **six** such routers, not two.
+- Deprecated aliases were assumed but not located. They are the 11 entries with an
+  `alias_target`, id-prefixed `~`, which also **break the grouping key**:
+  `id.split('/')[0]` yields `~anthropic`, `~google`, `~x-ai`, `~openai`,
+  `~deepseek`, `~moonshotai`. "58 providers" was six tilde artifacts plus 52 real
+  ones. `expiration_date` is the real deprecation signal and had been missed.
+- "No icon field anywhere" — confirmed against the full key set, nested included.
+
+**Decisions taken during the review, all the user's:**
+
+- **Icons dropped, T1.7.3 deleted.** `@lobehub/icons-static-svg` is real and MIT,
+  but has no `main`/`module`/`exports` (file paths only, so a bad slug is a runtime
+  miss), and matches barely half the real provider slugs: ~7 need hand-written
+  aliases, ~20 have no icon at all. That is the same standing maintenance cost that
+  got privacy cut, so it went the same way. The picker is text-only.
+- **Privacy stays dropped, for a corrected reason.** `GET /api/v1/providers` does
+  exist and is machine-readable (101 entries, `privacy_policy_url`, `headquarters`,
+  `datacenters`) — the doc had claimed no source at all. But it carries no ZDR,
+  retention or training flag, and neither does the public endpoints response, so
+  the part a badge would need still has no source.
+- **No Postgres snapshot; in-memory TTL only.** OpenRouter serves the endpoint via
+  Cloudflare with `stale-if-error=3600`, so an origin outage is absorbed at the
+  edge. The only case a snapshot covers is our own server restarting offline,
+  where OpenRouter is also the transport and nothing can be sent anyway. It would
+  have meant inventing this repo's first hand-rolled table a milestone before M2
+  decides how tables are made. DoD item 7 was removed with it.
+- **All routers offered except `openrouter/bodybuilder`**, which turns prose into
+  API request objects rather than answering. Accepted knowingly: `fusion` makes
+  several model calls per message, and `free` routes to free models, which
+  generally carry prompt logging as their price.
+- **`openrouter/auto` is the default selection**, so the default can never dangle
+  and no model id is hand-typed. Its per-message cost is not knowable in advance
+  and the thinking toggle is inert on a first visit; both accepted.
+
+**Three risks the plan had missed, now tasked:**
+
+- **The transport switch was assumed but never tasked** — ids today are
+  `anthropic/claude-*` on `ANTHROPIC_API_KEY`, the only provider key in
+  `.env.example`. Now T1.7.0, done first against the existing allowlist. It also
+  names the id-shape wrinkle: OpenRouter ids contain a slash, so the router string
+  is `openrouter/anthropic/claude-opus-5` while the catalog id is
+  `anthropic/claude-opus-5`.
+- **`thinking.ts` is replaced, not adjusted.** Its `providerOptions.anthropic`
+  output and per-id `THINKING_MODES` table are meaningless once OpenRouter is the
+  transport, which takes a unified `reasoning` parameter. T1.7.2 now says so; it is
+  the largest piece of work in the milestone and was hidden inside "update
+  `thinkingProviderOptions`".
+- **Persisted client state goes stale.** T1.6.1 stores the model id and thinking
+  boolean in browser storage; a returning user holds ids that may no longer resolve.
+  A stored selection absent from the catalog is now discarded, not sent.
+
+Also noted for the executing agent: `UnknownModelError` enumerates the whole
+allowlist in its message — fine at nine ids, several kilobytes at 337.
+
+**Corrected:** `11d-m1.7-openrouter.md` throughout — ground truth, decisions, task
+list, Definition of Done and closing notes.
+
+### 2026-08-03 — Settings move out of the model picker; web search becomes M2.5
+
+A follow-up pass over the rest of the `/models` response, again against live data
+(325 models, i.e. after filtering aliases and `bodybuilder`).
+
+**What the remaining fields are worth:**
+
+- **`supported_parameters` is the useful one and the plan ignored it.** It gates
+  every possible control and is now in the schema: `temperature` 279 models,
+  `top_p` 268, `tools` 260, `seed` 258, `structured_outputs` 250,
+  `reasoning_effort` 79, `verbosity` 11.
+- **The models most likely to be picked have no temperature.** All 51 that omit it
+  are frontier models — every current Claude and the whole `openai/gpt-5.6-*`
+  family. Any temperature control has to be gated, and will often be absent.
+- **`default_parameters` is present but mostly null** — `temperature` non-null on
+  71 of 325, `top_p` 52, `top_k` 16. It can show a default, never supply one.
+- **`tools` is a live correctness gap.** 65 models cannot call tools and the app
+  already ships one; picking those breaks it silently today. Now a marker in the
+  picker (T1.7.4).
+- **Also added, cheaply:** `knowledgeCutoff` (156), `maxCompletionTokens` (284),
+  `inputModalities` (for M4).
+- **Checked and rejected:** `per_request_limits` (null on all 325),
+  `supported_voices` (2 models, both empty), `benchmarks` (`design_arena` empty,
+  `artificial_analysis` on only 117), `tokenizer`, `instruct_type`,
+  `hugging_face_id`, `canonical_slug` (differs from `id` on 185 and is not what
+  the API accepts), `top_a`, `prediction`, `parallel_tool_calls`.
+- **Two display caveats found:** `pricing.overrides` (44 models) is tiered
+  pricing, so one headline number is a simplification; and `context_length`
+  disagrees with `top_provider.context_length` on 33 models.
+
+**Settings get their own picker (user's call).** `ModelPicker` becomes purely a
+model picker; a second trigger opens a `SettingsPicker` holding thinking, effort,
+temperature, verbosity, max output tokens and seed, each gated, each with an
+inline description, persisted per model id. The single-trigger-with-submenus
+pattern (Claude's) was considered and rejected: a searchable dialog over 325
+models cannot live in a submenu. The settings trigger carries a visible summary
+rather than a bare icon, because per-model persistence means switching models
+swaps an entire profile.
+
+This split T1.7.7 into two — a server-side settings contract (T1.7.7) and the
+picker (T1.7.8) — and stripped the thinking toggle out of T1.7.4. The alternative
+considered was deferring all of it to an M1.8; rejected because M1.7 would then
+build the thinking and effort controls inside the picker and M1.8 would
+immediately remove them.
+
+`prepare-chat-request.ts`'s rule is unchanged: the client sends a narrow validated
+signal, the server decides the provider payload. The signal widens from a boolean
+to a settings object, validated against the selected model's own capabilities.
+
+**Web search deferred to M2.5** — new stub at
+[12b-m2.5-web-search.md](12b-m2.5-web-search.md). It is not a model capability
+(OpenRouter's docs confirm `:online` and the `web` plugin work on any model, and
+`web_search_options` is only `search_context_size` for native search — using it as
+a capability flag would hide the feature on all 325). It is mostly a citation
+renderer, and citations are message metadata, so it belongs after M2 makes
+messages persistent.
+
+**Corrected:** `11d-m1.7-openrouter.md` (ground truth, decisions 4 and 10–13,
+T1.7.2, T1.7.4, T1.7.7, new T1.7.8, DoD, notes); new `12b-m2.5-web-search.md`;
+`README.md` index.
 
 ## Open questions
 
