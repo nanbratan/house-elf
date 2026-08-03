@@ -1,13 +1,6 @@
 import { z } from 'zod';
 
-/**
- * OpenRouter's live model list: what it offers, before any of it is translated
- * into the shape this app publishes. Mapping to the shared schema is T1.7.2's
- * job — this module answers only "what does OpenRouter say exists right now".
- *
- * The list is public; the key is needed to *use* a model, not to read the
- * catalog.
- */
+/** The list is public — the key is needed to *use* a model, not to read the catalog. */
 const CATALOG_URL = 'https://openrouter.ai/api/v1/models';
 
 /**
@@ -26,12 +19,9 @@ const CACHE_TTL_MS = 60 * 60 * 1000;
 const EXCLUDED_ROUTER_ID = 'openrouter/bodybuilder';
 
 /**
- * Only `mandatory` is universal. Verified against the live response on
- * 2026-08-03: of the 213 entries carrying a `reasoning` object, `mandatory` is
- * on all 213, `default_enabled` on 85, `supported_efforts` and `default_effort`
- * on 86, `supports_max_tokens` on 8. `supported_efforts` is never null — when a
- * model has no effort levels the key is simply absent, which means a plain
- * on/off rather than "any effort accepted".
+ * Only `mandatory` is universal — verified against all 213 live entries carrying a
+ * `reasoning` object on 2026-08-03. `supported_efforts` is never null: an absent
+ * key means a plain on/off, not "any effort accepted".
  */
 const reasoningSchema = z.object({
 	mandatory: z.boolean(),
@@ -42,14 +32,11 @@ const reasoningSchema = z.object({
 });
 
 /**
- * Deliberately narrow: unknown keys are stripped, so this declares exactly the
- * fields the app has a use for and nothing travels further than that.
- *
- * Nullability is not guesswork — each was counted across all 337 live entries on
- * 2026-08-03. `knowledge_cutoff` is null on 179, `expiration_date` on 332,
- * `top_provider.context_length` on 6, `max_completion_tokens` on 43, and
- * `default_parameters.temperature` is present on 233 but null on 162, so it can
- * show a published default and can never supply one.
+ * Deliberately narrow: unknown keys are stripped, so nothing travels further
+ * than the fields the app has a use for. Every `nullable` here was counted
+ * across all 337 live entries on 2026-08-03, not guessed — notably
+ * `default_parameters.temperature`, which is null on 162 of the 233 that carry
+ * it, so it can display a published default and can never supply one.
  */
 const openRouterModelSchema = z.object({
 	id: z.string().min(1),
@@ -76,7 +63,7 @@ const openRouterModelSchema = z.object({
 	knowledge_cutoff: z.string().nullable(),
 	expiration_date: z.string().nullable(),
 	reasoning: reasoningSchema.optional(),
-	// Present on the 11 `~`-prefixed duplicates and nowhere else.
+	// On the 11 `~…-latest` entries only, naming what the pointer resolves to today.
 	alias_target: z.object({ slug: z.string() }).optional()
 });
 
@@ -104,24 +91,15 @@ async function fetchModels(): Promise<readonly OpenRouterModel[]> {
 	return catalogResponseSchema.parse(await response.json()).data;
 }
 
-/**
- * Three things are dropped and nothing else. In particular there is no filter on
- * output modality: every one of the 337 live entries includes `"text"`, because
- * the default listing is already LLM-only and non-chat models sit behind a
- * `?category=` parameter. Such a filter would match everything.
- */
 function isOffered(model: OpenRouterModel, now: number): boolean {
-	if (model.alias_target !== undefined) return false;
 	if (model.id === EXCLUDED_ROUTER_ID) return false;
-	// An unparseable date yields NaN, which fails this comparison and keeps the
-	// model — a malformed field should not silently remove something usable.
-	return model.expiration_date === null || !(Date.parse(model.expiration_date) < now);
+	// An unparseable date parses to NaN and every NaN comparison is false, so a
+	// malformed field keeps the model rather than silently removing something usable.
+	const hasExpired = model.expiration_date !== null && Date.parse(model.expiration_date) < now;
+	return !hasExpired;
 }
 
 /**
- * Every model OpenRouter currently offers, newest fetch first and the in-memory
- * cache otherwise.
- *
  * Expiry is applied on read rather than baked into the cache, so a model that
  * lapses mid-TTL disappears at the right moment instead of an hour late.
  *

@@ -2137,6 +2137,44 @@ needs a `module` setting this repo does not use (plain JSON import instead), and
 `bun run verify` green: 72 server tests, 140 web tests, check/lint/format/build all
 clean.
 
+### 2026-08-03 — T1.7.1 review: the `~…-latest` filter was wrong
+
+Three corrections from review, all on top of the commit above.
+
+**The `~…-latest` entries are not duplicates, and are now offered.** The plan
+called them that and I repeated it. They are pointers: `~anthropic/claude-opus-latest`
+is Opus 5 today and becomes Opus 6 when Anthropic ships it, while
+`anthropic/claude-opus-5` stays put. Those are two different things to want. All
+11 targets do also exist as their own entries, but that is what a pointer is for,
+not redundancy. The filter is gone, `alias_target` is kept as metadata so the
+picker can show what a pointer resolves to, and the grouping cost moves to T1.7.4:
+**strip the leading `~` before splitting on `/`**, or six phantom providers appear.
+
+**Discounts exist and this endpoint does not carry them.** `pricing.overrides` in
+`/api/v1/models` is volume tiering, not a sale — do not read it as one. The real
+signal is `pricing.discount` on `GET /api/v1/models/{id}/endpoints`: a fraction
+(0.494 = 49.4% off), per provider endpoint, and negative on at least one model
+(`xiaomi/mimo-v2.5-pro` on StreamLake, −0.2, a markup). Checked all 337.
+
+Two findings decide what to do with it. First, **the price already shown is the
+discounted one** — `z-ai/glm-5.2` lists at exactly its post-discount rate — so a
+sale is already reflected in the picker and `discount` only adds a badge. Second,
+there is no bulk access: `?include=endpoints`, `?endpoints=true` and
+`?expand=endpoints` are silently ignored, `/api/v1/endpoints` and
+`/api/v1/models/endpoints` 404. One request per model, ~10s per refresh, and it
+cannot be narrowed — only 17 models are free, and discounts hit single-provider
+models too (7 of 54 sampled). So the catalog fetch does not do it; if the badge is
+wanted it is one on-demand request for the selected model, recorded in the plan as
+a T1.7.4/T1.7.7 display concern rather than a new task.
+
+**`isOffered` was unreadable.** `return model.expiration_date === null || !(Date.parse(…) < now)`
+is a double negative guarding a NaN case. Now a named `hasExpired` const, with the
+NaN reasoning stated once.
+
+Re-proved: eight mutations, each killing exactly one test. The alias behaviour is
+pinned by stripping `alias_target` from the schema, which fails only the new
+"keeps the `~latest` pointers" test.
+
 ## Open questions
 
 Things needing a human answer. Remove once resolved.

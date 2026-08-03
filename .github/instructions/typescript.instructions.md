@@ -44,6 +44,29 @@ body = await c.req.raw.clone().json();
 If a comment states a fact about a dependency, it must have been verified against the
 installed version, not recalled.
 
+### A comment must survive the code it describes
+
+Every comment is attached to something. If you delete or reverse a change, delete its
+comment too — a doc comment left floating above nothing, or one explaining why code
+that is no longer there was written, tells the next reader that a decision was made
+and gives them no way to find out which.
+
+Three that are never worth writing:
+
+- **Comments on absent code.** "There is deliberately no X filter here." The reader
+  cannot see the thing you did not do, so this reads as a warning about code that
+  exists. If a rejected approach needs recording, it belongs in the plan document,
+  where the alternatives already live.
+- **Changelog comments.** "Now uses Y instead of Z", "kept for T1.7.4". Git knows. A
+  comment describing an edit is addressed to a reviewer who will be gone by the next
+  commit.
+- **Statistics for their own sake.** One measurement that forces a decision earns its
+  line — `supported_efforts` is never null, so absent means on/off. A table of counts
+  nobody acts on is a notebook entry, not a comment.
+
+This file is not a notebook. If a note has no reader who would act differently for
+having read it, it does not go in the source.
+
 ## Scope
 
 - Change what was asked and what that requires. Nothing else.

@@ -37,16 +37,15 @@ afterEach(() => {
 });
 
 describe('openRouterModels', () => {
-	it('drops the alias duplicates that would break provider grouping', async () => {
+	it('keeps the ~latest pointers alongside the versions they currently resolve to', async () => {
 		vi.stubGlobal('fetch', respondWith(fixture));
 		const { openRouterModels } = await importCatalog();
 
-		const ids = (await openRouterModels()).map((model) => model.id);
+		const models = await openRouterModels();
 
-		// An alias duplicates a model already listed, and its `~anthropic/…` id
-		// would group it under a provider that does not exist.
-		expect(ids).not.toContain('~anthropic/claude-opus-latest');
-		expect(ids).toContain('anthropic/claude-opus-5');
+		const latest = models.find((model) => model.id === '~anthropic/claude-opus-latest');
+		expect(latest?.alias_target?.slug).toBe('anthropic/claude-opus-5');
+		expect(models.map((model) => model.id)).toContain('anthropic/claude-opus-5');
 	});
 
 	it('drops bodybuilder but keeps the routers that do answer questions', async () => {
