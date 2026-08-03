@@ -30,6 +30,7 @@
 
 	let text = $state('');
 	let textareaElement: HTMLTextAreaElement | undefined;
+	let textareaFocused = $state(false);
 
 	// `submitted` covers the gap between sending and the first chunk, when there is
 	// nothing on screen yet but the request is already in flight.
@@ -82,7 +83,9 @@
 
 <form class="border-t border-line bg-canvas px-4 py-3" {onsubmit}>
 	<div
-		class="mx-auto max-w-3xl overflow-hidden rounded-xl border border-line bg-raised transition-colors focus-within:border-accent/50"
+		class="mx-auto max-w-3xl overflow-hidden rounded-xl border bg-raised transition-colors {textareaFocused
+			? 'border-accent/50'
+			: 'border-line'}"
 	>
 		<textarea
 			bind:this={textareaElement}
@@ -90,6 +93,8 @@
 			{onkeydown}
 			{oncompositionstart}
 			{oncompositionend}
+			onfocus={() => (textareaFocused = true)}
+			onblur={() => (textareaFocused = false)}
 			rows="1"
 			placeholder="Send a message…"
 			aria-label="Message"
