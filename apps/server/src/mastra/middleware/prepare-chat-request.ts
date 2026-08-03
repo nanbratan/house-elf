@@ -19,6 +19,7 @@
 
 import type { Middleware } from '@mastra/core/server';
 
+import { routerModelId } from '../model-router';
 import { UnknownModelError, resolveModel } from '../models';
 import { ThinkingNotSupportedError, thinkingProviderOptions, wantsThinking } from '../thinking';
 
@@ -50,8 +51,11 @@ export const prepareChatRequest = {
 		let rewritten: Record<string, unknown>;
 		try {
 			const model = resolveModel(rest.model);
+			// The client names a catalog id; the provider is addressed by the router
+			// id, so the field is replaced rather than passed through.
+			const routed = { ...rest, model: routerModelId(model) };
 			const options = thinkingProviderOptions(model, wantsThinking(thinking));
-			rewritten = options === undefined ? rest : { ...rest, providerOptions: options };
+			rewritten = options === undefined ? routed : { ...routed, providerOptions: options };
 		} catch (error) {
 			if (error instanceof UnknownModelError || error instanceof ThinkingNotSupportedError) {
 				return c.json({ error: error.message }, 400);

@@ -48,7 +48,18 @@ describe('prepareChatRequest', () => {
 		await settled;
 		expect(next).toHaveBeenCalledOnce();
 		// Without the clone this throws: the handler already drained the stream.
-		await expect(delivered()).resolves.toMatchObject({ model: haiku, messages: [] });
+		await expect(delivered()).resolves.toMatchObject({ messages: [] });
+	});
+
+	it('addresses the model through OpenRouter rather than forwarding the catalog id', async () => {
+		// The client names `anthropic/…`; sending that on would reach Anthropic
+		// directly, on a key the app no longer has.
+		const { delivered, settled } = call(JSON.stringify({ model: haiku, messages: [] }));
+
+		await settled;
+		await expect(delivered()).resolves.toMatchObject({
+			model: 'openrouter/anthropic/claude-haiku-4-5'
+		});
 	});
 
 	it('stops a disallowed model with a 400 instead of passing it on', async () => {

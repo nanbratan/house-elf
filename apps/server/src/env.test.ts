@@ -17,16 +17,26 @@ describe('env', () => {
 
 	it('exposes the required variables', async () => {
 		vi.stubEnv('DATABASE_URL', 'postgresql://user:pw@localhost:5432/db');
+		vi.stubEnv('OPENROUTER_API_KEY', 'sk-or-test');
 
 		const env = await importEnv();
 
 		expect(env.databaseUrl).toBe('postgresql://user:pw@localhost:5432/db');
+		expect(env.openrouterApiKey).toBe('sk-or-test');
 	});
 
 	it('throws naming the variable when one is missing', async () => {
 		vi.stubEnv('DATABASE_URL', undefined);
 
 		await expect(importEnv()).rejects.toThrow('DATABASE_URL');
+	});
+
+	it('refuses to start without the key every model request is billed to', async () => {
+		// Otherwise the first message sent surfaces a raw provider 401 instead.
+		vi.stubEnv('DATABASE_URL', 'postgresql://user:pw@localhost:5432/db');
+		vi.stubEnv('OPENROUTER_API_KEY', undefined);
+
+		await expect(importEnv()).rejects.toThrow('OPENROUTER_API_KEY');
 	});
 
 	it('treats a whitespace-only value as missing', async () => {

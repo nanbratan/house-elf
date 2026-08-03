@@ -103,7 +103,7 @@ and 30624316521, ~1m10s each); and a full teardown — volumes and `node_modules
 Plan reviewed against the live OpenRouter API on 2026-08-03 and substantially
 corrected before any code — see the decision-log entry of that date.
 
-- [ ] T1.7.0 OpenRouter becomes the transport
+- [x] T1.7.0 OpenRouter becomes the transport
 - [ ] T1.7.1 Server-side catalog fetch
 - [ ] T1.7.2 Shared schema rewrite
 - [ ] T1.7.4 Grouped, searchable model picker (model choice only)
@@ -2006,6 +2006,62 @@ messages persistent.
 **Corrected:** `11d-m1.7-openrouter.md` (ground truth, decisions 4 and 10–13,
 T1.7.2, T1.7.4, T1.7.7, new T1.7.8, DoD, notes); new `12b-m2.5-web-search.md`;
 `README.md` index.
+
+### 2026-08-03 — T1.7.0: OpenRouter is the transport
+
+The prefix composes exactly as the plan guessed — `openrouter/` + the catalog id,
+three segments — but the reason it works is not the one the plan gave, and the
+difference matters for T1.7.1.
+
+**OpenRouter's ids are not the allowlist's ids.** OpenRouter spells Anthropic
+versions with dots (`anthropic/claude-haiku-4.5`); `models.ts` uses the native
+Anthropic dashes (`anthropic/claude-haiku-4-5`). Seven of the nine allowlisted ids
+do not appear in `GET /api/v1/models` at all, so composing the prefix over them
+looked like it should 404. It does not: **OpenRouter normalises the separator.**
+All nine were POSTed to `/api/v1/chat/completions` and every one returned 200 with
+`model` naming its dotted equivalent. So T1.7.0 needed no change to `models.ts`,
+as instructed — but the id a request sends and the id the catalog publishes are
+not always the same string, which T1.7.2's "a stored selection absent from the
+fetched catalog is discarded" will act on: a persisted `…-4-5` will be dropped as
+unknown even though it still works. Fine, and now expected rather than a surprise.
+
+**Where the prefix lives.** New `apps/server/src/mastra/model-router.ts`, one
+function, `routerModelId(model)`. It takes a resolved `SelectableModel` rather than
+a string so a client id cannot reach a provider merely by being prefixed. Two call
+sites: `prepare-chat-request.ts` (which now replaces the body's `model` rather than
+passing it through) and `agents/general.ts`. That agent's `model` — Studio's
+descriptor, never what the app runs on — stopped naming Haiku itself and now tracks
+`INITIAL_MODEL`, so when the picker's default becomes `openrouter/auto` in T1.7.2
+it follows without an edit. `/api/agents` reports it back as
+`provider: "openrouter"`, `modelId: "anthropic/claude-haiku-4-5"`, which is the
+router splitting the composed string exactly as intended.
+
+**Fail-closed is at boot, not per request.** `OPENROUTER_API_KEY` is `required()`
+in `env.ts`, so a missing key stops the server with a message naming the variable.
+Nothing reads the value — Mastra's model router picks it up from `process.env`
+itself (confirmed in `@mastra/core`'s embedded docs) — but without the check the
+first message sent surfaces a raw provider 401.
+
+**`ANTHROPIC_API_KEY` was removed from `.env.example`.** Nothing reads it once
+every request routes through OpenRouter, and that file's own rule is that it lists
+what the app reads. Billing note added beside the new key: usage is paid from
+OpenRouter credits.
+
+**Verified in a browser, not by reading the code.** `.env` holds no Anthropic key,
+so a reply can only have come through OpenRouter. Haiku 4.5 streamed an answer;
+Opus 5 with thinking on streamed a reasoning block, called `getCurrentTime`, and
+answered from it. `providerOptions.anthropic` from `thinking.ts` survives the trip
+for now — it did not error and reasoning still rendered — but it is still T1.7.2's
+job to replace it with OpenRouter's unified `reasoning` parameter.
+
+**Mutations, each failing exactly one test bar the first:** dropping the prefix in
+`routerModelId` failed both its own tests and the middleware's (three total —
+different layers, kept); passing `rest.model` through unrewritten failed only
+"addresses the model through OpenRouter"; making `openrouterApiKey` optional failed
+only "refuses to start without the key every model request is billed to".
+
+`bun run verify` green: 60 server tests, 140 web tests, check/lint/format/build all
+clean.
 
 ## Open questions
 

@@ -116,7 +116,9 @@ export const SELECTABLE_MODELS: readonly SelectableModel[] = [
 ];
 
 /** The picker's first-visit choice. Request resolution still has no default. */
-export const INITIAL_MODEL_ID = initialModel.id;
+export const INITIAL_MODEL: SelectableModel = initialModel;
+
+export const INITIAL_MODEL_ID = INITIAL_MODEL.id;
 
 export const MODEL_CATALOG = {
 	initialModelId: INITIAL_MODEL_ID,

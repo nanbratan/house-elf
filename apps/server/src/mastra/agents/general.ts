@@ -1,6 +1,7 @@
 import { Agent } from '@mastra/core/agent';
 
-import { resolveModel } from '../models';
+import { routerModelId } from '../model-router';
+import { INITIAL_MODEL } from '../models';
 import { getCurrentTimeTool } from '../tools/get-current-time';
 
 /**
@@ -23,9 +24,10 @@ export const generalAgent = new Agent({
 	//
 	// It cannot become an invisible default for the app: requireKnownModel
 	// rejects an unnamed model at the door, before the agent is consulted.
-	// Resolved through the allowlist so that dropping this id from the list
-	// fails the server at boot instead of quietly here.
-	model: resolveModel('anthropic/claude-haiku-4-5').id,
+	//
+	// It tracks the picker's first-visit choice so the two never drift: when that
+	// becomes a router in T1.7.2, Studio follows without an edit here.
+	model: routerModelId(INITIAL_MODEL),
 	// The key, not the tool's `id`, is the name the model calls and the name that
 	// appears in the stream's `toolName`. Keep it clean.
 	tools: { getCurrentTime: getCurrentTimeTool }
