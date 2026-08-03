@@ -356,3 +356,24 @@ for free; it is a one-line change.
 >
 > If both admit `^7`, adopt 7 as the **only** compiler and note the deviation. Do not
 > run both. Do not use `typescript@latest` in the meantime — it is 7.
+
+---
+
+## D14 — Thinking is a per-request toggle, not a model property
+
+**Chosen:** a single boolean, sent with the request, next to the model choice from
+D6 — same argument, second parameter. The client owns it, same as the model: no
+server-side default, no model that always thinks, no hidden budget the client
+cannot see. A model that cannot think disables the toggle rather than hiding it, so
+its absence is a fact about the model, not a silent no-op.
+
+**Why:** the whole point of M1.6 is that nothing about generation is implicit. A
+toggle that turned itself on for "smarter" models, or a fixed thinking budget picked
+by the server, would be exactly the kind of default this project keeps rejecting —
+see D6's "the route has no default" for the same reasoning applied here.
+
+**Not doing:** a thinking-budget slider, a reasoning-effort dropdown, or a token
+count in the UI. The boolean is the whole feature. If the budget needs tuning later,
+that is a constant on the server, changed in a commit — not a client-facing control.
+(A real effort-level control is now planned as its own task, M1.7's T1.7.7, once
+OpenRouter models with graduated effort levels — not just on/off — are in scope.)

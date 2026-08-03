@@ -93,8 +93,8 @@ and 30624316521, ~1m10s each); and a full teardown — volumes and `node_modules
 ## M1.6 — Thinking on demand → [11c-m1.6-polish.md](11c-m1.6-polish.md)
 
 - [x] T1.6.1 Thinking is a toggle, not a model property
-- [ ] T1.6.2 A quieter focus ring on the composer
-- [ ] T1.6.3 Clicking the composer's empty space focuses the input
+- [x] T1.6.2 A quieter focus ring on the composer
+- [x] T1.6.3 Clicking the composer's empty space focuses the input
 - [ ] T1.6.4 Documentation
 - [ ] **DoD verified**
 
@@ -1825,6 +1825,23 @@ match what it now does.
 browser at `/c/new`: the same question on Haiku 4.5 answered directly with the toggle
 off, and with it on returned a "Thought for 1 second" pane containing real reasoning
 text.
+
+### T1.6.2 & T1.6.3 — composer focus polish
+
+Both implemented directly in `Composer.svelte` and verified live in a browser:
+the wrapper gains `focus-within:border-accent/50`, a subtle brighten rather than
+the loud global `:focus-visible` ring (which is untouched); clicking the footer's
+empty space focuses the textarea via `event.currentTarget === event.target`, so a
+click on any real control inside (picker, Send, Stop) never reaches the handler —
+no per-child target sniffing needed. Deliberately pointer-only: no role or key
+handler added to the footer `<div>` (`svelte-ignore` used for the two a11y lint
+rules that would otherwise demand one), since Tab already reaches the textarea
+directly and a second keyboard path would be redundant.
+
+**Gotcha: `rm -rf .svelte-kit` is not a safe cache clear.** Deleting it mid-session
+made vitest report a misleading "invalid JS syntax" parse error pointing at an
+unrelated file's `</script>` tag. `bunx svelte-kit sync` regenerates it; the
+directory holds real generated files vitest depends on, not disposable cache.
 
 ## Open questions
 
