@@ -13,18 +13,26 @@ vi.mock('../../../src/lib/components/chat/ModelPicker.svelte', async () => ({
 const Composer = (await import('../../../src/lib/components/chat/Composer.svelte')).default;
 
 const models = [
-	{ id: 'anthropic/claude-opus-5', label: 'Opus 5', family: 'opus', generation: '5' },
+	{
+		id: 'anthropic/claude-opus-5',
+		label: 'Opus 5',
+		family: 'opus',
+		generation: '5',
+		thinking: 'optional'
+	},
 	{
 		id: 'anthropic/claude-sonnet-4-6',
 		label: 'Sonnet 4.6',
 		family: 'sonnet',
-		generation: '4.6'
+		generation: '4.6',
+		thinking: 'optional'
 	},
 	{
 		id: 'anthropic/claude-haiku-4-5',
 		label: 'Haiku 4.5',
 		family: 'haiku',
-		generation: '4.5'
+		generation: '4.5',
+		thinking: 'optional'
 	}
 ] as const;
 
@@ -36,14 +44,26 @@ function renderComposer(
 	const onsend = vi.fn();
 	const onstop = vi.fn();
 	const onmodelselect = vi.fn();
+	const onthinkingchange = vi.fn();
 	const { container, unmount } = render(Composer, {
-		props: { status, onsend, onstop, models: availableModels, selectedModelId, onmodelselect }
+		props: {
+			status,
+			onsend,
+			onstop,
+			models: availableModels,
+			selectedModelId,
+			onmodelselect,
+			thinking: false,
+			canChooseThinking: true,
+			onthinkingchange
+		}
 	});
 
 	return {
 		onsend,
 		onstop,
 		onmodelselect,
+		onthinkingchange,
 		container,
 		unmount,
 		textarea: screen.getByRole('textbox', { name: 'Message' })
@@ -190,12 +210,19 @@ describe('composer', () => {
 	describe('model picker contract', () => {
 		it('passes the catalog and selected id down, and passes selections back up', () => {
 			const { onmodelselect } = renderComposer('ready', 'catalog/haiku', [
-				{ id: 'catalog/opus', label: 'Server Opus', family: 'opus', generation: 'catalog-a' },
+				{
+					id: 'catalog/opus',
+					label: 'Server Opus',
+					family: 'opus',
+					generation: 'catalog-a',
+					thinking: 'optional'
+				},
 				{
 					id: 'catalog/haiku',
 					label: 'Server Haiku',
 					family: 'haiku',
-					generation: 'catalog-c'
+					generation: 'catalog-c',
+					thinking: 'optional'
 				}
 			]);
 
@@ -205,13 +232,15 @@ describe('composer', () => {
 					id: 'catalog/opus',
 					label: 'Server Opus',
 					family: 'opus',
-					generation: 'catalog-a'
+					generation: 'catalog-a',
+					thinking: 'optional'
 				},
 				{
 					id: 'catalog/haiku',
 					label: 'Server Haiku',
 					family: 'haiku',
-					generation: 'catalog-c'
+					generation: 'catalog-c',
+					thinking: 'optional'
 				}
 			]);
 			expect(selectedModelId).toBe('catalog/haiku');

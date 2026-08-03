@@ -13,7 +13,8 @@ const catalog = {
 			id: 'anthropic/claude-haiku-4-5',
 			label: 'Haiku 4.5',
 			family: 'haiku',
-			generation: '4.5'
+			generation: '4.5',
+			thinking: 'optional'
 		}
 	]
 };

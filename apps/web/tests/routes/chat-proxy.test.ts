@@ -52,10 +52,11 @@ describe('POST /api/chat/[agentId]', () => {
 		env.MASTRA_URL = 'http://mastra.test:4111';
 	});
 
-	it('forwards the whole request body, including the selected model', async () => {
+	it('forwards the whole request body, model and thinking flag included', async () => {
 		const body = JSON.stringify({
 			messages: [],
-			model: 'anthropic/claude-haiku-4-5'
+			model: 'anthropic/claude-haiku-4-5',
+			thinking: true
 		});
 		const fetchSpy = vi.fn().mockResolvedValue(new Response('ok'));
 

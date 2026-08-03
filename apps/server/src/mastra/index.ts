@@ -6,7 +6,7 @@ import { PostgresStore } from '@mastra/pg';
 import { env } from '../env';
 import { generalAgent } from './agents/general';
 import { describeChatError } from './chat-error';
-import { requireKnownModel } from './middleware/require-known-model';
+import { prepareChatRequest } from './middleware/prepare-chat-request';
 import { modelCatalogRoute } from './model-catalog-route';
 
 const logger = new PinoLogger({
@@ -18,8 +18,8 @@ export const mastra = new Mastra({
 	agents: { general: generalAgent },
 	server: {
 		// Runs before the chat route, which would otherwise hand the body's `model`
-		// straight to the provider.
-		middleware: [requireKnownModel],
+		// and `providerOptions` straight to the provider.
+		middleware: [prepareChatRequest],
 		apiRoutes: [
 			modelCatalogRoute,
 			// Dynamic form: every agent registered above is reachable without a new

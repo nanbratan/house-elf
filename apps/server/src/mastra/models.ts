@@ -26,23 +26,92 @@ import type { ModelCatalog, SelectableModel } from '@house-elf/shared';
 
 export type { ModelFamily, SelectableModel } from '@house-elf/shared';
 
+/**
+ * Every entry's `thinking` value was read off Anthropic's per-model table at
+ * https://platform.claude.com/docs/en/build-with-claude/thinking-troubleshooting
+ * ("Configurations each model rejects"), not inferred from the family or the
+ * version number.
+ *
+ * `optional` says the choice is ours to make, not that thinking starts off.
+ * Opus 5 and Sonnet 5 think unless told not to, and they are still `optional`
+ * because they accept being told not to — confirmed by asking Opus 5 with
+ * thinking off and getting an answer with no reasoning rather than a 400. What
+ * a model *defaults* to never reaches this file: the server states the choice
+ * outright on every request, so there is no default left to describe.
+ *
+ * `always` is for models that reject `disabled` — Fable 5 and Mythos 5 — and
+ * `unsupported` for models that cannot think. Neither state has a model on this
+ * list; both are kept because the allowlist is expected to grow, and a wrong
+ * value here costs a rejected request on every send.
+ *
+ * How thinking is *requested* differs by model and is `thinking.ts`'s business.
+ */
 const initialModel = {
 	id: 'anthropic/claude-haiku-4-5',
 	label: 'Haiku 4.5',
 	family: 'haiku',
-	generation: '4.5'
+	generation: '4.5',
+	thinking: 'optional'
 } as const satisfies SelectableModel;
 
 /** Ordered newest first within each family: Opus, Sonnet, then Haiku. */
 export const SELECTABLE_MODELS: readonly SelectableModel[] = [
-	{ id: 'anthropic/claude-opus-5', label: 'Opus 5', family: 'opus', generation: '5' },
-	{ id: 'anthropic/claude-opus-4-8', label: 'Opus 4.8', family: 'opus', generation: '4.8' },
-	{ id: 'anthropic/claude-opus-4-7', label: 'Opus 4.7', family: 'opus', generation: '4.7' },
-	{ id: 'anthropic/claude-opus-4-6', label: 'Opus 4.6', family: 'opus', generation: '4.6' },
-	{ id: 'anthropic/claude-opus-4-5', label: 'Opus 4.5', family: 'opus', generation: '4.5' },
-	{ id: 'anthropic/claude-sonnet-5', label: 'Sonnet 5', family: 'sonnet', generation: '5' },
-	{ id: 'anthropic/claude-sonnet-4-6', label: 'Sonnet 4.6', family: 'sonnet', generation: '4.6' },
-	{ id: 'anthropic/claude-sonnet-4-5', label: 'Sonnet 4.5', family: 'sonnet', generation: '4.5' },
+	{
+		id: 'anthropic/claude-opus-5',
+		label: 'Opus 5',
+		family: 'opus',
+		generation: '5',
+		thinking: 'optional'
+	},
+	{
+		id: 'anthropic/claude-opus-4-8',
+		label: 'Opus 4.8',
+		family: 'opus',
+		generation: '4.8',
+		thinking: 'optional'
+	},
+	{
+		id: 'anthropic/claude-opus-4-7',
+		label: 'Opus 4.7',
+		family: 'opus',
+		generation: '4.7',
+		thinking: 'optional'
+	},
+	{
+		id: 'anthropic/claude-opus-4-6',
+		label: 'Opus 4.6',
+		family: 'opus',
+		generation: '4.6',
+		thinking: 'optional'
+	},
+	{
+		id: 'anthropic/claude-opus-4-5',
+		label: 'Opus 4.5',
+		family: 'opus',
+		generation: '4.5',
+		thinking: 'optional'
+	},
+	{
+		id: 'anthropic/claude-sonnet-5',
+		label: 'Sonnet 5',
+		family: 'sonnet',
+		generation: '5',
+		thinking: 'optional'
+	},
+	{
+		id: 'anthropic/claude-sonnet-4-6',
+		label: 'Sonnet 4.6',
+		family: 'sonnet',
+		generation: '4.6',
+		thinking: 'optional'
+	},
+	{
+		id: 'anthropic/claude-sonnet-4-5',
+		label: 'Sonnet 4.5',
+		family: 'sonnet',
+		generation: '4.5',
+		thinking: 'optional'
+	},
 	initialModel
 ];
 

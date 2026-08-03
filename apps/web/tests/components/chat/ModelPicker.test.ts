@@ -6,30 +6,40 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import ModelPicker from '../../../src/lib/components/chat/ModelPicker.svelte';
 
 const models = [
-	{ id: 'anthropic/claude-opus-5', label: 'Opus 5', family: 'opus', generation: '5' },
+	{
+		id: 'anthropic/claude-opus-5',
+		label: 'Opus 5',
+		family: 'opus',
+		generation: '5',
+		thinking: 'optional'
+	},
 	{
 		id: 'anthropic/claude-opus-4-5',
 		label: 'Opus 4.5',
 		family: 'opus',
-		generation: '4.5'
+		generation: '4.5',
+		thinking: 'optional'
 	},
 	{
 		id: 'anthropic/claude-sonnet-4-5',
 		label: 'Sonnet 4.5',
 		family: 'sonnet',
-		generation: '4.5'
+		generation: '4.5',
+		thinking: 'optional'
 	},
 	{
 		id: 'anthropic/claude-haiku-4-5',
 		label: 'Haiku 4.5',
 		family: 'haiku',
-		generation: '4.5'
+		generation: '4.5',
+		thinking: 'optional'
 	},
 	{
 		id: 'anthropic/claude-haiku-3-5',
 		label: 'Haiku 3.5',
 		family: 'haiku',
-		generation: '3.5'
+		generation: '3.5',
+		thinking: 'optional'
 	}
 ] as const satisfies readonly SelectableModel[];
 
@@ -48,20 +58,82 @@ afterEach(async () => {
 	});
 });
 
-async function openPicker(selectedModelId: string = models[0].id, selectedModelLabel = 'Opus 5') {
+async function openPicker(
+	selectedModelId: string = models[0].id,
+	selectedModelLabel = 'Opus 5',
+	thinkingProps: { thinking?: boolean; canChooseThinking?: boolean } = {}
+) {
 	const user = userEvent.setup();
 	const onselect = vi.fn();
-	render(ModelPicker, { props: { models, selectedModelId, onselect } });
+	const onthinkingchange = vi.fn();
+	const thinking = thinkingProps.thinking ?? false;
+	render(ModelPicker, {
+		props: {
+			models,
+			selectedModelId,
+			onselect,
+			thinking,
+			canChooseThinking: thinkingProps.canChooseThinking ?? true,
+			onthinkingchange
+		}
+	});
 	await user.click(
 		screen.getByRole('button', {
-			name: `Choose model. Current model: ${selectedModelLabel}`
+			name: `Choose model. Current model: ${selectedModelLabel}${thinking ? ', thinking on' : ''}`
 		})
 	);
 
-	return { user, onselect };
+	return { user, onselect, onthinkingchange };
 }
 
 describe('model picker', () => {
+	describe('the thinking switch', () => {
+		it('shows the switch off, and asks to turn thinking on when clicked', async () => {
+			const { user, onthinkingchange } = await openPicker();
+
+			const toggle = screen.getByRole('switch', { name: 'Thinking' });
+			expect(toggle).toHaveAttribute('aria-checked', 'false');
+
+			await user.click(toggle);
+
+			expect(onthinkingchange).toHaveBeenCalledExactlyOnceWith(true);
+		});
+
+		it('turns thinking back off', async () => {
+			const { user, onthinkingchange } = await openPicker(models[0].id, 'Opus 5', {
+				thinking: true
+			});
+
+			expect(screen.getByRole('switch', { name: 'Thinking' })).toHaveAttribute(
+				'aria-checked',
+				'true'
+			);
+
+			await user.click(screen.getByRole('switch', { name: 'Thinking' }));
+
+			expect(onthinkingchange).toHaveBeenCalledExactlyOnceWith(false);
+		});
+
+		it('has no switch to show for a model that is always on or never on', async () => {
+			// `canChooseThinking` is false for the two capability states that leave
+			// nothing to decide: `always` (nothing to turn off) and `unsupported`
+			// (nothing to turn on). Either way, there is no question for a toggle to ask.
+			await openPicker(models[0].id, 'Opus 5', { canChooseThinking: false });
+
+			expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+		});
+	});
+
+	it('names thinking on the trigger, so an expensive setting is not a hidden one', async () => {
+		await openPicker(models[0].id, 'Opus 5', { thinking: true });
+
+		// The accessible name is asserted by openPicker, which finds the trigger by
+		// it. This is the visible half.
+		expect(
+			screen.getByRole('button', { name: /Current model: Opus 5, thinking on/ })
+		).toHaveTextContent('Thinking');
+	});
+
 	it('locks page scrolling only while the modal is open', async () => {
 		const { user } = await openPicker();
 

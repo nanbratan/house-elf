@@ -92,7 +92,7 @@ and 30624316521, ~1m10s each); and a full teardown — volumes and `node_modules
 
 ## M1.6 — Thinking on demand → [11c-m1.6-polish.md](11c-m1.6-polish.md)
 
-- [ ] T1.6.1 Thinking is a toggle, not a model property
+- [x] T1.6.1 Thinking is a toggle, not a model property
 - [ ] T1.6.2 A quieter focus ring on the composer
 - [ ] T1.6.3 Clicking the composer's empty space focuses the input
 - [ ] T1.6.4 Documentation
@@ -1776,6 +1776,55 @@ only the one being edited at the time. The rule's own example had to be correcte
 hooks run first. The file's `afterEach` now closes any open dialog instead, because
 bits-ui's scroll lock leaves `overflow: hidden` on `document.body` and restores it on
 a deferred timer.
+
+### 2026-08-02 — every model can think, and one of them does so unless told not to
+
+T1.6.1. The task assumed thinking is a capability some models have. Anthropic's
+per-model table says otherwise for the nine on the allowlist: **all nine support
+thinking**, so the plan's incapable-model branches — the 400, the disabled toggle —
+have no model to reach them. The capability field is kept anyway, per the user's
+call, and both branches are covered by tests using invented ids. DoD steps 3 and 5
+cannot be demonstrated against a real model; that is the reason, not an omission.
+
+**"Off" cannot be expressed by silence.** Opus 5 and Sonnet 5 think by default. A
+request that omits `thinking` gets thinking, so the server sends
+`{ type: 'disabled' }` explicitly whenever the toggle is off. Verified by curl: same
+model, same question, `thinking: false` produced no `reasoning-*` chunks and
+`thinking: true` produced eight `reasoning-delta`s.
+
+**"On" has two shapes, and the plan implies one.** 4.6-and-newer take
+`{ type: 'adaptive' }` and reject `{ type: 'enabled' }` — a 400 on 4.7+, deprecated
+on 4.6. The 4.5 family is the reverse: `enabled` with a `budgetTokens`, and
+`adaptive` is a 400. The mapping lives in `apps/server/src/mastra/thinking.ts` and a
+test fails if an allowlisted model has no entry, because the silent default would be
+the wrong shape for most of the list. Budget for the 4.5 models is 4,096, chosen by
+the user, with the alternatives commented in place.
+
+**Without `display: 'summarized'` the reasoning pane renders blank.** Adaptive
+thinking defaults to `display: 'omitted'` on 4.7+ — thinking blocks arrive with no
+text. The pane would have looked broken rather than empty.
+
+**The capability field is three-valued, not the boolean the plan asked for**
+(`optional | always | unsupported`). Anthropic ships always-on models (Fable 5,
+Mythos 5, neither on our allowlist) that reject `disabled` outright, so a boolean
+cannot say what to render. `always` shows no toggle and sends no thinking option.
+
+**How the flag becomes provider options.** `chatRoute` calls `c.req.json()` and
+spreads the result into `agent.stream()`, so a `providerOptions` field in the body
+would reach the provider verbatim — a browser could have set its own token budget.
+Hono's `c.req.raw` is a public, assignable property and its `bodyCache` is empty
+until first read, so the middleware validates a clone, then replaces `c.req.raw` with
+a rewritten request: `thinking` and any client-supplied `providerOptions` removed,
+the server's own options added. Proven live, not by reading: posting
+`providerOptions: { anthropic: { thinking: { type: 'adaptive' } } }` on Haiku 4.5 —
+which Anthropic rejects with a 400 — streamed a normal reply, so the client's version
+never left the server. `require-known-model` is renamed `prepare-chat-request` to
+match what it now does.
+
+**`ReasoningPart.svelte` needed no changes**, as the task predicted. Verified in the
+browser at `/c/new`: the same question on Haiku 4.5 answered directly with the toggle
+off, and with it on returned a "Thought for 1 second" pane containing real reasoning
+text.
 
 ## Open questions
 

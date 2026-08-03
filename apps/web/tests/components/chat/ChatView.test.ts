@@ -78,18 +78,26 @@ const ChatView = (await import('../../../src/lib/components/chat/ChatView.svelte
 const modelCatalog = {
 	initialModelId: 'anthropic/claude-haiku-4-5',
 	models: [
-		{ id: 'anthropic/claude-opus-5', label: 'Opus 5', family: 'opus', generation: '5' },
+		{
+			id: 'anthropic/claude-opus-5',
+			label: 'Opus 5',
+			family: 'opus',
+			generation: '5',
+			thinking: 'optional'
+		},
 		{
 			id: 'anthropic/claude-sonnet-4-6',
 			label: 'Sonnet 4.6',
 			family: 'sonnet',
-			generation: '4.6'
+			generation: '4.6',
+			thinking: 'optional'
 		},
 		{
 			id: 'anthropic/claude-haiku-4-5',
 			label: 'Haiku 4.5',
 			family: 'haiku',
-			generation: '4.5'
+			generation: '4.5',
+			thinking: 'optional'
 		}
 	]
 } as const;
@@ -116,13 +124,22 @@ function composerProps(): {
 	status: string;
 	models: readonly SelectableModel[];
 	selectedModelId: string;
+	thinking: boolean;
 } {
-	const { status, models, selectedModelId } = stubProps(composerStub);
+	const { status, models, selectedModelId, thinking } = stubProps(composerStub);
 	return {
 		status: status as string,
 		models: models as readonly SelectableModel[],
-		selectedModelId: selectedModelId as string
+		selectedModelId: selectedModelId as string,
+		thinking: thinking as boolean
 	};
+}
+
+/** The request body of each `sendMessage` call, in order. */
+function sentBodies(): Record<string, unknown>[] {
+	return mocks.sendMessage.mock.calls.map(
+		(call) => (call[1] as { body: Record<string, unknown> }).body
+	);
 }
 
 describe('chat view', () => {
@@ -154,7 +171,8 @@ describe('chat view', () => {
 		expect(composerProps()).toStrictEqual({
 			status: 'ready',
 			models: modelCatalog.models,
-			selectedModelId: 'anthropic/claude-haiku-4-5'
+			selectedModelId: 'anthropic/claude-haiku-4-5',
+			thinking: false
 		});
 	});
 
@@ -248,7 +266,7 @@ describe('chat view', () => {
 
 		expect(mocks.sendMessage).toHaveBeenCalledExactlyOnceWith(
 			{ text: 'Hello from the composer' },
-			{ body: { model: 'anthropic/claude-haiku-4-5' } }
+			{ body: { model: 'anthropic/claude-haiku-4-5', thinking: false } }
 		);
 	});
 
@@ -263,8 +281,32 @@ describe('chat view', () => {
 
 		expect(mocks.sendMessage).toHaveBeenCalledExactlyOnceWith(
 			{ text: 'Hello from the composer' },
-			{ body: { model: 'anthropic/claude-sonnet-4-6' } }
+			{ body: { model: 'anthropic/claude-sonnet-4-6', thinking: false } }
 		);
+	});
+
+	it('carries the thinking choice made at the moment of asking', async () => {
+		renderChatView();
+
+		stubCallback(composerStub, 'onsend')('First');
+
+		stubCallback(composerStub, 'onthinkingchange')(true);
+		await tick();
+		expect(composerProps().thinking).toBe(true);
+
+		stubCallback(composerStub, 'onsend')('Second');
+
+		// Two sends, same thread, different bodies — the flag is per message.
+		expect(sentBodies().map((body) => body.thinking)).toEqual([false, true]);
+	});
+
+	it('sends only a boolean, never anything the provider would honour verbatim', () => {
+		renderChatView();
+		stubCallback(composerStub, 'onthinkingchange')(true);
+
+		stubCallback(composerStub, 'onsend')('Hello');
+
+		expect(Object.keys(sentBodies()[0]).toSorted()).toEqual(['model', 'thinking']);
 	});
 
 	it('stops generation when the composer asks it to', () => {

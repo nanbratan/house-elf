@@ -41,8 +41,18 @@
 		modelSelection.select(modelId);
 	}
 
+	function setThinking(thinking: boolean) {
+		modelSelection.setThinking(thinking);
+	}
+
 	function send(text: string) {
-		void chat.sendMessage({ text }, { body: { model: modelSelection.selectedModelId } });
+		// Both travel per message rather than per thread: the choice made at the
+		// moment of asking is the one that should apply. A boolean is all that goes
+		// over the wire — what thinking costs the provider is the server's to say.
+		void chat.sendMessage(
+			{ text },
+			{ body: { model: modelSelection.selectedModelId, thinking: modelSelection.thinking } }
+		);
 	}
 
 	function stop() {
@@ -83,6 +93,9 @@
 		models={modelCatalog.models}
 		selectedModelId={modelSelection.selectedModelId}
 		onmodelselect={selectModel}
+		thinking={modelSelection.thinking}
+		canChooseThinking={modelSelection.canChooseThinking}
+		onthinkingchange={setThinking}
 		onsend={send}
 		onstop={stop}
 	/>

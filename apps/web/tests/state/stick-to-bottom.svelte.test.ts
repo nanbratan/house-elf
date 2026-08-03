@@ -92,12 +92,17 @@ function attach({ startAt = BOTTOM } = {}) {
 		for (const observer of observers) observer.fire();
 	}
 
+	/** The reader reaching for the page, rather than a scroll we caused. */
+	function wheel() {
+		viewport.dispatchEvent(new Event('wheel'));
+	}
+
 	function detach() {
 		attachedViewport?.destroy?.();
 		attachedContent?.destroy?.();
 	}
 
-	return { stick, viewport, content, scrolled, scrollTo, contentGrew, detach };
+	return { stick, viewport, content, scrolled, scrollTo, contentGrew, wheel, detach };
 }
 
 describe('sticking to the bottom', () => {
@@ -130,20 +135,31 @@ describe('sticking to the bottom', () => {
 		expect(scrolled).toHaveBeenCalledWith({ top: CONTENT_HEIGHT, behavior: 'auto' });
 	});
 
-	it('counts a reader just short of the end as still reading it', () => {
+	it('lets go as soon as the reader scrolls up at all', () => {
 		const { stick, scrollTo } = attach();
 
-		scrollTo(BOTTOM - 200);
+		// A few lines up, not a few screens. Anything that counts this as still
+		// following costs the reader the page the moment something grows.
+		scrollTo(BOTTOM - 20);
+
+		expect(stick.isPinned).toBe(false);
+	});
+
+	it('does not treat a fraction of a pixel as scrolling away', () => {
+		const { stick, scrollTo } = attach();
+
+		scrollTo(BOTTOM - 1);
 
 		expect(stick.isPinned).toBe(true);
 	});
 
-	it('lets go once the reader has gone further than that', () => {
-		const { stick, scrollTo } = attach();
+	it('leaves a reader who scrolled up a little where they are when content grows', () => {
+		const { scrolled, scrollTo, contentGrew } = attach();
 
-		scrollTo(BOTTOM - 201);
+		scrollTo(BOTTOM - 20);
+		contentGrew();
 
-		expect(stick.isPinned).toBe(false);
+		expect(scrolled).not.toHaveBeenCalled();
 	});
 
 	it('stops chasing once it has let go, so reading is not interrupted', () => {
@@ -177,11 +193,57 @@ describe('sticking to the bottom', () => {
 		expect(stick.isPinned).toBe(true);
 	});
 
+	/**
+	 * A real smooth scroll fires a `scroll` event at every position it passes
+	 * through on its way to the end. jsdom does not animate `Element.scrollTo`, so
+	 * this fires one by hand to stand in for a mid-journey position.
+	 */
+	it('ignores its own mid-journey scroll events', () => {
+		const { stick, scrollTo } = attach();
+		const midJourney = () => {
+			scrollTo(BOTTOM - 800);
+		};
+
+		scrollTo(0);
+		stick.scrollToEnd();
+
+		midJourney();
+		expect(stick.isPinned).toBe(true);
+
+		scrollTo(BOTTOM);
+		expect(stick.isPinned).toBe(true);
+	});
+
+	it('stops ignoring them once a wheel interrupts the journey', () => {
+		const { stick, scrollTo, wheel } = attach();
+		const midJourney = () => {
+			scrollTo(BOTTOM - 800);
+		};
+
+		scrollTo(0);
+		stick.scrollToEnd();
+		wheel();
+
+		midJourney();
+		expect(stick.isPinned).toBe(false);
+	});
+
 	describe('once the elements go away', () => {
 		it('stops listening to the scroller it no longer owns', () => {
 			const { stick, scrollTo, detach } = attach();
 
 			detach();
+			scrollTo(0);
+
+			expect(stick.isPinned).toBe(true);
+		});
+
+		it('does not act on a wheel or scroll after being told to let go', () => {
+			const { stick, scrollTo, wheel, detach } = attach();
+
+			stick.scrollToEnd();
+			detach();
+			wheel();
 			scrollTo(0);
 
 			expect(stick.isPinned).toBe(true);

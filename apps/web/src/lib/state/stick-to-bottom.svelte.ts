@@ -1,11 +1,16 @@
 import type { Action } from 'svelte/action';
 
 /**
- * How far from the bottom still counts as "following along". Generous, because
- * this is a question about intent, not arithmetic: a reader a line or two off the
- * end is still reading the end, and streaming text should keep coming to them.
+ * Rounding slack, and nothing more. Sub-pixel layout means a scroller sitting
+ * at its own end often reports a fraction of a pixel short of it, and that must
+ * not read as the reader having scrolled away.
+ *
+ * This is deliberately not a "close enough to count as following" allowance. A
+ * generous one costs the reader control: scrolled up a little to re-read a
+ * paragraph, they are still counted as pinned, and the next thing that grows —
+ * a token, or a reasoning section being opened — hauls them back down.
  */
-const NEAR_BOTTOM_PX = 200;
+const BOTTOM_EPSILON_PX = 2;
 
 export interface StickToBottom {
 	/** Whether new content is currently being followed down the page. */
@@ -22,26 +27,44 @@ export interface StickToBottom {
  * Keeps a scroller pinned to its own bottom while content grows, and lets go the
  * moment the reader scrolls away from it.
  *
- * There is no "the user has taken over" flag, because distance from the bottom
- * already says so: scrolling up unpins, scrolling back within `NEAR_BOTTOM_PX`
- * re-pins. One rule, and it cannot disagree with what is on screen.
+ * There is no "the user has taken over" flag, because position already says so:
+ * scrolling up at all unpins, returning to the end re-pins. One rule, and it
+ * cannot disagree with what is on screen.
  */
 export function createStickToBottom(): StickToBottom {
 	let viewportElement: HTMLElement | undefined;
 	let pinned = $state(true);
+	// A smooth scroll to the end passes through every position on the way, each
+	// firing a scroll event. Those are ours, not the reader's, and without this
+	// the first one would unpin and undo the journey it is part of.
+	let chasingEnd = false;
 
 	function measure(): void {
 		if (!viewportElement) return;
 
 		const { scrollTop, scrollHeight, clientHeight } = viewportElement;
+		const atEnd = scrollHeight - (scrollTop + clientHeight) <= BOTTOM_EPSILON_PX;
 
-		pinned = scrollHeight - (scrollTop + clientHeight) <= NEAR_BOTTOM_PX;
+		if (chasingEnd && !atEnd) return;
+
+		chasingEnd = false;
+		pinned = atEnd;
+	}
+
+	/**
+	 * The reader reaching for the page outranks any journey we are in the middle
+	 * of — browsers cancel a smooth scroll on these too, so the alternative is a
+	 * chase that never arrives and a pin that never lets go.
+	 */
+	function readerTookOver(): void {
+		chasingEnd = false;
 	}
 
 	function scrollToEnd(behavior: ScrollBehavior): void {
 		if (!viewportElement) return;
 
 		pinned = true;
+		chasingEnd = behavior === 'smooth';
 		viewportElement.scrollTo({ top: viewportElement.scrollHeight, behavior });
 	}
 
@@ -57,14 +80,18 @@ export function createStickToBottom(): StickToBottom {
 		viewport(node) {
 			viewportElement = node;
 
-			// Passive: this only reads scroll position, so the browser need not wait
-			// to find out whether we cancel the scroll.
+			// Passive throughout: these only read scroll position, so the browser need
+			// not wait to find out whether we cancel the scroll.
 			node.addEventListener('scroll', measure, { passive: true });
+			node.addEventListener('wheel', readerTookOver, { passive: true });
+			node.addEventListener('touchstart', readerTookOver, { passive: true });
 			measure();
 
 			return {
 				destroy() {
 					node.removeEventListener('scroll', measure);
+					node.removeEventListener('wheel', readerTookOver);
+					node.removeEventListener('touchstart', readerTookOver);
 					viewportElement = undefined;
 				}
 			};

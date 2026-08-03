@@ -9,14 +9,30 @@
 	};
 	const componentId = $props.id();
 	const modelListId = `${componentId}-model-list`;
+	const thinkingLabelId = `${componentId}-thinking-label`;
 
 	interface ModelPickerProps {
 		models: readonly SelectableModel[];
 		selectedModelId: string;
 		onselect: (modelId: string) => void;
+		thinking: boolean;
+		/**
+		 * False when the current model settles the question itself — it either
+		 * always thinks or cannot. The row is then not rendered at all, rather than
+		 * shown disabled: a control that can never be used is just clutter.
+		 */
+		canChooseThinking: boolean;
+		onthinkingchange: (thinking: boolean) => void;
 	}
 
-	let { models, selectedModelId, onselect }: ModelPickerProps = $props();
+	let {
+		models,
+		selectedModelId,
+		onselect,
+		thinking,
+		canChooseThinking,
+		onthinkingchange
+	}: ModelPickerProps = $props();
 
 	let open = $state(false);
 	let search = $state('');
@@ -56,10 +72,16 @@
 
 <Dialog.Root bind:open>
 	<Dialog.Trigger
-		aria-label={`Choose model. Current model: ${selectedModel?.label ?? 'none'}`}
+		aria-label={`Choose model. Current model: ${selectedModel?.label ?? 'none'}${
+			thinking ? ', thinking on' : ''
+		}`}
 		class="flex h-8 min-w-0 items-center gap-1.5 rounded-md px-2 text-xs text-muted transition-colors hover:bg-canvas hover:text-content"
 	>
 		<span class="max-w-32 truncate">{selectedModel?.label ?? 'Choose model'}</span>
+		{#if thinking}
+			<!-- Named on the trigger so an expensive setting is never a hidden one. -->
+			<span class="shrink-0 text-faint">Thinking</span>
+		{/if}
 		<svg
 			class="size-3 shrink-0"
 			viewBox="0 0 12 12"
@@ -152,6 +174,37 @@
 					{/each}
 				</Command.List>
 			</Command.Root>
+
+			{#if canChooseThinking}
+				<!-- Outside Command.Root, so the list's arrow-key navigation does not
+				     try to treat the switch as one more model. -->
+				<div class="flex items-center gap-3 border-t border-line px-4 py-3">
+					<span class="flex-1">
+						<span id={thinkingLabelId} class="block text-sm">Thinking</span>
+						<span class="block text-xs text-faint">
+							Works through the problem first. Slower, and costs more.
+						</span>
+					</span>
+					<button
+						type="button"
+						role="switch"
+						aria-checked={thinking}
+						aria-labelledby={thinkingLabelId}
+						onclick={() => {
+							onthinkingchange(!thinking);
+						}}
+						class="h-5 w-9 shrink-0 rounded-full p-0.5 transition-colors {thinking
+							? 'bg-accent'
+							: 'bg-line'}"
+					>
+						<span
+							class="block size-4 rounded-full bg-white transition-transform {thinking
+								? 'translate-x-4'
+								: ''}"
+						></span>
+					</button>
+				</div>
+			{/if}
 		</Dialog.Content>
 	</Dialog.Portal>
 </Dialog.Root>

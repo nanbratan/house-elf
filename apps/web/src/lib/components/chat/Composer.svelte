@@ -11,9 +11,22 @@
 		models: readonly SelectableModel[];
 		selectedModelId: string;
 		onmodelselect: (modelId: string) => void;
+		thinking: boolean;
+		canChooseThinking: boolean;
+		onthinkingchange: (thinking: boolean) => void;
 	}
 
-	let { status, onsend, onstop, models, selectedModelId, onmodelselect }: ComposerProps = $props();
+	let {
+		status,
+		onsend,
+		onstop,
+		models,
+		selectedModelId,
+		onmodelselect,
+		thinking,
+		canChooseThinking,
+		onthinkingchange
+	}: ComposerProps = $props();
 
 	let text = $state('');
 
@@ -70,7 +83,14 @@
 		></textarea>
 
 		<div class="flex items-center justify-end gap-1.5 px-2 pb-2">
-			<ModelPicker {models} {selectedModelId} onselect={onmodelselect} />
+			<ModelPicker
+				{models}
+				{selectedModelId}
+				onselect={onmodelselect}
+				{thinking}
+				{canChooseThinking}
+				{onthinkingchange}
+			/>
 
 			{#if busy}
 				<button
