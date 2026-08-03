@@ -250,4 +250,36 @@ describe('composer', () => {
 			expect(onmodelselect).toHaveBeenCalledExactlyOnceWith('catalog/opus');
 		});
 	});
+
+	describe('footer click-to-focus', () => {
+		it('focuses the textarea when the empty part of the footer is clicked', async () => {
+			const { container, textarea } = renderComposer();
+			const footer = container.querySelector('.justify-end');
+			if (!footer) throw new Error('footer not found');
+
+			await fireEvent.click(footer);
+
+			expect(textarea).toHaveFocus();
+		});
+
+		it('leaves the model picker to handle its own click, without stealing focus', async () => {
+			const { textarea } = renderComposer();
+
+			await fireEvent.click(screen.getByTestId('model-picker'));
+
+			expect(textarea).not.toHaveFocus();
+		});
+
+		it('leaves the send button to handle its own click, without stealing focus', async () => {
+			const user = userEvent.setup();
+			const { onsend, textarea } = renderComposer();
+
+			await user.type(textarea, 'hello');
+			textarea.blur();
+			await user.click(screen.getByRole('button', { name: 'Send' }));
+
+			expect(onsend).toHaveBeenCalledExactlyOnceWith('hello');
+			expect(textarea).not.toHaveFocus();
+		});
+	});
 });

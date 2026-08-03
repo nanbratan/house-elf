@@ -29,6 +29,7 @@
 	}: ComposerProps = $props();
 
 	let text = $state('');
+	let textareaElement: HTMLTextAreaElement | undefined;
 
 	// `submitted` covers the gap between sending and the first chunk, when there is
 	// nothing on screen yet but the request is already in flight.
@@ -67,11 +68,24 @@
 	function oncompositionend() {
 		composing = false;
 	}
+
+	// Clicking the footer's empty space should feel like clicking into the input it
+	// sits inside of. Only fires when the click's target is the footer row itself —
+	// a real control inside it (the picker, its own click handler; the send/stop
+	// button, theirs) stops the event from ever reaching this handler, so nothing
+	// here has to guess what was clicked.
+	function onfooterclick(event: MouseEvent) {
+		if (event.currentTarget !== event.target) return;
+		textareaElement?.focus();
+	}
 </script>
 
 <form class="border-t border-line bg-canvas px-4 py-3" {onsubmit}>
-	<div class="mx-auto max-w-3xl overflow-hidden rounded-xl border border-line bg-raised">
+	<div
+		class="mx-auto max-w-3xl overflow-hidden rounded-xl border border-line bg-raised transition-colors focus-within:border-accent/50"
+	>
 		<textarea
+			bind:this={textareaElement}
 			bind:value={text}
 			{onkeydown}
 			{oncompositionstart}
@@ -82,7 +96,9 @@
 			class="max-h-48 min-h-12 w-full resize-none bg-transparent px-3 pt-3 pb-2 text-sm outline-none placeholder:text-faint"
 		></textarea>
 
-		<div class="flex items-center justify-end gap-1.5 px-2 pb-2">
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div class="flex items-center justify-end gap-1.5 px-2 pb-2" onclick={onfooterclick}>
 			<ModelPicker
 				{models}
 				{selectedModelId}
