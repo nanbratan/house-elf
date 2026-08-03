@@ -95,8 +95,8 @@ and 30624316521, ~1m10s each); and a full teardown — volumes and `node_modules
 - [x] T1.6.1 Thinking is a toggle, not a model property
 - [x] T1.6.2 A quieter focus ring on the composer
 - [x] T1.6.3 Clicking the composer's empty space focuses the input
-- [ ] T1.6.4 Documentation
-- [ ] **DoD verified**
+- [x] T1.6.4 Documentation
+- [x] **DoD verified**
 
 ## M2 — Threads and memory → [12-m2-threads-memory.md](12-m2-threads-memory.md)
 
