@@ -1,0 +1,650 @@
+{
+	"data": [
+		{
+			"id": "anthropic/claude-opus-5",
+			"canonical_slug": "anthropic/claude-opus-5-20260723",
+			"hugging_face_id": null,
+			"name": "Claude Opus 5",
+			"created": 1784912544,
+			"description": "Claude Opus 5 is Anthropic’s flagship model for demanding reasoning, coding, and long-horizon agentic work. It is particularly strong at end-to-end software tasks, code review and bug finding, visual analysis...",
+			"context_length": 1000000,
+			"architecture": {
+				"modality": "text+image+file->text",
+				"input_modalities": ["text", "image", "file"],
+				"output_modalities": ["text"],
+				"tokenizer": "Claude",
+				"instruct_type": null
+			},
+			"pricing": {
+				"prompt": "0.000005",
+				"completion": "0.000025",
+				"web_search": "0.01",
+				"input_cache_read": "0.0000005",
+				"input_cache_write": "0.00000625",
+				"input_cache_write_1h": "0.00001"
+			},
+			"top_provider": {
+				"context_length": 1000000,
+				"max_completion_tokens": 128000,
+				"is_moderated": true
+			},
+			"per_request_limits": null,
+			"supported_parameters": [
+				"include_reasoning",
+				"max_completion_tokens",
+				"max_tokens",
+				"reasoning",
+				"reasoning_effort",
+				"response_format",
+				"stop",
+				"structured_outputs",
+				"temperature",
+				"tool_choice",
+				"tools",
+				"verbosity"
+			],
+			"default_parameters": {
+				"temperature": null,
+				"top_p": null,
+				"top_k": null,
+				"frequency_penalty": null,
+				"presence_penalty": null,
+				"repetition_penalty": null
+			},
+			"supported_voices": null,
+			"knowledge_cutoff": null,
+			"expiration_date": null,
+			"links": {
+				"details": "/api/v1/models/anthropic/claude-opus-5-20260723/endpoints"
+			},
+			"benchmarks": {
+				"design_arena": [
+					{
+						"arena": "agents",
+						"category": "webapps",
+						"elo": 1290,
+						"win_rate": 56,
+						"rank": 5
+					},
+					{
+						"arena": "models",
+						"category": "3d",
+						"elo": 1382,
+						"win_rate": 63.9,
+						"rank": 2
+					},
+					{
+						"arena": "models",
+						"category": "codecategories",
+						"elo": 1356,
+						"win_rate": 61.2,
+						"rank": 2
+					},
+					{
+						"arena": "models",
+						"category": "dataviz",
+						"elo": 1379,
+						"win_rate": 66.2,
+						"rank": 2
+					},
+					{
+						"arena": "models",
+						"category": "uicomponent",
+						"elo": 1400,
+						"win_rate": 66.3,
+						"rank": 2
+					},
+					{
+						"arena": "models",
+						"category": "website",
+						"elo": 1341,
+						"win_rate": 59.5,
+						"rank": 2
+					}
+				],
+				"artificial_analysis": {
+					"intelligence_index": 60.7,
+					"coding_index": 78,
+					"agentic_index": 55.3
+				}
+			},
+			"reasoning": {
+				"mandatory": false,
+				"default_enabled": true,
+				"supported_efforts": ["max", "xhigh", "high", "medium", "low"],
+				"default_effort": "high"
+			}
+		},
+		{
+			"id": "openai/gpt-5.3-chat",
+			"canonical_slug": "openai/gpt-5.3-chat-20260303",
+			"hugging_face_id": "",
+			"name": "OpenAI: GPT-5.3 Chat",
+			"created": 1772564061,
+			"description": "GPT-5.3 Chat is an update to ChatGPT's most-used model that makes everyday conversations smoother, more useful, and more directly helpful. It delivers more accurate answers with better contextualization and significantly...",
+			"context_length": 128000,
+			"architecture": {
+				"modality": "text+image+file->text",
+				"input_modalities": ["text", "image", "file"],
+				"output_modalities": ["text"],
+				"tokenizer": "GPT",
+				"instruct_type": null
+			},
+			"pricing": {
+				"prompt": "0.00000175",
+				"completion": "0.000014",
+				"web_search": "0.01",
+				"input_cache_read": "0.000000175"
+			},
+			"top_provider": {
+				"context_length": 128000,
+				"max_completion_tokens": 16384,
+				"is_moderated": true
+			},
+			"per_request_limits": null,
+			"supported_parameters": [
+				"max_completion_tokens",
+				"max_tokens",
+				"response_format",
+				"seed",
+				"structured_outputs",
+				"tool_choice",
+				"tools"
+			],
+			"default_parameters": {
+				"temperature": null,
+				"top_p": null,
+				"top_k": null,
+				"frequency_penalty": null,
+				"presence_penalty": null,
+				"repetition_penalty": null
+			},
+			"supported_voices": null,
+			"knowledge_cutoff": null,
+			"expiration_date": "2026-08-10",
+			"links": {
+				"details": "/api/v1/models/openai/gpt-5.3-chat-20260303/endpoints"
+			}
+		},
+		{
+			"id": "z-ai/glm-5v-turbo",
+			"canonical_slug": "z-ai/glm-5v-turbo-20260401",
+			"hugging_face_id": "",
+			"name": "Z.ai: GLM 5V Turbo",
+			"created": 1775061458,
+			"description": "GLM-5V-Turbo is Z.ai’s first native multimodal agent foundation model, built for vision-based coding and agent-driven tasks. It natively handles image, video, and text inputs, excels at long-horizon planning, complex coding,...",
+			"context_length": 202752,
+			"architecture": {
+				"modality": "text+image+video->text",
+				"input_modalities": ["image", "text", "video"],
+				"output_modalities": ["text"],
+				"tokenizer": "Other",
+				"instruct_type": null
+			},
+			"pricing": {
+				"prompt": "0.0000012",
+				"completion": "0.000004",
+				"input_cache_read": "0.00000024"
+			},
+			"top_provider": {
+				"context_length": 202752,
+				"max_completion_tokens": 131072,
+				"is_moderated": false
+			},
+			"per_request_limits": null,
+			"supported_parameters": [
+				"include_reasoning",
+				"max_tokens",
+				"reasoning",
+				"response_format",
+				"temperature",
+				"tool_choice",
+				"tools",
+				"top_k",
+				"top_p"
+			],
+			"default_parameters": {
+				"temperature": 1,
+				"top_p": 0.95,
+				"top_k": null,
+				"frequency_penalty": null,
+				"presence_penalty": null,
+				"repetition_penalty": null
+			},
+			"supported_voices": null,
+			"knowledge_cutoff": null,
+			"expiration_date": "2098-12-31",
+			"links": {
+				"details": "/api/v1/models/z-ai/glm-5v-turbo-20260401/endpoints"
+			},
+			"benchmarks": {
+				"design_arena": [
+					{
+						"arena": "agents",
+						"category": "agenticgamedev",
+						"elo": 1108,
+						"win_rate": 41.7,
+						"rank": 18
+					},
+					{
+						"arena": "agents",
+						"category": "agentichtmlslides",
+						"elo": 1134,
+						"win_rate": 41.7,
+						"rank": 8
+					},
+					{
+						"arena": "agents",
+						"category": "agenticslides",
+						"elo": 1171,
+						"win_rate": 51.6,
+						"rank": 6
+					},
+					{
+						"arena": "agents",
+						"category": "agenticslides(html)",
+						"elo": 1137,
+						"win_rate": 41.8,
+						"rank": 8
+					},
+					{
+						"arena": "agents",
+						"category": "agenticslides(python-pptx)",
+						"elo": 1183,
+						"win_rate": 53.9,
+						"rank": 6
+					},
+					{
+						"arena": "agents",
+						"category": "androidnative",
+						"elo": 1267,
+						"win_rate": 54.8,
+						"rank": 4
+					},
+					{
+						"arena": "agents",
+						"category": "fullstack",
+						"elo": 1192,
+						"win_rate": 52.3,
+						"rank": 16
+					},
+					{
+						"arena": "agents",
+						"category": "godotgamedev",
+						"elo": 1003,
+						"win_rate": 27.4,
+						"rank": 30
+					},
+					{
+						"arena": "agents",
+						"category": "htmlslides",
+						"elo": 1152,
+						"win_rate": 44.5,
+						"rank": 18
+					},
+					{
+						"arena": "agents",
+						"category": "mobileapps",
+						"elo": 1200,
+						"win_rate": 50.4,
+						"rank": 16
+					},
+					{
+						"arena": "agents",
+						"category": "pptxslides",
+						"elo": 1164,
+						"win_rate": 52.1,
+						"rank": 6
+					},
+					{
+						"arena": "agents",
+						"category": "python-pptxslides",
+						"elo": 1165,
+						"win_rate": 51.9,
+						"rank": 13
+					},
+					{
+						"arena": "agents",
+						"category": "webapps",
+						"elo": 1177,
+						"win_rate": 45.3,
+						"rank": 22
+					},
+					{
+						"arena": "models",
+						"category": "3d",
+						"elo": 1267,
+						"win_rate": 54.3,
+						"rank": 28
+					},
+					{
+						"arena": "models",
+						"category": "asciiart",
+						"elo": 1140,
+						"win_rate": 42.8,
+						"rank": 47
+					},
+					{
+						"arena": "models",
+						"category": "codecategories",
+						"elo": 1259,
+						"win_rate": 51.8,
+						"rank": 32
+					},
+					{
+						"arena": "models",
+						"category": "dataviz",
+						"elo": 1226,
+						"win_rate": 48.3,
+						"rank": 39
+					},
+					{
+						"arena": "models",
+						"category": "gamedev",
+						"elo": 1276,
+						"win_rate": 54,
+						"rank": 25
+					},
+					{
+						"arena": "models",
+						"category": "svg",
+						"elo": 1196,
+						"win_rate": 51,
+						"rank": 30
+					},
+					{
+						"arena": "models",
+						"category": "uicomponent",
+						"elo": 1248,
+						"win_rate": 50.4,
+						"rank": 33
+					},
+					{
+						"arena": "models",
+						"category": "website",
+						"elo": 1254,
+						"win_rate": 50.6,
+						"rank": 31
+					}
+				]
+			},
+			"reasoning": {
+				"mandatory": false,
+				"default_enabled": true
+			}
+		},
+		{
+			"id": "aion-labs/aion-3.0-mini",
+			"canonical_slug": "aion-labs/aion-3.0-mini-20260707",
+			"hugging_face_id": null,
+			"name": "AionLabs: Aion-3.0-Mini",
+			"created": 1783443096,
+			"description": "Aion-3.0 Mini is a multi-model roleplaying and storytelling system from AionLabs, built on the DeepSeek family of models. It uses a collaborative generation process in which multiple specialized models each...",
+			"context_length": 131072,
+			"architecture": {
+				"modality": "text->text",
+				"input_modalities": ["text"],
+				"output_modalities": ["text"],
+				"tokenizer": "Other",
+				"instruct_type": null
+			},
+			"pricing": {
+				"prompt": "0.0000007",
+				"completion": "0.0000014",
+				"input_cache_read": "0.00000018"
+			},
+			"top_provider": {
+				"context_length": 131072,
+				"max_completion_tokens": 32768,
+				"is_moderated": false
+			},
+			"per_request_limits": null,
+			"supported_parameters": [
+				"include_reasoning",
+				"max_tokens",
+				"reasoning",
+				"response_format",
+				"temperature",
+				"tool_choice",
+				"tools",
+				"top_p"
+			],
+			"default_parameters": {},
+			"supported_voices": null,
+			"knowledge_cutoff": null,
+			"expiration_date": null,
+			"links": {
+				"details": "/api/v1/models/aion-labs/aion-3.0-mini-20260707/endpoints"
+			},
+			"reasoning": {
+				"mandatory": true
+			}
+		},
+		{
+			"id": "openrouter/auto",
+			"canonical_slug": "openrouter/auto",
+			"hugging_face_id": null,
+			"name": "Auto Router",
+			"created": 1699401600,
+			"description": "Your prompt will be processed by a meta-model and routed to one of dozens of models (see below), optimizing for the best possible output. To see which model was used,...",
+			"context_length": 2000000,
+			"architecture": {
+				"modality": "text+image+file+audio+video->text+image",
+				"input_modalities": ["text", "image", "audio", "file", "video"],
+				"output_modalities": ["text", "image"],
+				"tokenizer": "Router",
+				"instruct_type": null
+			},
+			"pricing": {
+				"prompt": "-1",
+				"completion": "-1"
+			},
+			"top_provider": {
+				"context_length": null,
+				"max_completion_tokens": null,
+				"is_moderated": false
+			},
+			"per_request_limits": null,
+			"supported_parameters": [
+				"frequency_penalty",
+				"include_reasoning",
+				"logit_bias",
+				"logprobs",
+				"max_tokens",
+				"min_p",
+				"prediction",
+				"presence_penalty",
+				"reasoning",
+				"reasoning_effort",
+				"repetition_penalty",
+				"response_format",
+				"seed",
+				"stop",
+				"structured_outputs",
+				"temperature",
+				"tool_choice",
+				"tools",
+				"top_a",
+				"top_k",
+				"top_logprobs",
+				"top_p",
+				"web_search_options"
+			],
+			"default_parameters": {
+				"temperature": null,
+				"top_p": null,
+				"top_k": null,
+				"frequency_penalty": null,
+				"presence_penalty": null,
+				"repetition_penalty": null
+			},
+			"supported_voices": null,
+			"knowledge_cutoff": null,
+			"expiration_date": null,
+			"links": {
+				"details": "/api/v1/models/openrouter/auto/endpoints"
+			}
+		},
+		{
+			"id": "openrouter/bodybuilder",
+			"canonical_slug": "openrouter/bodybuilder",
+			"hugging_face_id": "",
+			"name": "Body Builder (beta)",
+			"created": 1764903653,
+			"description": "Transform your natural language requests into structured OpenRouter API request objects. Describe what you want to accomplish with AI models, and Body Builder will construct the appropriate API calls. Example:...",
+			"context_length": 128000,
+			"architecture": {
+				"modality": "text->text",
+				"input_modalities": ["text"],
+				"output_modalities": ["text"],
+				"tokenizer": "Router",
+				"instruct_type": null
+			},
+			"pricing": {
+				"prompt": "-1",
+				"completion": "-1"
+			},
+			"top_provider": {
+				"context_length": null,
+				"max_completion_tokens": null,
+				"is_moderated": false
+			},
+			"per_request_limits": null,
+			"supported_parameters": [],
+			"default_parameters": {
+				"temperature": null,
+				"top_p": null,
+				"frequency_penalty": null
+			},
+			"supported_voices": null,
+			"knowledge_cutoff": null,
+			"expiration_date": null,
+			"links": {
+				"details": "/api/v1/models/openrouter/bodybuilder/endpoints"
+			}
+		},
+		{
+			"id": "~anthropic/claude-opus-latest",
+			"canonical_slug": "~anthropic/claude-opus-latest",
+			"alias_target": {
+				"name": "Claude Opus 5",
+				"slug": "anthropic/claude-opus-5"
+			},
+			"hugging_face_id": "",
+			"name": "Anthropic: Claude Opus Latest",
+			"created": 1776795361,
+			"description": "This model always redirects to the latest model in the Claude Opus family.",
+			"context_length": 1000000,
+			"architecture": {
+				"modality": "text+image+file->text",
+				"input_modalities": ["text", "image", "file"],
+				"output_modalities": ["text"],
+				"tokenizer": "Router",
+				"instruct_type": null
+			},
+			"pricing": {
+				"prompt": "0.000005",
+				"completion": "0.000025",
+				"web_search": "0.01",
+				"input_cache_read": "0.0000005",
+				"input_cache_write": "0.00000625",
+				"input_cache_write_1h": "0.00001"
+			},
+			"top_provider": {
+				"context_length": 1000000,
+				"max_completion_tokens": 128000,
+				"is_moderated": true
+			},
+			"per_request_limits": null,
+			"supported_parameters": [
+				"include_reasoning",
+				"max_completion_tokens",
+				"max_tokens",
+				"reasoning",
+				"reasoning_effort",
+				"response_format",
+				"stop",
+				"structured_outputs",
+				"temperature",
+				"tool_choice",
+				"tools",
+				"verbosity"
+			],
+			"default_parameters": {
+				"temperature": null,
+				"top_p": null,
+				"top_k": null,
+				"frequency_penalty": null,
+				"presence_penalty": null,
+				"repetition_penalty": null
+			},
+			"supported_voices": null,
+			"knowledge_cutoff": null,
+			"expiration_date": null,
+			"links": {
+				"details": "/api/v1/models/~anthropic/claude-opus-latest/endpoints"
+			},
+			"reasoning": {
+				"mandatory": false,
+				"default_enabled": true,
+				"supported_efforts": ["max", "xhigh", "high", "medium", "low"],
+				"default_effort": "high"
+			}
+		},
+		{
+			"id": "kwaipilot/kat-coder-air-v2.5",
+			"canonical_slug": "kwaipilot/kat-coder-air-v2.5-20260710",
+			"hugging_face_id": null,
+			"name": "Kwaipilot: KAT-Coder-Air V2.5",
+			"created": 1783714590,
+			"description": "KAT-Coder-Air V2.5 is a flagship-level Agentic Coding model that can directly hand over an entire issue or an entire business workflow to it, allowing it to autonomously locate and make...",
+			"context_length": 256000,
+			"architecture": {
+				"modality": "text->text",
+				"input_modalities": ["text"],
+				"output_modalities": ["text"],
+				"tokenizer": "Other",
+				"instruct_type": null
+			},
+			"pricing": {
+				"prompt": "0.00000015",
+				"completion": "0.0000006",
+				"input_cache_read": "0.00000003"
+			},
+			"top_provider": {
+				"context_length": 256000,
+				"max_completion_tokens": 80000,
+				"is_moderated": false
+			},
+			"per_request_limits": null,
+			"supported_parameters": [
+				"frequency_penalty",
+				"logprobs",
+				"max_tokens",
+				"presence_penalty",
+				"response_format",
+				"stop",
+				"structured_outputs",
+				"temperature",
+				"tool_choice",
+				"tools",
+				"top_logprobs",
+				"top_p"
+			],
+			"default_parameters": {
+				"temperature": null,
+				"top_p": null,
+				"top_k": null,
+				"frequency_penalty": null,
+				"presence_penalty": null,
+				"repetition_penalty": null
+			},
+			"supported_voices": null,
+			"knowledge_cutoff": null,
+			"expiration_date": null,
+			"links": {
+				"details": "/api/v1/models/kwaipilot/kat-coder-air-v2.5-20260710/endpoints"
+			}
+		}
+	]
+}

@@ -104,7 +104,7 @@ Plan reviewed against the live OpenRouter API on 2026-08-03 and substantially
 corrected before any code — see the decision-log entry of that date.
 
 - [x] T1.7.0 OpenRouter becomes the transport
-- [ ] T1.7.1 Server-side catalog fetch
+- [x] T1.7.1 Server-side catalog fetch
 - [ ] T1.7.2 Shared schema rewrite
 - [ ] T1.7.4 Grouped, searchable model picker (model choice only)
 - [ ] T1.7.5 Documentation
@@ -2061,6 +2061,80 @@ different layers, kept); passing `rest.model` through unrewritten failed only
 only "refuses to start without the key every model request is billed to".
 
 `bun run verify` green: 60 server tests, 140 web tests, check/lint/format/build all
+clean.
+
+### 2026-08-03 — T1.7.1: the catalog fetch, and a task boundary that had to move
+
+**The task as written could not end green.** T1.7.1 said the fetcher "maps each
+entry to the shared schema (below)" — but that schema is T1.7.2's rewrite, and
+rewriting it breaks the nine hand-typed entries in `models.ts`, so the server stops
+compiling until the mapper exists. T1.7.1 needed T1.7.2's schema; T1.7.2 needed
+T1.7.1's fetcher. Asked rather than guessed; the boundary was re-cut on the user's
+call. **T1.7.1 is now fetch, filter and cache over OpenRouter's raw shape**,
+touching no shared types and imported by nothing. The mapper, the catalog-route
+wiring, `resolveModel` against the fetched list and `UnknownModelError`'s message
+all moved into T1.7.2, which is where the breakage belongs. Both sections of
+`11d-m1.7-openrouter.md` were rewritten to match.
+
+**The ground-truth section undercounted nulls.** Re-measured all 337 live entries
+while typing the schema, and "present on every entry" turned out to mean "the key
+is there", not "there is a value": `supported_voices` is null on 335 (the doc said
+"present on 2, both empty"), `hugging_face_id` on 81, `instruct_type` on 296,
+`top_provider.context_length` on 6, `max_completion_tokens` on 43.
+`frequency_penalty` and `presence_penalty` appear on roughly two thirds of models
+and are null on every single one. Four pricing keys the doc never listed exist
+(`input_cache_write_1h`, `input_audio_cache`, `image_output`, `audio_output`), and
+`benchmarks.design_arena` is an empty _array_, not an empty object. All corrected
+in the doc.
+
+**The expiry filter is correct and matches nothing.** `expiration_date` is non-null
+on 5 models and **not one of those dates has passed**, so nothing is being filtered
+today. Rather than hand-edit a date into the fixture to make a test pass — which
+would mean testing against data OpenRouter never sent — the fixture stays 100%
+verbatim and the tests move the clock with `vi.setSystemTime`. Expiry is applied on
+read, not baked into the cache, so a model that lapses mid-TTL disappears at the
+right moment rather than an hour late.
+
+**The fixture is eight real entries, one per branch.** Recorded live, chosen so
+every path through the schema is exercised by data OpenRouter actually produced:
+Opus 5 (five effort levels), `gpt-5.3-chat` (a genuine near-term expiry),
+`glm-5v-turbo` (expiry far out, `mandatory` + `default_enabled`),
+`aion-3.0-mini` (`reasoning` carrying nothing but `mandatory` — the case a
+three-state enum cannot express), `openrouter/auto` (sentinel `"-1"` pricing, no
+reasoning object), `openrouter/bodybuilder` and a `~` alias (both must be dropped),
+and a plain model with none of the above. Prettier reformats its whitespace, so
+re-record with `bunx prettier --write` after.
+
+**Two tests were wrong until the mutations said so.** Nine mutations, each meant to
+kill exactly one test. Seven did immediately. The other two were the point of the
+exercise:
+
+- "fails loudly when OpenRouter answers with an error status" survived deleting the
+  `!response.ok` check entirely — because its stub returned `{ data: [] }`, which
+  the schema's `.min(1)` rejected anyway. The test passed for a reason unrelated to
+  what it claimed to cover. Its stub now returns a perfectly valid catalog body
+  with a failing status, so only the status check can catch it.
+- "keeps a reasoning object that carries nothing but `mandatory`" was pinned by a
+  mutation that made the whole parse fail, killing all nine tests instead of one.
+  Stripping `mandatory` from the schema instead isolates it properly.
+
+**Fixture drift: decided, no live shape check.** The plan demanded a choice. A test
+against the live endpoint only reports on the day it runs, so it would say nothing
+across exactly the quiet stretch in which a shape change lands unnoticed — and it
+adds a network-dependent test to maintain. What actually protects the app is that
+the Zod parse fails loudly: a changed shape surfaces as `CatalogUnavailableError`
+and a 503 from the catalog route, never a silently short model list.
+
+**One temporary thing, written down.** `openRouterModels()` serves a stale cache
+silently when a refresh fails, because nothing imports the module yet and there is
+no logger to report to. T1.7.2 wires one in when it connects the catalog route.
+
+Two incidental fixes on the way through `verify`: `import … with { type: 'json' }`
+needs a `module` setting this repo does not use (plain JSON import instead), and
+`response.status` in a template literal trips
+`restrict-template-expressions`.
+
+`bun run verify` green: 72 server tests, 140 web tests, check/lint/format/build all
 clean.
 
 ## Open questions
