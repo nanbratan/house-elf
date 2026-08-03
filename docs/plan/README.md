@@ -17,6 +17,7 @@ These documents are written for an **executing AI agent**. Read them in this ord
 | 5   | [11-m1-chat-e2e.md](11-m1-chat-e2e.md)                     | M1 — One agent, streaming end to end                          |
 | 5.5 | [11b-m1.5-model-selection.md](11b-m1.5-model-selection.md) | M1.5 — Per-request model choice, allowlist, scripted model    |
 | 5.6 | [11c-m1.6-polish.md](11c-m1.6-polish.md)                   | M1.6 — Per-request thinking toggle, composer fixes            |
+| 5.7 | [11d-m1.7-openrouter.md](11d-m1.7-openrouter.md)           | M1.7 — Any OpenRouter model, grouped by provider              |
 | 6   | [12-m2-threads-memory.md](12-m2-threads-memory.md)         | M2 — Conversation list, persistence, memory                   |
 | 7   | [13-m3-menu-agent.md](13-m3-menu-agent.md)                 | M3 — Nutrition agent (first real use case)                    |
 | 8   | [14-m4-cv-agent.md](14-m4-cv-agent.md)                     | M4 — CV agent, RAG, Typst → PDF                               |
