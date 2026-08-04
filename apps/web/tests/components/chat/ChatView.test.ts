@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { composerStub, errorNoticeStub } from '../../stubs/keys';
 import { stubCallback, stubProps, stubPropsOf } from '../../stubs/stub-props';
+import { optionalThinking, selectableModel } from '../../helpers/models.ts';
 
 /**
  * `Chat` owns a network transport, so it is replaced wholesale. These tests are
@@ -78,29 +79,23 @@ const ChatView = (await import('../../../src/lib/components/chat/ChatView.svelte
 const modelCatalog = {
 	initialModelId: 'anthropic/claude-haiku-4-5',
 	models: [
-		{
+		selectableModel({
 			id: 'anthropic/claude-opus-5',
 			label: 'Opus 5',
-			family: 'opus',
-			generation: '5',
-			thinking: 'optional'
-		},
-		{
+			...optionalThinking
+		}),
+		selectableModel({
 			id: 'anthropic/claude-sonnet-4-6',
 			label: 'Sonnet 4.6',
-			family: 'sonnet',
-			generation: '4.6',
-			thinking: 'optional'
-		},
-		{
+			...optionalThinking
+		}),
+		selectableModel({
 			id: 'anthropic/claude-haiku-4-5',
 			label: 'Haiku 4.5',
-			family: 'haiku',
-			generation: '4.5',
-			thinking: 'optional'
-		}
+			...optionalThinking
+		})
 	]
-} as const;
+};
 
 function renderChatView() {
 	return render(ChatView, { props: { agentId: 'general', modelCatalog } });
@@ -125,13 +120,15 @@ function composerProps(): {
 	models: readonly SelectableModel[];
 	selectedModelId: string;
 	thinking: boolean;
+	canChooseThinking: boolean;
 } {
-	const { status, models, selectedModelId, thinking } = stubProps(composerStub);
+	const { status, models, selectedModelId, thinking, canChooseThinking } = stubProps(composerStub);
 	return {
 		status: status as string,
 		models: models as readonly SelectableModel[],
 		selectedModelId: selectedModelId as string,
-		thinking: thinking as boolean
+		thinking: thinking as boolean,
+		canChooseThinking: canChooseThinking as boolean
 	};
 }
 
@@ -172,7 +169,8 @@ describe('chat view', () => {
 			status: 'ready',
 			models: modelCatalog.models,
 			selectedModelId: 'anthropic/claude-haiku-4-5',
-			thinking: false
+			thinking: false,
+			canChooseThinking: true
 		});
 	});
 

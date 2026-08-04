@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { env } from '../env';
+import { logger } from './logger';
 
 /**
  * The account-scoped list, so the API key is required to read it. It is the
@@ -91,8 +92,6 @@ export class CatalogUnavailableError extends Error {
 	}
 }
 
-let cache: { models: readonly OpenRouterModel[]; fetchedAt: number } | undefined;
-
 async function fetchModels(): Promise<readonly OpenRouterModel[]> {
 	const response = await fetch(CATALOG_URL, {
 		headers: { Authorization: `Bearer ${env.openrouterApiKey}` }
@@ -103,6 +102,10 @@ async function fetchModels(): Promise<readonly OpenRouterModel[]> {
 	return catalogResponseSchema.parse(await response.json()).data;
 }
 
+/**
+ * Expiry is applied on read rather than baked into the cache, so a model that
+ * lapses mid-TTL disappears at the right moment instead of an hour late.
+ */
 function isOffered(model: OpenRouterModel, now: number): boolean {
 	if (model.id === EXCLUDED_ROUTER_ID) return false;
 	// An unparseable date parses to NaN and every NaN comparison is false, so a
@@ -111,26 +114,59 @@ function isOffered(model: OpenRouterModel, now: number): boolean {
 	return !hasExpired;
 }
 
-/**
- * Expiry is applied on read rather than baked into the cache, so a model that
- * lapses mid-TTL disappears at the right moment instead of an hour late.
- *
- * A failed refresh with something already cached serves the stale list: model
- * metadata going briefly out of date must never stop a message being sent
- * against a model the client already holds.
- */
-export async function openRouterModels(): Promise<readonly OpenRouterModel[]> {
-	const now = Date.now();
+/** A fetched catalog, indexed by model id, and the moment it was fetched. */
+interface CachedCatalog {
+	readonly modelsById: ReadonlyMap<string, OpenRouterModel>;
+	readonly fetchedAt: number;
+}
 
-	if (cache === undefined || now - cache.fetchedAt >= CACHE_TTL_MS) {
-		try {
-			cache = { models: await fetchModels(), fetchedAt: now };
-		} catch (error) {
-			if (cache === undefined) throw new CatalogUnavailableError(error);
-			// Stale beats empty. Nothing consumes this module yet, so there is no
-			// logger to report the failed refresh to; T1.7.2 wires one in.
-		}
+/**
+ * The catalog and its cache in one place, so callers ask for models without
+ * having to know whether the answer costs a request.
+ */
+class OpenRouterCatalog {
+	#cache: CachedCatalog | undefined;
+
+	/** Every model this account may currently choose from. */
+	async list(): Promise<readonly OpenRouterModel[]> {
+		const now = Date.now();
+		const catalog = await this.#currentCatalog(now);
+		const models = [...catalog.modelsById.values()];
+		return models.filter((model) => isOffered(model, now));
 	}
 
-	return cache.models.filter((model) => isOffered(model, now));
+	/** One model by its catalog id, or `undefined` if the catalog does not offer it. */
+	async get(id: string): Promise<OpenRouterModel | undefined> {
+		const now = Date.now();
+		const catalog = await this.#currentCatalog(now);
+		const model = catalog.modelsById.get(id);
+		if (model === undefined || !isOffered(model, now)) return undefined;
+		return model;
+	}
+
+	/** The cached catalog, refetched first if there is none or it has aged out. */
+	async #currentCatalog(now: number): Promise<CachedCatalog> {
+		const cached = this.#cache;
+		const isFresh = cached !== undefined && now - cached.fetchedAt < CACHE_TTL_MS;
+		if (isFresh) return cached;
+
+		try {
+			const models = await fetchModels();
+			const refreshed: CachedCatalog = {
+				modelsById: new Map(models.map((model) => [model.id, model])),
+				fetchedAt: now
+			};
+			this.#cache = refreshed;
+			return refreshed;
+		} catch (error) {
+			if (cached === undefined) throw new CatalogUnavailableError(error);
+			// Stale beats empty: nobody is stopped from sending a message because the
+			// metadata is an hour old. Logged because nothing else surfaces it — the
+			// symptom of a permanently failing refresh is a catalog that never changes.
+			logger.warn('Serving a stale OpenRouter model catalog', { error });
+			return cached;
+		}
+	}
 }
+
+export const openRouterCatalog = new OpenRouterCatalog();

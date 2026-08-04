@@ -40,15 +40,15 @@ afterEach(() => {
 	vi.unstubAllEnvs();
 });
 
-describe('openRouterModels', () => {
+describe('the OpenRouter catalog', () => {
 	it('asks the account-scoped catalog with the key', async () => {
 		// The public list would ignore this account's privacy settings, which is the
 		// only thing filtering logged-prompt models out of the picker.
 		const fetchStub = respondWith(fixture);
 		vi.stubGlobal('fetch', fetchStub);
-		const { openRouterModels } = await importCatalog();
+		const { openRouterCatalog } = await importCatalog();
 
-		await openRouterModels();
+		await openRouterCatalog.list();
 
 		expect(fetchStub).toHaveBeenCalledWith('https://openrouter.ai/api/v1/models/user', {
 			headers: { Authorization: 'Bearer sk-or-test' }
@@ -57,9 +57,9 @@ describe('openRouterModels', () => {
 
 	it('keeps the ~latest pointers alongside the versions they currently resolve to', async () => {
 		vi.stubGlobal('fetch', respondWith(fixture));
-		const { openRouterModels } = await importCatalog();
+		const { openRouterCatalog } = await importCatalog();
 
-		const models = await openRouterModels();
+		const models = await openRouterCatalog.list();
 
 		const ids = models.map((model) => model.id);
 		expect(ids).toContain('~anthropic/claude-opus-latest');
@@ -69,9 +69,9 @@ describe('openRouterModels', () => {
 	it('keeps the release date each entry publishes', async () => {
 		// The picker groups by release month, so an unmapped `created` is unusable.
 		vi.stubGlobal('fetch', respondWith(fixture));
-		const { openRouterModels } = await importCatalog();
+		const { openRouterCatalog } = await importCatalog();
 
-		const models = await openRouterModels();
+		const models = await openRouterCatalog.list();
 
 		expect(models.find((model) => model.id === 'anthropic/claude-opus-5')?.created).toBe(
 			1784912544
@@ -80,9 +80,9 @@ describe('openRouterModels', () => {
 
 	it('drops bodybuilder but keeps the routers that do answer questions', async () => {
 		vi.stubGlobal('fetch', respondWith(fixture));
-		const { openRouterModels } = await importCatalog();
+		const { openRouterCatalog } = await importCatalog();
 
-		const ids = (await openRouterModels()).map((model) => model.id);
+		const ids = (await openRouterCatalog.list()).map((model) => model.id);
 
 		expect(ids).not.toContain('openrouter/bodybuilder');
 		expect(ids).toContain('openrouter/auto');
@@ -90,19 +90,19 @@ describe('openRouterModels', () => {
 
 	it('keeps a model whose expiration date has not arrived', async () => {
 		vi.stubGlobal('fetch', respondWith(fixture));
-		const { openRouterModels } = await importCatalog();
+		const { openRouterCatalog } = await importCatalog();
 
-		const ids = (await openRouterModels()).map((model) => model.id);
+		const ids = (await openRouterCatalog.list()).map((model) => model.id);
 
 		expect(ids).toContain('z-ai/glm-4.5');
 	});
 
 	it('drops a model once its expiration date has passed', async () => {
 		vi.stubGlobal('fetch', respondWith(fixture));
-		const { openRouterModels } = await importCatalog();
+		const { openRouterCatalog } = await importCatalog();
 		vi.setSystemTime(new Date('2027-01-01T00:00:00Z'));
 
-		const ids = (await openRouterModels()).map((model) => model.id);
+		const ids = (await openRouterCatalog.list()).map((model) => model.id);
 
 		expect(ids).not.toContain('z-ai/glm-4.5');
 		expect(ids).toContain('z-ai/glm-5v-turbo');
@@ -112,9 +112,9 @@ describe('openRouterModels', () => {
 		// 127 live models are exactly this. A schema demanding the other fields
 		// would reject them outright.
 		vi.stubGlobal('fetch', respondWith(fixture));
-		const { openRouterModels } = await importCatalog();
+		const { openRouterCatalog } = await importCatalog();
 
-		const models = await openRouterModels();
+		const models = await openRouterCatalog.list();
 
 		expect(models.find((model) => model.id === 'google/gemini-3-pro-image')?.reasoning).toEqual({
 			mandatory: true
@@ -123,9 +123,9 @@ describe('openRouterModels', () => {
 
 	it('keeps the effort levels a model publishes', async () => {
 		vi.stubGlobal('fetch', respondWith(fixture));
-		const { openRouterModels } = await importCatalog();
+		const { openRouterCatalog } = await importCatalog();
 
-		const models = await openRouterModels();
+		const models = await openRouterCatalog.list();
 
 		expect(
 			models.find((model) => model.id === 'anthropic/claude-opus-5')?.reasoning?.supported_efforts
@@ -135,11 +135,11 @@ describe('openRouterModels', () => {
 	it('answers from cache inside the TTL instead of going back to the network', async () => {
 		const fetchStub = respondWith(fixture);
 		vi.stubGlobal('fetch', fetchStub);
-		const { openRouterModels } = await importCatalog();
+		const { openRouterCatalog } = await importCatalog();
 
-		await openRouterModels();
+		await openRouterCatalog.list();
 		vi.setSystemTime(beforeExpiry.getTime() + 59 * 60 * 1000);
-		await openRouterModels();
+		await openRouterCatalog.list();
 
 		expect(fetchStub).toHaveBeenCalledOnce();
 	});
@@ -147,11 +147,11 @@ describe('openRouterModels', () => {
 	it('refetches once the TTL has elapsed', async () => {
 		const fetchStub = respondWith(fixture);
 		vi.stubGlobal('fetch', fetchStub);
-		const { openRouterModels } = await importCatalog();
+		const { openRouterCatalog } = await importCatalog();
 
-		await openRouterModels();
+		await openRouterCatalog.list();
 		vi.setSystemTime(beforeExpiry.getTime() + 61 * 60 * 1000);
-		await openRouterModels();
+		await openRouterCatalog.list();
 
 		expect(fetchStub).toHaveBeenCalledTimes(2);
 	});
@@ -159,14 +159,16 @@ describe('openRouterModels', () => {
 	it('serves the stale list when a refresh fails', async () => {
 		const fetchStub = respondWith(fixture);
 		vi.stubGlobal('fetch', fetchStub);
-		const { openRouterModels } = await importCatalog();
-		await openRouterModels();
+		const { openRouterCatalog } = await importCatalog();
+		await openRouterCatalog.list();
 
 		fetchStub.mockRejectedValueOnce(new Error('network is down'));
 		vi.setSystemTime(beforeExpiry.getTime() + 61 * 60 * 1000);
 
 		// Metadata going briefly stale must not stop a message being sent.
-		await expect(openRouterModels()).resolves.not.toHaveLength(0);
+		await expect(openRouterCatalog.list()).resolves.toContainEqual(
+			expect.objectContaining({ id: 'anthropic/claude-opus-5' })
+		);
 	});
 
 	it('fails loudly when nothing is cached and the fetch fails', async () => {
@@ -174,25 +176,25 @@ describe('openRouterModels', () => {
 			'fetch',
 			vi.fn(() => Promise.reject(new Error('network is down')))
 		);
-		const { CatalogUnavailableError, openRouterModels } = await importCatalog();
+		const { CatalogUnavailableError, openRouterCatalog } = await importCatalog();
 
-		await expect(openRouterModels()).rejects.toBeInstanceOf(CatalogUnavailableError);
+		await expect(openRouterCatalog.list()).rejects.toBeInstanceOf(CatalogUnavailableError);
 	});
 
 	it('fails loudly when OpenRouter rejects the key', async () => {
 		// The body is a perfectly valid catalog, so only the status check can catch
 		// this: an error response that happens to parse must not be served as truth.
 		vi.stubGlobal('fetch', respondWith(fixture, 401));
-		const { CatalogUnavailableError, openRouterModels } = await importCatalog();
+		const { CatalogUnavailableError, openRouterCatalog } = await importCatalog();
 
-		await expect(openRouterModels()).rejects.toBeInstanceOf(CatalogUnavailableError);
+		await expect(openRouterCatalog.list()).rejects.toBeInstanceOf(CatalogUnavailableError);
 	});
 
 	it('names the status OpenRouter answered with', async () => {
 		vi.stubGlobal('fetch', respondWith(fixture, 401));
-		const { openRouterModels } = await importCatalog();
+		const { openRouterCatalog } = await importCatalog();
 
-		await expect(openRouterModels()).rejects.toHaveProperty(
+		await expect(openRouterCatalog.list()).rejects.toHaveProperty(
 			'cause.message',
 			expect.stringContaining('401')
 		);
@@ -200,8 +202,39 @@ describe('openRouterModels', () => {
 
 	it('fails loudly when the response is not the shape the app was built against', async () => {
 		vi.stubGlobal('fetch', respondWith({ data: [{ id: 'a/b' }] }));
-		const { CatalogUnavailableError, openRouterModels } = await importCatalog();
+		const { CatalogUnavailableError, openRouterCatalog } = await importCatalog();
 
-		await expect(openRouterModels()).rejects.toBeInstanceOf(CatalogUnavailableError);
+		await expect(openRouterCatalog.list()).rejects.toBeInstanceOf(CatalogUnavailableError);
+	});
+
+	it('answers a lookup by id from the same cache the list came from', async () => {
+		const fetchStub = respondWith(fixture);
+		vi.stubGlobal('fetch', fetchStub);
+		const { openRouterCatalog } = await importCatalog();
+		await openRouterCatalog.list();
+
+		await expect(openRouterCatalog.get('anthropic/claude-opus-5')).resolves.toHaveProperty(
+			'name',
+			'Claude Opus 5'
+		);
+		expect(fetchStub).toHaveBeenCalledOnce();
+	});
+
+	it('does not answer a lookup for a model the list refuses to offer', async () => {
+		// Otherwise a request could name bodybuilder, which the picker never shows.
+		vi.stubGlobal('fetch', respondWith(fixture));
+		const { openRouterCatalog } = await importCatalog();
+
+		await expect(openRouterCatalog.get('openrouter/bodybuilder')).resolves.toBeUndefined();
+	});
+
+	it('stops answering a lookup once the model has expired', async () => {
+		vi.stubGlobal('fetch', respondWith(fixture));
+		const { openRouterCatalog } = await importCatalog();
+		await expect(openRouterCatalog.get('z-ai/glm-4.5')).resolves.toBeDefined();
+
+		vi.setSystemTime(new Date('2027-01-01T00:00:00Z'));
+
+		await expect(openRouterCatalog.get('z-ai/glm-4.5')).resolves.toBeUndefined();
 	});
 });

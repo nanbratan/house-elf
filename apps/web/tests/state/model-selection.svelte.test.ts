@@ -1,43 +1,25 @@
 import type { ModelCatalog } from '@house-elf/shared';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import {
+	mandatoryThinking,
+	optionalThinking,
+	selectableModel,
+	undescribedThinking
+} from '../helpers/models.ts';
+
 import { createModelSelection } from '$lib/state/model-selection.svelte';
 
 const catalog = {
 	initialModelId: 'anthropic/claude-haiku-4-5',
 	models: [
-		{
-			id: 'anthropic/claude-sonnet-4-6',
-			label: 'Sonnet 4.6',
-			family: 'sonnet',
-			generation: '4.6',
-			thinking: 'optional'
-		},
-		{
-			id: 'anthropic/claude-haiku-4-5',
-			label: 'Haiku 4.5',
-			family: 'haiku',
-			generation: '4.5',
-			thinking: 'optional'
-		},
-		// Invented ids. No model in the real allowlist is in either state today, so
-		// the only way to cover the branches that force the flag off is to make one.
-		{
-			id: 'test/always-thinks',
-			label: 'Always',
-			family: 'opus',
-			generation: '9',
-			thinking: 'always'
-		},
-		{
-			id: 'test/never-thinks',
-			label: 'Never',
-			family: 'haiku',
-			generation: '9',
-			thinking: 'unsupported'
-		}
+		selectableModel({ id: 'anthropic/claude-sonnet-4-6', ...optionalThinking }),
+		selectableModel({ id: 'anthropic/claude-haiku-4-5', ...optionalThinking }),
+		selectableModel({ id: 'test/always-thinks', ...mandatoryThinking }),
+		selectableModel({ id: 'test/router', ...undescribedThinking }),
+		selectableModel({ id: 'test/never-thinks' })
 	]
-} as const satisfies ModelCatalog;
+} satisfies ModelCatalog;
 
 const storageKey = 'house-elf:selected-model';
 const thinkingStorageKey = 'house-elf:thinking';
@@ -63,10 +45,14 @@ describe('model selection', () => {
 		expect(selection.selectedModelId).toBe('anthropic/claude-haiku-4-5');
 	});
 
-	it('starts from the catalog initial selection when nothing has been stored', () => {
+	it('falls back to the initial model, not the first listed, for an id the catalog lost', () => {
 		const selection = createModelSelection(catalog, localStorage);
 
-		expect(selection.selectedModelId).toBe('anthropic/claude-haiku-4-5');
+		selection.select('anthropic/claude-retired-1');
+
+		// The first entry is whichever model the catalog happened to list first; the
+		// initial one is the choice the picker is meant to open on.
+		expect(selection.selectedModel.id).toBe('anthropic/claude-haiku-4-5');
 	});
 
 	it('changes and persists the selection together', () => {
@@ -138,5 +124,14 @@ describe('thinking', () => {
 
 		expect(selection.thinking).toBe(true);
 		expect(selection.canChooseThinking).toBe(false);
+	});
+
+	it('is offered on a model that takes the parameter but describes no reasoning', () => {
+		// `openrouter/auto` is this shape, and it is where a first visit starts.
+		const selection = createModelSelection(catalog, localStorage);
+
+		selection.select('test/router');
+
+		expect(selection.canChooseThinking).toBe(true);
 	});
 });

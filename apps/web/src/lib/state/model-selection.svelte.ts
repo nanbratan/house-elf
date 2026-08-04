@@ -37,27 +37,39 @@ export function createModelSelection(
 	let storage = initialStorage;
 	let selectedModelId = $state(catalog.initialModelId);
 	let thinking = $state(false);
+	// Built once from a catalog that never changes for the lifetime of this
+	// selection and never written to, so nothing can depend on it reactively.
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity
+	const modelsById = new Map(catalog.models.map((model) => [model.id, model]));
+	// The schema guarantees the catalog carries its own initial model, so the
+	// last resort here is unreachable.
+	const initialModel = modelsById.get(catalog.initialModelId) ?? catalog.models[0];
 
 	function modelFor(modelId: string): SelectableModel {
-		// The catalog is validated to contain its own initial model, so the
-		// fallback is unreachable rather than a guess at a default.
-		return catalog.models.find((model) => model.id === modelId) ?? catalog.models[0];
+		// An id the catalog does not carry falls back to the model the picker opens
+		// on, not to whichever model the catalog happens to list first.
+		return modelsById.get(modelId) ?? initialModel;
+	}
+
+	/**
+	 * `supportedParameters` rather than the presence of a `reasoning` object: the
+	 * two disagree on the live catalog, and the parameter list is the one that
+	 * says what the model accepts being asked. The object says how it reasons.
+	 */
+	function thinkingIsOptional(modelId: string): boolean {
+		const model = modelFor(modelId);
+		return model.supportedParameters.includes('reasoning') && model.reasoning?.mandatory !== true;
 	}
 
 	function restore(): void {
 		const storedModelId = storage?.getItem(modelStorageKey);
-		if (
-			storedModelId !== null &&
-			storedModelId !== undefined &&
-			catalog.models.some((model) => model.id === storedModelId)
-		) {
+		if (storedModelId !== null && storedModelId !== undefined && modelsById.has(storedModelId)) {
 			selectedModelId = storedModelId;
 		}
 
 		// Read after the model, because the model decides whether it is allowed.
 		thinking =
-			storage?.getItem(thinkingStorageKey) === 'true' &&
-			modelFor(selectedModelId).thinking === 'optional';
+			storage?.getItem(thinkingStorageKey) === 'true' && thinkingIsOptional(selectedModelId);
 	}
 
 	if (storage === undefined) {
@@ -82,17 +94,17 @@ export function createModelSelection(
 			return modelFor(selectedModelId);
 		},
 		get thinking() {
-			// An always-on model thinks whether or not anyone asked, so reporting
-			// anything else would put a false statement in front of the reader.
-			return modelFor(selectedModelId).thinking === 'always' || thinking;
+			// A mandatory-reasoning model thinks whether or not anyone asked, so
+			// reporting anything else would put a false statement in front of the reader.
+			return modelFor(selectedModelId).reasoning?.mandatory === true || thinking;
 		},
 		get canChooseThinking() {
-			return modelFor(selectedModelId).thinking === 'optional';
+			return thinkingIsOptional(selectedModelId);
 		},
 		select(modelId: string) {
 			selectedModelId = modelId;
 			storage?.setItem(modelStorageKey, modelId);
-			if (modelFor(modelId).thinking !== 'optional') setThinking(false);
+			if (!thinkingIsOptional(modelId)) setThinking(false);
 		},
 		setThinking
 	};

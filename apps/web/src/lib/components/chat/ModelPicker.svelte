@@ -1,12 +1,7 @@
 <script lang="ts">
-	import type { ModelFamily, SelectableModel } from '@house-elf/shared';
+	import type { SelectableModel } from '@house-elf/shared';
 	import { Command, Dialog } from 'bits-ui';
 
-	const familyLabels: Record<ModelFamily, string> = {
-		opus: 'Opus',
-		sonnet: 'Sonnet',
-		haiku: 'Haiku'
-	};
 	const componentId = $props.id();
 	const modelListId = `${componentId}-model-list`;
 	const thinkingLabelId = `${componentId}-thinking-label`;
@@ -40,21 +35,12 @@
 
 	function matchesSearch(model: SelectableModel, query: string) {
 		if (query === '') return true;
-		return [model.label, model.family, model.generation, model.id].some((field) =>
-			field.toLowerCase().includes(query)
-		);
+		return model.label.toLowerCase().includes(query);
 	}
 
-	const groups = $derived.by(() => {
+	const matches = $derived.by(() => {
 		const query = search.trim().toLowerCase();
-
-		return Object.entries(familyLabels)
-			.map(([family, label]) => ({
-				family,
-				label,
-				models: models.filter((model) => model.family === family && matchesSearch(model, query))
-			}))
-			.filter((group) => group.models.length > 0);
+		return models.filter((model) => matchesSearch(model, query));
 	});
 
 	function select(modelId: string) {
@@ -135,42 +121,33 @@
 				</div>
 
 				<Command.List id={modelListId} class="overflow-y-auto p-1.5">
-					{#if groups.length === 0}
+					{#if matches.length === 0}
 						<div class="px-3 py-8 text-center text-sm text-faint">No models found.</div>
 					{/if}
 
-					{#each groups as group (group.family)}
-						<Command.Group value={group.family}>
-							<Command.GroupHeading class="px-2 py-1.5 text-xs font-medium text-faint capitalize">
-								{group.label}
-							</Command.GroupHeading>
-							<Command.GroupItems>
-								{#each group.models as model (model.id)}
-									<Command.Item
-										value={model.label}
-										onSelect={() => {
-											select(model.id);
-										}}
-										aria-label={model.label}
-										class="flex cursor-default items-center rounded-lg px-2 py-2 text-sm outline-none data-selected:bg-raised"
-									>
-										<span class="flex-1">{model.label}</span>
-										{#if model.id === selectedModelId}
-											<svg
-												class="size-4 text-accent"
-												viewBox="0 0 16 16"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="1.75"
-												aria-hidden="true"
-											>
-												<path d="m3 8 3 3 7-7" />
-											</svg>
-										{/if}
-									</Command.Item>
-								{/each}
-							</Command.GroupItems>
-						</Command.Group>
+					{#each matches as model (model.id)}
+						<Command.Item
+							value={model.label}
+							onSelect={() => {
+								select(model.id);
+							}}
+							aria-label={model.label}
+							class="flex cursor-default items-center rounded-lg px-2 py-2 text-sm outline-none data-selected:bg-raised"
+						>
+							<span class="flex-1">{model.label}</span>
+							{#if model.id === selectedModelId}
+								<svg
+									class="size-4 text-accent"
+									viewBox="0 0 16 16"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.75"
+									aria-hidden="true"
+								>
+									<path d="m3 8 3 3 7-7" />
+								</svg>
+							{/if}
+						</Command.Item>
 					{/each}
 				</Command.List>
 			</Command.Root>

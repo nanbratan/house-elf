@@ -1,32 +1,60 @@
 import { z } from 'zod';
 
-/** Anthropic's model families, ordered most to least capable. */
-export const MODEL_FAMILIES = ['opus', 'sonnet', 'haiku'] as const;
-
-export const modelFamilySchema = z.enum(MODEL_FAMILIES);
-
 /**
- * Whether a model can be asked to think, and whether it can be asked not to.
+ * What a model will do if asked to think.
  *
- * - `optional` — thinking is a per-request choice. The picker shows a toggle.
- * - `always` — the model thinks on every request and rejects being told not to.
- *   No toggle is shown, because there is nothing to decide.
- * - `unsupported` — the model cannot think. No toggle, and asking for thinking
- *   is a 400.
+ * Only `mandatory` is universal; the other fields are absent on most models that
+ * carry this object at all, so the shape mirrors OpenRouter's rather than
+ * flattening it into states the live data cannot express. An absent
+ * `supportedEfforts` means a plain on/off, not "any effort accepted".
  *
  * This describes a capability, never a setting. Nothing here says whether
  * thinking is switched on right now; that travels per message in the request.
  */
-export const THINKING_SUPPORT = ['optional', 'always', 'unsupported'] as const;
+export const reasoningSupportSchema = z.object({
+	/** True when the model thinks whatever it is told, and rejects being told not to. */
+	mandatory: z.boolean(),
+	supportedEfforts: z.array(z.string()).optional(),
+	defaultEffort: z.string().optional(),
+	defaultEnabled: z.boolean().optional(),
+	supportsMaxTokens: z.boolean().optional()
+});
 
-export const thinkingSupportSchema = z.enum(THINKING_SUPPORT);
+/** Dollars per token, as OpenRouter states them: decimal strings, not numbers. */
+export const modelPricingSchema = z.object({
+	prompt: z.string(),
+	completion: z.string()
+});
+
+/** Published defaults, for display. A model with none rests on the provider's. */
+export const modelDefaultParametersSchema = z.object({
+	temperature: z.number().optional()
+});
 
 export const selectableModelSchema = z.object({
 	id: z.string().min(1),
 	label: z.string().min(1),
-	family: modelFamilySchema,
-	generation: z.string().min(1),
-	thinking: thinkingSupportSchema
+	/** The id's slug before the first `/`. Not an enum — there are 52 and it moves. */
+	provider: z.string().min(1),
+	description: z.string(),
+	/** Unix milliseconds, so the picker can group by release month. */
+	createdAt: z.number(),
+	contextLength: z.number(),
+	maxCompletionTokens: z.number().optional(),
+	knowledgeCutoff: z.string().optional(),
+	inputModalities: z.array(z.string()),
+	/** OpenRouter's own list. The gate for every per-model control. */
+	supportedParameters: z.array(z.string()),
+	pricing: modelPricingSchema,
+	defaultParameters: modelDefaultParametersSchema,
+	/**
+	 * Derived, because the routers price as `"-1"` — meaning "whatever the model
+	 * it picks costs" — and a non-positive check would call all of them free.
+	 */
+	isFree: z.boolean(),
+	/** OpenRouter's own routing products, which pick a model per request. */
+	isRouter: z.boolean(),
+	reasoning: reasoningSupportSchema.optional()
 });
 
 /** Public shape returned by the Mastra model-catalog route. */
@@ -40,8 +68,8 @@ export const modelCatalogSchema = z
 		path: ['initialModelId']
 	});
 
-export type ModelFamily = z.infer<typeof modelFamilySchema>;
-export type ThinkingSupport = z.infer<typeof thinkingSupportSchema>;
+export type ReasoningSupport = Readonly<z.infer<typeof reasoningSupportSchema>>;
+export type ModelPricing = Readonly<z.infer<typeof modelPricingSchema>>;
 export type SelectableModel = Readonly<z.infer<typeof selectableModelSchema>>;
 export type ModelCatalog = Readonly<{
 	initialModelId: string;

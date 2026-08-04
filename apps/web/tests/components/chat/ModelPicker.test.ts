@@ -1,47 +1,34 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import type { SelectableModel } from '@house-elf/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { optionalThinking, selectableModel } from '../../helpers/models.ts';
 
 import ModelPicker from '../../../src/lib/components/chat/ModelPicker.svelte';
 
 const models = [
-	{
-		id: 'anthropic/claude-opus-5',
-		label: 'Opus 5',
-		family: 'opus',
-		generation: '5',
-		thinking: 'optional'
-	},
-	{
+	selectableModel({ id: 'anthropic/claude-opus-5', label: 'Opus 5', ...optionalThinking }),
+	selectableModel({
 		id: 'anthropic/claude-opus-4-5',
 		label: 'Opus 4.5',
-		family: 'opus',
-		generation: '4.5',
-		thinking: 'optional'
-	},
-	{
+		...optionalThinking
+	}),
+	selectableModel({
 		id: 'anthropic/claude-sonnet-4-5',
 		label: 'Sonnet 4.5',
-		family: 'sonnet',
-		generation: '4.5',
-		thinking: 'optional'
-	},
-	{
+		...optionalThinking
+	}),
+	selectableModel({
 		id: 'anthropic/claude-haiku-4-5',
 		label: 'Haiku 4.5',
-		family: 'haiku',
-		generation: '4.5',
-		thinking: 'optional'
-	},
-	{
-		id: 'anthropic/claude-haiku-3-5',
-		label: 'Haiku 3.5',
-		family: 'haiku',
-		generation: '3.5',
-		thinking: 'optional'
-	}
-] as const satisfies readonly SelectableModel[];
+		...optionalThinking
+	}),
+	selectableModel({
+		id: 'openai/gpt-5.3-chat',
+		label: 'GPT-5.3 Chat',
+		...optionalThinking
+	})
+];
 
 afterEach(async () => {
 	// bits-ui locks scrolling by writing `overflow: hidden` and `pointer-events: none`
@@ -115,9 +102,9 @@ describe('model picker', () => {
 		});
 
 		it('has no switch to show for a model that is always on or never on', async () => {
-			// `canChooseThinking` is false for the two capability states that leave
-			// nothing to decide: `always` (nothing to turn off) and `unsupported`
-			// (nothing to turn on). Either way, there is no question for a toggle to ask.
+			// `canChooseThinking` is false for the two capabilities that leave nothing
+			// to decide: mandatory reasoning (nothing to turn off) and no reasoning at
+			// all (nothing to turn on). Either way there is no question to ask.
 			await openPicker(models[0].id, 'Opus 5', { canChooseThinking: false });
 
 			expect(screen.queryByRole('switch')).not.toBeInTheDocument();
@@ -146,54 +133,44 @@ describe('model picker', () => {
 		});
 	});
 
-	it('shows each family name with the generation in every model label', async () => {
+	it('shows each row as the label and nothing else', async () => {
+		// Ids, providers and prices stay out of the list until T1.7.4 designs them in.
 		await openPicker();
 
 		expect(screen.getByRole('option', { name: 'Opus 5' })).toHaveTextContent(/^Opus 5$/);
-		expect(screen.getByRole('option', { name: 'Sonnet 4.5' })).toHaveTextContent(/^Sonnet 4\.5$/);
-		expect(screen.getByRole('option', { name: 'Haiku 3.5' })).toHaveTextContent(/^Haiku 3\.5$/);
+		expect(screen.getByRole('option', { name: 'GPT-5.3 Chat' })).toHaveTextContent(
+			/^GPT-5\.3 Chat$/
+		);
 	});
 
-	it('finds every model in a searched family', async () => {
+	it('finds every model whose label shares the searched words', async () => {
 		await openPicker();
 
 		await fireEvent.input(screen.getByRole('combobox', { name: 'Search models' }), {
-			target: { value: 'Haiku' }
+			target: { value: 'Opus' }
 		});
 
 		await waitFor(() => {
-			expect(screen.getByRole('option', { name: 'Haiku 4.5' })).toBeVisible();
-			expect(screen.getByRole('option', { name: 'Haiku 3.5' })).toBeVisible();
-			expect(screen.queryByRole('option', { name: 'Opus 5' })).not.toBeInTheDocument();
-		});
-	});
-
-	it('finds every model in a searched generation', async () => {
-		await openPicker();
-
-		await fireEvent.input(screen.getByRole('combobox', { name: 'Search models' }), {
-			target: { value: '4.5' }
-		});
-
-		await waitFor(() => {
+			expect(screen.getByRole('option', { name: 'Opus 5' })).toBeVisible();
 			expect(screen.getByRole('option', { name: 'Opus 4.5' })).toBeVisible();
-			expect(screen.getByRole('option', { name: 'Sonnet 4.5' })).toBeVisible();
-			expect(screen.getByRole('option', { name: 'Haiku 4.5' })).toBeVisible();
-			expect(screen.queryByRole('option', { name: 'Opus 5' })).not.toBeInTheDocument();
+			expect(screen.queryByRole('option', { name: 'GPT-5.3 Chat' })).not.toBeInTheDocument();
 		});
 	});
 
-	it('finds a model by its provider id', async () => {
+	it('searches the label only, not the ids behind it', async () => {
+		// `openai` is the provider slug of one model's id and appears in no label.
+		// Searching what is on screen is the whole contract; matching hidden fields
+		// would drop models out of the list for a reason the reader cannot see.
 		await openPicker();
 
 		await fireEvent.input(screen.getByRole('combobox', { name: 'Search models' }), {
-			target: { value: 'claude-sonnet' }
+			target: { value: 'openai' }
 		});
 
 		await waitFor(() => {
-			expect(screen.getByRole('option', { name: 'Sonnet 4.5' })).toBeVisible();
-			expect(screen.queryByRole('option', { name: 'Haiku 3.5' })).not.toBeInTheDocument();
+			expect(screen.getByText('No models found.')).toBeVisible();
 		});
+		expect(screen.queryByRole('option')).not.toBeInTheDocument();
 	});
 
 	it('marks the current model as selected for assistive technology', async () => {

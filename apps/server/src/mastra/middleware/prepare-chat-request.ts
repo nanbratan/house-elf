@@ -21,6 +21,7 @@ import type { Middleware } from '@mastra/core/server';
 
 import { routerModelId } from '../model-router';
 import { UnknownModelError, resolveModel } from '../models';
+import { CatalogUnavailableError } from '../openrouter-catalog';
 import { ThinkingNotSupportedError, thinkingProviderOptions, wantsThinking } from '../thinking';
 
 export const prepareChatRequest = {
@@ -50,7 +51,7 @@ export const prepareChatRequest = {
 
 		let rewritten: Record<string, unknown>;
 		try {
-			const model = resolveModel(rest.model);
+			const model = await resolveModel(rest.model);
 			// The client names a catalog id; the provider is addressed by the router
 			// id, so the field is replaced rather than passed through.
 			const routed = { ...rest, model: routerModelId(model) };
@@ -59,6 +60,11 @@ export const prepareChatRequest = {
 		} catch (error) {
 			if (error instanceof UnknownModelError || error instanceof ThinkingNotSupportedError) {
 				return c.json({ error: error.message }, 400);
+			}
+			if (error instanceof CatalogUnavailableError) {
+				// The request is fine; the server cannot currently say whether the model
+				// it names exists, and guessing would mean billing an unvalidated id.
+				return c.json({ error: error.message }, 503);
 			}
 			throw error;
 		}

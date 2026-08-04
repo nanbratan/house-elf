@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { modelPickerStub } from '../../stubs/keys';
 import { stubCallback, stubProps } from '../../stubs/stub-props';
+import { selectableModel } from '../../helpers/models.ts';
 
 vi.mock('../../../src/lib/components/chat/ModelPicker.svelte', async () => ({
 	default: (await import('../../stubs/ModelPickerStub.svelte')).default
@@ -13,28 +14,10 @@ vi.mock('../../../src/lib/components/chat/ModelPicker.svelte', async () => ({
 const Composer = (await import('../../../src/lib/components/chat/Composer.svelte')).default;
 
 const models = [
-	{
-		id: 'anthropic/claude-opus-5',
-		label: 'Opus 5',
-		family: 'opus',
-		generation: '5',
-		thinking: 'optional'
-	},
-	{
-		id: 'anthropic/claude-sonnet-4-6',
-		label: 'Sonnet 4.6',
-		family: 'sonnet',
-		generation: '4.6',
-		thinking: 'optional'
-	},
-	{
-		id: 'anthropic/claude-haiku-4-5',
-		label: 'Haiku 4.5',
-		family: 'haiku',
-		generation: '4.5',
-		thinking: 'optional'
-	}
-] as const;
+	selectableModel({ id: 'anthropic/claude-opus-5', label: 'Opus 5' }),
+	selectableModel({ id: 'anthropic/claude-sonnet-4-6', label: 'Sonnet 4.6' }),
+	selectableModel({ id: 'anthropic/claude-haiku-4-5', label: 'Haiku 4.5' })
+];
 
 function renderComposer(
 	status: 'ready' | 'submitted' | 'streaming' | 'error' = 'ready',
@@ -209,45 +192,31 @@ describe('composer', () => {
 
 	describe('model picker contract', () => {
 		it('passes the catalog and selected id down, and passes selections back up', () => {
-			const { onmodelselect } = renderComposer('ready', 'catalog/haiku', [
-				{
-					id: 'catalog/opus',
-					label: 'Server Opus',
-					family: 'opus',
-					generation: 'catalog-a',
-					thinking: 'optional'
-				},
-				{
-					id: 'catalog/haiku',
-					label: 'Server Haiku',
-					family: 'haiku',
-					generation: 'catalog-c',
-					thinking: 'optional'
-				}
-			]);
+			const serverModels = [
+				selectableModel({ id: 'catalog/opus', label: 'Server Opus' }),
+				selectableModel({ id: 'catalog/haiku', label: 'Server Haiku' })
+			];
+			const { onmodelselect } = renderComposer('ready', 'catalog/haiku', serverModels);
 
 			const { models, selectedModelId } = stubProps(modelPickerStub);
-			expect(models).toStrictEqual([
-				{
-					id: 'catalog/opus',
-					label: 'Server Opus',
-					family: 'opus',
-					generation: 'catalog-a',
-					thinking: 'optional'
-				},
-				{
-					id: 'catalog/haiku',
-					label: 'Server Haiku',
-					family: 'haiku',
-					generation: 'catalog-c',
-					thinking: 'optional'
-				}
-			]);
+			expect(models).toStrictEqual(serverModels);
 			expect(selectedModelId).toBe('catalog/haiku');
 
 			stubCallback(modelPickerStub, 'onselect')('catalog/opus');
 
 			expect(onmodelselect).toHaveBeenCalledExactlyOnceWith('catalog/opus');
+		});
+
+		it('passes the thinking choice down, and passes a new one back up', () => {
+			const { onthinkingchange } = renderComposer();
+
+			const { thinking, canChooseThinking } = stubProps(modelPickerStub);
+			expect(thinking).toBe(false);
+			expect(canChooseThinking).toBe(true);
+
+			stubCallback(modelPickerStub, 'onthinkingchange')(true);
+
+			expect(onthinkingchange).toHaveBeenCalledExactlyOnceWith(true);
 		});
 	});
 

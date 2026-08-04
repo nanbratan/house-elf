@@ -10,24 +10,20 @@ import type { SelectableModel } from '@house-elf/shared';
  * segments: `openrouter/anthropic/claude-opus-5`. The router id is derived here
  * and never leaves the server; nothing else composes the prefix.
  *
- * Confirmed rather than inferred, 2026-08-03:
- *
- * - `provider-registry.mjs --provider openrouter` lists 337 ids in the
- *   two-segment catalog form, and `@mastra/core`'s embedded docs spell the
- *   router string `openrouter/openai/gpt-oss-safeguard-20b` — three segments.
- * - OpenRouter's own catalog spells Anthropic versions with dots
- *   (`anthropic/claude-haiku-4.5`) where the allowlist uses dashes
- *   (`anthropic/claude-haiku-4-5`), which looks like it should 404. It does not:
- *   OpenRouter normalises the separator. All nine allowlisted ids were POSTed to
- *   `/api/v1/chat/completions` and every one returned 200 naming its dotted
- *   equivalent, so the prefix composes over the existing list unchanged.
+ * Confirmed rather than inferred, 2026-08-03: `provider-registry.mjs --provider
+ * openrouter` lists 337 ids in the two-segment catalog form, and `@mastra/core`'s
+ * embedded docs spell the router string
+ * `openrouter/openai/gpt-oss-safeguard-20b` — three segments. The catalog ids
+ * now come from OpenRouter's own response verbatim, so the prefix is the only
+ * transformation between what the browser names and what the router resolves.
  */
 const OPENROUTER_PREFIX = 'openrouter/';
 
 /**
- * Takes a resolved model rather than a string, so a client-supplied id cannot
- * reach a provider by being prefixed — it has to survive the allowlist first.
+ * Takes a model object rather than a bare id, so a client-supplied string
+ * cannot reach a provider by being prefixed — it has to have come out of the
+ * catalog, or be the initial-model constant, first.
  */
-export function routerModelId(model: SelectableModel): string {
+export function routerModelId(model: Pick<SelectableModel, 'id'>): string {
 	return `${OPENROUTER_PREFIX}${model.id}`;
 }

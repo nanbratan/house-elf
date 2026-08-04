@@ -1,18 +1,13 @@
 import { chatRoute } from '@mastra/ai-sdk';
 import { Mastra } from '@mastra/core/mastra';
-import { PinoLogger } from '@mastra/loggers';
 import { PostgresStore } from '@mastra/pg';
 
 import { env } from '../env';
 import { generalAgent } from './agents/general';
 import { describeChatError } from './chat-error';
+import { logger } from './logger';
 import { prepareChatRequest } from './middleware/prepare-chat-request';
 import { modelCatalogRoute } from './model-catalog-route';
-
-const logger = new PinoLogger({
-	name: 'house-elf',
-	level: 'info'
-});
 
 export const mastra = new Mastra({
 	agents: { general: generalAgent },

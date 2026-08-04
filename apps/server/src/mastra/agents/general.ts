@@ -1,7 +1,7 @@
 import { Agent } from '@mastra/core/agent';
 
 import { routerModelId } from '../model-router';
-import { INITIAL_MODEL } from '../models';
+import { INITIAL_MODEL_ID } from '../models';
 import { getCurrentTimeTool } from '../tools/get-current-time';
 
 /**
@@ -22,12 +22,11 @@ export const generalAgent = new Agent({
 	// callback here makes the agent undescribable and Studio reports "Agent not
 	// found", which is too high a price for a rule aimed at our own route.
 	//
-	// It cannot become an invisible default for the app: requireKnownModel
+	// It cannot become an invisible default for the app: the chat middleware
 	// rejects an unnamed model at the door, before the agent is consulted.
 	//
-	// It tracks the picker's first-visit choice so the two never drift: when that
-	// becomes a router in T1.7.2, Studio follows without an edit here.
-	model: routerModelId(INITIAL_MODEL),
+	// It tracks the picker's first-visit choice so the two never drift.
+	model: routerModelId({ id: INITIAL_MODEL_ID }),
 	// The key, not the tool's `id`, is the name the model calls and the name that
 	// appears in the stream's `toolName`. Keep it clean.
 	tools: { getCurrentTime: getCurrentTimeTool }
