@@ -18,9 +18,9 @@ function required(name: string): string {
 
 export const env = {
 	databaseUrl: required('DATABASE_URL'),
-	// Nothing reads this value. Mastra's model router picks OPENROUTER_API_KEY up
-	// from process.env itself; requiring it here is what turns a missing key into
-	// a startup failure naming the variable, instead of a raw provider 401 on the
-	// first message someone sends.
+	// Read by the catalog fetch, which is account-scoped. Mastra's model router
+	// picks OPENROUTER_API_KEY up from process.env itself; requiring it here is
+	// what turns a missing key into a startup failure naming the variable,
+	// instead of a raw provider 401 on the first message someone sends.
 	openrouterApiKey: required('OPENROUTER_API_KEY')
 } as const;

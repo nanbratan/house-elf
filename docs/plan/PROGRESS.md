@@ -105,7 +105,7 @@ corrected before any code — see the decision-log entry of that date.
 
 - [x] T1.7.0 OpenRouter becomes the transport
 - [x] T1.7.1 Server-side catalog fetch
-- [ ] T1.7.1b The catalog comes from `/models/user`
+- [x] T1.7.1b The catalog comes from `/models/user`
 - [ ] T1.7.3 A mid-stream error says what actually went wrong
 - [ ] T1.7.2 Shared schema rewrite
 - [ ] T1.7.4 Searchable, filterable, date-grouped model picker (model choice only)
@@ -2117,7 +2117,9 @@ Opus 5 (five effort levels), `gpt-5.3-chat` (a genuine near-term expiry),
 three-state enum cannot express), `openrouter/auto` (sentinel `"-1"` pricing, no
 reasoning object), `openrouter/bodybuilder` and a `~` alias (both must be dropped),
 and a plain model with none of the above. Prettier reformats its whitespace, so
-re-record with `bunx prettier --write` after.
+re-record with `bun run prettier --write` after — the repo's pinned binary, rather
+than the `bunx prettier` this entry originally said (see the 2026-08-04 T1.7.1b
+entry for what was measured).
 
 **Two tests were wrong until the mutations said so.** Nine mutations, each meant to
 kill exactly one test. Seven did immediately. The other two were the point of the
@@ -2339,6 +2341,56 @@ always visible rather than hover-only, because a hover target does not exist for
 keyboard user; and the picker stays a **modal** rather than becoming a dropdown —
 we have a working `Dialog` + `Command` already and the filter row wants the width.
 The user's call, explicitly reversible later.
+
+### 2026-08-04 — T1.7.1b: the fixture could not be re-recorded entry-for-entry
+
+**Plan said:** point `CATALOG_URL` at `/models/user`, re-record the same eight
+fixture entries, and the only change to expect is the `~…-latest` entry losing its
+`alias_target`.
+
+**What is true:** that part held — all ten `~…-latest` entries in `/models/user`
+arrive without `alias_target`. **No test asserts that**, though the plan asked for
+one: `alias_target` is already optional, so a test reading it back off the fixture
+proves nothing about the code, and the only mutation that could break it — making
+the field required — fails **12** tests, because the parse then rejects the whole
+fixture. It was written, mutation-tested, and deleted. The fixture itself is the
+record that the key is gone. The fixture is nine entries, not eight, because three
+of the original eight did not survive the endpoint change:
+
+- `aion-labs/aion-3.0-mini` and `kwaipilot/kat-coder-air-v2.5` are simply **not in
+  `/models/user`** (230 models against the public list's 338). Replaced by
+  `google/gemini-3-pro-image` — `reasoning: { mandatory: true }` and nothing else,
+  the branch aion covered — and `qwen/qwen3-vl-30b-a3b-instruct`, a plain model
+  that additionally carries a **non-null `knowledge_cutoff`**, a nullable branch no
+  entry in the old fixture exercised.
+- `openai/gpt-5.3-chat`'s `expiration_date` is now **null**; on 2026-08-03 it was
+  `2026-08-10`. It stays in the fixture as the no-`reasoning` case, but the expiry
+  tests needed a real future date, so `z-ai/glm-4.5` (`2026-12-31`) joined and the
+  "already expired" clock moved to 2027-01-01. Only three models in `/models/user`
+  carry a non-null `expiration_date` at all, two of them the sentinel `2098-12-31`.
+
+That is the fixture drifting exactly as T1.7.1 predicted, one day later.
+
+**Also did:** added `created` to the raw schema for T1.7.4's month grouping, and
+corrected the two comments the endpoint change falsified — `CATALOG_URL`'s "the
+list is public" and `env.ts`'s "nothing reads this value". The catalog module now
+imports `env`, so its unit test stubs `DATABASE_URL` and `OPENROUTER_API_KEY`
+before importing.
+
+**Three mutations, three kills:** pointing the URL back at `/models`, dropping the
+`Authorization` header, and removing `created` from the schema each failed exactly
+one test.
+
+**A correction that did not reproduce.** T1.7.1's entry advises re-recording with
+`bunx prettier --write`, and this task was started on the belief that `bunx` pulls
+a different version whose output fails `prettier --check`. Measured: `bunx prettier
+--version` and `bun run prettier --version` both report the pinned 3.9.6, and
+`bunx prettier --write` on the fixture left it byte-identical and passing
+`--check`. So there is no bug here. The docs now say `bun run prettier` anyway —
+it is unambiguous about which binary runs — but without the false reason attached.
+
+**Corrected:** [11d-m1.7-openrouter.md](11d-m1.7-openrouter.md) T1.7.1b now records
+the fixture substitutions; the `bunx` advice is `bun run` in both plan docs.
 
 ## Open questions
 

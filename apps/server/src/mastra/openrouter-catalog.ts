@@ -1,7 +1,14 @@
 import { z } from 'zod';
 
-/** The list is public — the key is needed to *use* a model, not to read the catalog. */
-const CATALOG_URL = 'https://openrouter.ai/api/v1/models';
+import { env } from '../env';
+
+/**
+ * The account-scoped list, so the API key is required to read it. It is the
+ * public `/models` minus what this account's privacy settings exclude, which is
+ * why no client-side privacy filtering exists: change a setting on the website
+ * and the picker follows without a deploy.
+ */
+const CATALOG_URL = 'https://openrouter.ai/api/v1/models/user';
 
 /**
  * Refetching 337 models per chat request is wasteful for a list that changes a
@@ -41,6 +48,8 @@ const reasoningSchema = z.object({
 const openRouterModelSchema = z.object({
 	id: z.string().min(1),
 	name: z.string().min(1),
+	// Unix seconds. The picker groups by release month.
+	created: z.number(),
 	description: z.string(),
 	context_length: z.number(),
 	architecture: z.object({
@@ -63,7 +72,8 @@ const openRouterModelSchema = z.object({
 	knowledge_cutoff: z.string().nullable(),
 	expiration_date: z.string().nullable(),
 	reasoning: reasoningSchema.optional(),
-	// On the 11 `~…-latest` entries only, naming what the pointer resolves to today.
+	// Absent from `/models/user`, present on the public list's 11 `~…-latest`
+	// entries. Kept so the schema fits both; nothing may be built on reading it.
 	alias_target: z.object({ slug: z.string() }).optional()
 });
 
@@ -84,7 +94,9 @@ export class CatalogUnavailableError extends Error {
 let cache: { models: readonly OpenRouterModel[]; fetchedAt: number } | undefined;
 
 async function fetchModels(): Promise<readonly OpenRouterModel[]> {
-	const response = await fetch(CATALOG_URL);
+	const response = await fetch(CATALOG_URL, {
+		headers: { Authorization: `Bearer ${env.openrouterApiKey}` }
+	});
 	if (!response.ok) {
 		throw new Error(`OpenRouter answered ${String(response.status)} for the model catalog.`);
 	}
