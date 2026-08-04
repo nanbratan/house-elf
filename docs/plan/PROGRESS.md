@@ -105,16 +105,21 @@ corrected before any code — see the decision-log entry of that date.
 
 - [x] T1.7.0 OpenRouter becomes the transport
 - [x] T1.7.1 Server-side catalog fetch
+- [ ] T1.7.1b The catalog comes from `/models/user`
+- [ ] T1.7.3 A mid-stream error says what actually went wrong
 - [ ] T1.7.2 Shared schema rewrite
-- [ ] T1.7.4 Grouped, searchable model picker (model choice only)
+- [ ] T1.7.4 Searchable, filterable, date-grouped model picker (model choice only)
 - [ ] T1.7.5 Documentation
 - [ ] T1.7.6 Pinned / favorite models
 - [ ] T1.7.7 Per-model settings: the server contract
 - [ ] T1.7.8 The settings picker
 - [ ] **DoD verified**
 
-T1.7.3 (provider icons) was removed during the review, not skipped. Numbering of
-the surviving tasks is left alone so the plan doc and this list agree.
+T1.7.3 (provider icons) was removed during the review, not skipped; the number was
+reused on 2026-08-04 for the mid-stream error task. T1.7.1b and T1.7.3 were split
+out of T1.7.2 the same day and run before it — both change committed code, and
+T1.7.2 is already the largest task in the milestone. Numbering of the surviving
+tasks is otherwise left alone so the plan doc and this list agree.
 
 ## M2 — Threads and memory → [12-m2-threads-memory.md](12-m2-threads-memory.md)
 
@@ -2216,7 +2221,8 @@ against our code:
 
 - A rate limit hit _after_ streaming starts does not arrive as HTTP 429. It comes
   as an SSE chunk carrying an `error` object with `finish_reason: "error"`, on a
-  connection that already returned 200.
+  connection that already returned 200. **Checked the same day — see the entry
+  below; it reaches the banner, but says the wrong thing.**
 - Stream cancellation only stops billing on providers that support it. OpenAI,
   Anthropic and DeepSeek do; Google, Groq, Bedrock, Mistral and Perplexity do not.
   The Stop button is correct either way — this is about cost, not behaviour.
@@ -2225,6 +2231,114 @@ Also available and deliberately not pursued: `HTTP-Referer` / `X-OpenRouter-Titl
 attribution headers, model fallback via a `models[]` array, `/api/v1/generation`
 for after-the-fact cost stats, server-side presets, and PDF file-annotation reuse
 (M4's concern).
+
+### 2026-08-04 — three questions closed before T1.7.2, two new tasks filed
+
+The sweep above left three things unresolved. All are now settled, none by
+reasoning about the code.
+
+**A mid-stream error does reach the banner — with the wrong sentence.** The
+suspicion was a silent stop. It is not. `@mastra/core`'s gateway honours
+`process.env.OPENROUTER_BASE_URL`, which made this reproducible without mocking
+anything we do not own: the real Mastra server was pointed at a throwaway upstream
+streaming OpenRouter's documented mid-stream shape — an `error` object at the chunk
+root _and_ `choices[0].finish_reason: "error"` on a connection that already
+returned 200. The browser kept the partial text and showed the `role="alert"`
+banner with **Try again** beneath it. So `finishReason` still needs no handling.
+
+What is wrong is the wording. OpenRouter's error object carries `code: 429`, while
+`describeChatError` reads only `statusCode`, so a mid-stream rate limit is
+categorised `unknown`: "Something went wrong while generating the reply." The
+server log had the shape verbatim —
+`{ message, name: 'Error', code: 429, metadata: { error_type: 'rate_limit', provider_code } }`.
+Filed as **T1.7.3**, reusing the number freed when provider icons were cut. Reading
+`code` alongside `statusCode` fixes every category at once, not just the 429.
+
+**Mastra does forward root-level request fields.** This blocked `cost_tier`
+(T1.7.7) and most of M2.1. `openrouter/*` model strings resolve through
+`createOpenRouter()` to `OpenRouterChatLanguageModel`, bundled inside
+`@mastra/core` rather than the generic OpenAI-compatible path, and its
+`doStream`/`doGenerate` spread `providerOptions.openrouter` **at the root of the
+request body**. So `providerOptions: { openrouter: { plugins: [...] } }` reaches
+OpenRouter as a root-level `plugins` array, and `cache_control` works the same way.
+The model's own `settings` also accept `plugins`, `cache_control`,
+`web_search_options` and `usage` as first-class fields — but a model-router string
+cannot reach `settings`, so `providerOptions` is the route. Recorded in
+[11d-m1.7-openrouter.md](11d-m1.7-openrouter.md) and
+[12a-m2.1-prompt-caching.md](12a-m2.1-prompt-caching.md).
+
+**The `/models/user` switch became T1.7.1b** rather than being folded into T1.7.2.
+It changes committed T1.7.1 code, and T1.7.2 is already the largest task in the
+milestone.
+
+**A footnote, deliberately not acted on.** Probing the boundary, a chunk carrying
+`finish_reason: "error"` and _no_ top-level `error` object is not an error to
+Mastra at all: it silently re-ran the step **five times**, five billable upstream
+requests, and delivered the partial text repeated five times as one normal answer
+with nothing in the log. That is not the shape OpenRouter documents, and there is
+no evidence any real provider sends it, so no code was written and no guard added.
+It is here only so that a future duplicated answer and a surprising bill are not
+rediscovered from scratch.
+
+### 2026-08-04 — OpenRouter's own picker rewrites T1.7.4, and re-cuts icons
+
+The user found OpenRouter's model picker and it is better than what was planned.
+Evaluated against the plan; T1.7.4 and T1.7.6 were rewritten and two decisions
+added.
+
+**Provider grouping is gone.** The plan built T1.7.4 around a two-level provider
+menu. OpenRouter groups by **release month** and makes provider a **filter** with
+its own search box. That is the better answer to a problem T1.7.4 had already
+noticed — "52 providers, the large majority holding one to three community
+fine-tunes each, is a lot of menu for little payoff" — and it deletes the
+nested-menu risk the task flagged for testing. Newest-first also matches what a
+personal tool is actually used for.
+
+**The consequence is a schema change, not just a UI one.** `created` is mapped in
+neither the raw catalog schema nor the shared one. It is now part of T1.7.1b (with
+the fixture re-record, so it is only done once) and T1.7.2.
+
+**Icons were reopened and cut again, on new evidence.** The screenshots show them,
+and the user was willing to reconsider if it needed no workaround. It does.
+OpenRouter's own icon assets live at an undocumented path that is not derivable
+from the author slug — probed live, only `Anthropic.svg` and `OpenAI.svg` resolve;
+`DeepSeek`, `Qwen`, `Google`, `Meta`, `Mistral`, `xAI`, `Nvidia` and every casing
+variant tried returned 404. Same hand-maintained mapping as the `@lobehub` route
+already rejected, so the original decision stands with a second reason behind it.
+
+**Adopted:** a model count that tracks active filters, a filter row hidden behind
+a funnel with an active-count badge, search flattening the month grouping, a
+collapsible pinned section with a count, and pinned models appearing in both the
+pinned section and the main list so the star reads as a toggle.
+
+**Rejected, each for a measured reason:** an output-modality filter (no-op — every
+entry we keep outputs text; their 361 includes image and video models ours does
+not), Hide Unavailable (no source — `status` is per provider endpoint, one request
+per model, the bulk problem that killed discount badges), and the default-model
+footer (the server already sends `initialModelId`, and pins cover the same need).
+
+**Filters are data-derived, which is better than copying theirs.** Provider and
+input modality are fixed; every other toggle renders whenever the catalog splits
+on it — at least one model with the capability, at least one without — drawn from
+the capabilities the app actually exposes: `reasoning`, `tools`, `temperature`,
+`reasoning_effort`, `verbosity`, `free`. **No rarity threshold.** A first draft of
+this entry proposed hiding filters matching under 5% of the catalog; that is
+backwards, since the 11 models carrying `verbosity` are exactly the ones scrolling
+won't find. The candidate list, not a count, is what keeps junk like `top_k` out.
+`free` is derived in the mapper (`prompt` and `completion` both `'0'`) into an
+`isFree` boolean, with the routers' `"-1"` sentinel explicitly excluded — it means
+"unknowable", and a non-positive check would label all four routers free.
+
+**One trap written down before it is hit:** the `~` stripped for the provider
+filter must never reach the id on the wire. `~anthropic/claude-opus-latest` is the
+model; without the tilde it does not exist. Nothing strips it today, so it is a
+constraint on T1.7.4's new code, with a test.
+
+**Settled while here:** pins sort alphabetically, not by pin time; the star is
+always visible rather than hover-only, because a hover target does not exist for a
+keyboard user; and the picker stays a **modal** rather than becoming a dropdown —
+we have a working `Dialog` + `Command` already and the filter row wants the width.
+The user's call, explicitly reversible later.
 
 ## Open questions
 
