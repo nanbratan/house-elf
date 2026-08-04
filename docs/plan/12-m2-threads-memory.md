@@ -36,6 +36,22 @@ collapses. Verify this behaviour explicitly — it is the DoD's most important c
 - Verify the exact config shape against embedded docs; memory options were
   restructured in Mastra v1.
 
+**A long thread is silently truncated, twice over, and nothing in the app says
+so.** Two OpenRouter behaviours combine badly with growing history, and neither is
+handled today — `finishReason` appears nowhere in the codebase.
+
+- Overflow is not an error. `context_length_exceeded`, `max_tokens_exceeded` and
+  `token_limit_exceeded` are converted into **successful** completions with
+  `finish_reason: "length"`. The answer stops mid-sentence and looks finished.
+- Context compression (middle-out, dropping messages from the middle) is opt-in
+  via `plugins: [{ id: 'context-compression' }]` **except on endpoints with ≤8k
+  context, where it is on by default** and can only be turned off explicitly.
+
+Pick a deliberate position while choosing N above, rather than inheriting one:
+whether to enable compression, and whether a truncated turn is marked in the UI.
+`X-OpenRouter-Metadata: enabled` reports compression in `pipeline` when it fires,
+so "did this happen" is answerable rather than guessed at.
+
 ### T2.2 — Thread lifecycle
 
 - Creating a new conversation creates a thread with a generated ID.

@@ -127,6 +127,15 @@ the surviving tasks is left alone so the plan doc and this list agree.
 - [ ] T2.7 Tests
 - [ ] **DoD verified** — incl. the cross-thread working-memory check
 
+## M2.1 — Prompt caching → [12a-m2.1-prompt-caching.md](12a-m2.1-prompt-caching.md)
+
+Stub only. Raised during M1.7. Placed after M2 because caching needs a long prefix
+that is stable across turns, and thread history does not exist until M2; placed
+before M2.5 because web search injects per-turn content that must not land ahead of
+the cache breakpoint. Carries a correctness item beyond cost: without an explicit
+`session_id`, `openrouter/auto` can resolve to a different model on each turn of one
+conversation.
+
 ## M2.5 — Web search → [12b-m2.5-web-search.md](12b-m2.5-web-search.md)
 
 Stub only. Raised during M1.7 and deliberately deferred; the document records why
@@ -2174,6 +2183,48 @@ NaN reasoning stated once.
 Re-proved: eight mutations, each killing exactly one test. The alias behaviour is
 pinned by stripping `alias_target` from the schema, which fails only the new
 "keeps the `~latest` pointers" test.
+
+### 2026-08-04 — a documentation sweep, and the catalog is coming from the wrong URL
+
+Read OpenRouter's documentation index rather than guessing at search terms, after
+the first pass turned out to be a sample rather than a sweep. Findings landed in
+the milestone that owns each one; three are recorded here because they cross
+milestones or contradict shipped code.
+
+**The catalog should come from `/api/v1/models/user`, not the public list.**
+Measured live: 338 models public, 220 with `?zdr=true`, 230 from `/models/user`.
+`?zdr=true` is unusable — it drops all six `openrouter/*` routers, including the
+default selection, because a router has no endpoint of its own to carry a ZDR
+guarantee. `/models/user` applies the account's real privacy settings instead and
+keeps them; the arithmetic is exactly `220 + 6 routers + 10 pointers − 6 free
+models that log prompts`. It needs the API key, and it omits `alias_target` and
+`benchmarks`. Detail and consequences in
+[11d-m1.7-openrouter.md](11d-m1.7-openrouter.md).
+
+**`openrouter/auto` is deprecated, and stays anyway (user decision).** It will be
+replaced by `openrouter/auto-beta`, which benchmarks far better (83.8% vs 50.0% on
+GPQA Diamond). OpenRouter performs the swap behind the slug, so holding `auto`
+gets the improvement without a user-visible id change made twice.
+
+**Auto Exacto changes routing the moment M3 sends tools.** On any request carrying
+a `tools` array, OpenRouter reorders providers by throughput, tool-call success
+rate and its own benchmark harness rather than by price. On by default, no opt-in.
+Noted in [13-m3-menu-agent.md](13-m3-menu-agent.md).
+
+**Two things to check against M1's shipped streaming**, neither yet verified
+against our code:
+
+- A rate limit hit _after_ streaming starts does not arrive as HTTP 429. It comes
+  as an SSE chunk carrying an `error` object with `finish_reason: "error"`, on a
+  connection that already returned 200.
+- Stream cancellation only stops billing on providers that support it. OpenAI,
+  Anthropic and DeepSeek do; Google, Groq, Bedrock, Mistral and Perplexity do not.
+  The Stop button is correct either way — this is about cost, not behaviour.
+
+Also available and deliberately not pursued: `HTTP-Referer` / `X-OpenRouter-Title`
+attribution headers, model fallback via a `models[]` array, `/api/v1/generation`
+for after-the-fact cost stats, server-side presets, and PDF file-annotation reuse
+(M4's concern).
 
 ## Open questions
 

@@ -19,6 +19,7 @@ These documents are written for an **executing AI agent**. Read them in this ord
 | 5.6 | [11c-m1.6-polish.md](11c-m1.6-polish.md)                   | M1.6 — Per-request thinking toggle, composer fixes            |
 | 5.7 | [11d-m1.7-openrouter.md](11d-m1.7-openrouter.md)           | M1.7 — Any OpenRouter model, grouped by provider              |
 | 6   | [12-m2-threads-memory.md](12-m2-threads-memory.md)         | M2 — Conversation list, persistence, memory                   |
+| 6.1 | [12a-m2.1-prompt-caching.md](12a-m2.1-prompt-caching.md)   | M2.1 — Prompt caching across providers (stub)                 |
 | 6.5 | [12b-m2.5-web-search.md](12b-m2.5-web-search.md)           | M2.5 — Web search and citations (stub)                        |
 | 7   | [13-m3-menu-agent.md](13-m3-menu-agent.md)                 | M3 — Nutrition agent (first real use case)                    |
 | 8   | [14-m4-cv-agent.md](14-m4-cv-agent.md)                     | M4 — CV agent, RAG, Typst → PDF                               |

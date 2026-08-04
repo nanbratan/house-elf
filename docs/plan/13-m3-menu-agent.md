@@ -58,6 +58,15 @@ Start with **one** tool and only add more if a real conversation demands it:
 Deliberately _not_ building yet: recipe search, barcode scanning, external nutrition
 APIs, grocery lists. Add them when you actually miss them.
 
+**Auto Exacto is already on.** Verified 2026-08-04: OpenRouter reorders providers
+on every request that carries tools, ranking by throughput, tool-call success rate
+and its own GPQA/τ-bench harness instead of the usual price-weighted default. No
+configuration, no opt-in — which means the moment T3.4 sends a `tools` array, this
+milestone's requests start routing differently to M1's and M2's. Expect tool calls
+to cost slightly more than the price-sorted route would. Only `provider.sort:
+'price'`, the `:floor` variant, or an account default turns it off, and doing so
+trades tool-call reliability for money — do not reach for it without a reason.
+
 ### T3.5 — Structured output where it helps
 
 - When the agent produces a multi-day meal plan, having it emit structured output
