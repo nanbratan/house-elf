@@ -106,7 +106,7 @@ corrected before any code — see the decision-log entry of that date.
 - [x] T1.7.0 OpenRouter becomes the transport
 - [x] T1.7.1 Server-side catalog fetch
 - [x] T1.7.1b The catalog comes from `/models/user`
-- [ ] T1.7.3 A mid-stream error says what actually went wrong
+- [x] T1.7.3 A mid-stream error says what actually went wrong
 - [ ] T1.7.2 Shared schema rewrite
 - [ ] T1.7.4 Searchable, filterable, date-grouped model picker (model choice only)
 - [ ] T1.7.5 Documentation

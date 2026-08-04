@@ -24,6 +24,18 @@ const anthropicAuthFailure = {
 	isRetryable: false
 };
 
+/**
+ * Verbatim from the server log of a real mid-stream failure: OpenRouter puts the
+ * status in `code`, and the connection already returned 200, so there is no
+ * `statusCode` anywhere for the categoriser to read.
+ */
+const openRouterMidStreamRateLimit = {
+	message: 'Provider returned error',
+	name: 'Error',
+	code: 429,
+	metadata: { error_type: 'rate_limit', provider_code: 'rate_limit_exceeded' }
+};
+
 describe('describeChatError', () => {
 	it('leaks nothing from the error it was given', () => {
 		const described = describeChatError(anthropicAuthFailure);
@@ -42,6 +54,10 @@ describe('describeChatError', () => {
 
 	it('distinguishes a rate limit, which is waited out rather than fixed', () => {
 		expect(describeChatError({ statusCode: 429 })).toBe(chatErrorMessage.rateLimit);
+	});
+
+	it('categorises an error that arrives mid-stream, where the status is in `code`', () => {
+		expect(describeChatError(openRouterMidStreamRateLimit)).toBe(chatErrorMessage.rateLimit);
 	});
 
 	it('distinguishes trouble at the provider from trouble in our request', () => {

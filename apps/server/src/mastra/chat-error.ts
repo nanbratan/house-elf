@@ -26,11 +26,18 @@ export const chatErrorMessage = {
 	unknown: 'Something went wrong while generating the reply. The server log has the details.'
 } as const;
 
-/** Shape we can read off a provider error without depending on its class. */
+/**
+ * Shape we can read off a provider error without depending on its class.
+ *
+ * An error raised mid-stream carries its status as `code`: the HTTP response
+ * already returned 200, so `statusCode` is not there to read. Reading both here
+ * means every category below applies to mid-stream failures too.
+ */
 function statusOf(error: unknown): number | undefined {
 	if (typeof error !== 'object' || error === null) return undefined;
-	const status = (error as { statusCode?: unknown }).statusCode;
-	return typeof status === 'number' ? status : undefined;
+	const { statusCode, code } = error as { statusCode?: unknown; code?: unknown };
+	if (typeof statusCode === 'number') return statusCode;
+	return typeof code === 'number' ? code : undefined;
 }
 
 function nameOf(error: unknown): string {
