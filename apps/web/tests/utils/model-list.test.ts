@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { modelSections, providerName } from '../../src/lib/utils/model-list.ts';
+import { providerName, releaseSections, searchSections } from '../../src/lib/utils/model-list.ts';
 import { selectableModel } from '../helpers/models.ts';
 
 const opus = selectableModel({
@@ -34,7 +34,7 @@ function shape(sections: readonly { title: string; models: readonly { label: str
 
 describe('the picker list', () => {
 	it('groups models by release month, newest month first', () => {
-		expect(shape(modelSections([gpt, opus, sonnet], ''))).toEqual([
+		expect(shape(releaseSections([gpt, opus, sonnet]))).toEqual([
 			['August 2026', ['Opus 5']],
 			['July 2026', ['Sonnet 4.5', 'GPT-5.3 Chat']]
 		]);
@@ -43,7 +43,7 @@ describe('the picker list', () => {
 	it('puts routers above the months, out of the release order entirely', () => {
 		// The router is the oldest entry here, so month order alone would bury it —
 		// and it is the model a first visit starts on.
-		const [first, ...rest] = modelSections(catalog, '');
+		const [first, ...rest] = releaseSections(catalog);
 
 		expect(first.title).toBe('Routers');
 		expect(first.models).toEqual([auto]);
@@ -51,38 +51,48 @@ describe('the picker list', () => {
 	});
 
 	it('has no routers section when the catalog holds none', () => {
-		expect(modelSections([gpt, opus], '').map((section) => section.title)).toEqual([
+		expect(releaseSections([gpt, opus]).map((section) => section.title)).toEqual([
 			'August 2026',
 			'July 2026'
 		]);
 	});
 
-	it('collapses to a single ranked list while searching', () => {
-		expect(shape(modelSections(catalog, 'o'))).toEqual([
-			['Best matches', ['Opus 5', 'Auto Router', 'Sonnet 4.5', 'GPT-5.3 Chat']]
+	it('leaves the caller\u2019s catalog as it found it', () => {
+		const given = [gpt, opus, auto, sonnet];
+
+		releaseSections(given);
+
+		expect(given).toEqual([gpt, opus, auto, sonnet]);
+	});
+});
+
+describe('searching the picker', () => {
+	it('collapses to a single ranked list', () => {
+		expect(shape(searchSections(catalog, 'o'))).toEqual([
+			['Best matches', ['Opus 5', 'Auto Router', 'Sonnet 4.5']]
 		]);
 	});
 
 	it('ranks a label the query starts above a label that merely contains it', () => {
-		const [matches] = modelSections([sonnet, opus], 'o');
+		const [matches] = searchSections([sonnet, opus], 'o');
 
 		expect(matches.models.map((model) => model.label)).toEqual(['Opus 5', 'Sonnet 4.5']);
 	});
 
-	it('finds a model by its provider, and ranks it below the labels that match', () => {
-		const [matches] = modelSections([gpt, opus, sonnet], 'anthropic');
-
-		expect(matches.models).toEqual([opus, sonnet]);
+	it('matches the label only, never the provider behind it', () => {
+		// `openai` is GPT's provider and appears in no label. Provider is a filter of
+		// its own, not a second meaning for the search box.
+		expect(searchSections([gpt, opus, sonnet], 'anthropic')).toEqual([]);
 	});
 
 	it('matches whatever the reader typed, in any case, padded or not', () => {
-		const [matches] = modelSections([gpt, opus], '  OPUS ');
+		const [matches] = searchSections([gpt, opus], '  OPUS ');
 
 		expect(matches.models).toEqual([opus]);
 	});
 
 	it('has nothing to show for a query nothing answers', () => {
-		expect(modelSections(catalog, 'nothing named this')).toEqual([]);
+		expect(searchSections(catalog, 'nothing named this')).toEqual([]);
 	});
 });
 

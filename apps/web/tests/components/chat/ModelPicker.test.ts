@@ -228,10 +228,10 @@ describe('model picker', () => {
 		});
 	});
 
-	it('finds a model by the provider shown on its row', async () => {
-		// `openai` appears in no label, only in the provider beside it. It is on
-		// screen, so it is fair to search — the rule is that nothing invisible
-		// decides what the list contains.
+	it('searches the label alone, not the provider beside it', async () => {
+		// Provider is on the row to be read, and gets a filter of its own. Making it
+		// a second meaning for the search box would answer "openai" with a list that
+		// shares no visible word with what was typed.
 		await openPicker();
 
 		await fireEvent.input(screen.getByRole('combobox', { name: 'Search models' }), {
@@ -239,9 +239,9 @@ describe('model picker', () => {
 		});
 
 		await waitFor(() => {
-			expect(screen.getByRole('option', { name: 'GPT-5.3 Chat' })).toBeVisible();
+			expect(screen.getByText('No models found.')).toBeVisible();
 		});
-		expect(screen.queryByRole('option', { name: 'Opus 5' })).not.toBeInTheDocument();
+		expect(screen.queryByRole('option')).not.toBeInTheDocument();
 	});
 
 	it('says so when nothing answers the search', async () => {

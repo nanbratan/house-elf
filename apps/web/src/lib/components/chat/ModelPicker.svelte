@@ -2,7 +2,7 @@
 	import type { SelectableModel } from '@house-elf/shared';
 	import { Command, Dialog } from 'bits-ui';
 
-	import { modelSections, providerName } from '$lib/utils/model-list';
+	import { providerName, releaseSections, searchSections } from '$lib/utils/model-list';
 
 	const componentId = $props.id();
 	const modelListId = `${componentId}-model-list`;
@@ -35,10 +35,14 @@
 	let search = $state('');
 	const selectedModel = $derived(models.find((model) => model.id === selectedModelId));
 
-	const sections = $derived(modelSections(models, search));
-	const matchCount = $derived(
-		sections.reduce((count, section) => count + section.models.length, 0)
+	// Grouping the whole catalog depends on the catalog alone, so a keystroke
+	// re-runs the search and nothing else.
+	const grouped = $derived(releaseSections(models));
+	const sections = $derived(search.trim() === '' ? grouped : searchSections(models, search));
+	const listedCount = $derived(
+		sections.reduce((count, { models: listed }) => count + listed.length, 0)
 	);
+	const countLabel = $derived(listedCount === 1 ? '1 model' : `${String(listedCount)} models`);
 
 	function select(modelId: string) {
 		search = '';
@@ -115,11 +119,9 @@
 						placeholder="Search models…"
 						class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-faint"
 					/>
-					<!-- Live, because it is how a filter or a search announces that it did
-					     something before the reader scrolls to find out. -->
-					<span aria-live="polite" class="shrink-0 text-xs text-faint">
-						{matchCount === 1 ? '1 model' : `${String(matchCount)} models`}
-					</span>
+					<!-- Live, because it is how a search announces that it did something
+					     before the reader scrolls to find out. -->
+					<span aria-live="polite" class="shrink-0 text-xs text-faint">{countLabel}</span>
 				</div>
 
 				<Command.List id={modelListId} class="overflow-y-auto p-1.5">

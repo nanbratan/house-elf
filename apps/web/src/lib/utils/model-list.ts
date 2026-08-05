@@ -17,39 +17,37 @@ const monthFormatter = new Intl.DateTimeFormat('en-GB', {
 /**
  * The provider as it should be read, without the `~` that marks a pointer.
  *
- * Only for reading and matching. `~anthropic/claude-opus-latest` *is* the id —
- * the tilde is what makes it follow Anthropic forward — so a stripped value must
- * never be written back onto anything sent to the server.
+ * Only for reading. `~anthropic/claude-opus-latest` *is* the id — the tilde is
+ * what makes it follow Anthropic forward — so a stripped value must never be
+ * written back onto anything sent to the server.
  */
 export function providerName(model: SelectableModel): string {
 	return model.provider.startsWith('~') ? model.provider.slice(1) : model.provider;
-}
-
-const NO_MATCH = 3;
-
-/**
- * How well a model answers the query, lowest first. Label before provider,
- * because a reader typing "opus" is naming a model, and a reader typing
- * "anthropic" is naming a shelf to look on.
- */
-function rankOf(model: SelectableModel, query: string): number {
-	const label = model.label.toLowerCase();
-
-	if (label.startsWith(query)) return 0;
-	if (label.includes(query)) return 1;
-	if (providerName(model).toLowerCase().includes(query)) return 2;
-
-	return NO_MATCH;
 }
 
 function monthOf(model: SelectableModel): string {
 	return new Date(model.createdAt).toISOString().slice(0, 7);
 }
 
-function releaseSections(models: readonly SelectableModel[]): readonly ModelSection[] {
+/**
+ * Routers first, then release months, newest first.
+ *
+ * Depends on the catalog alone, which is fetched once and does not change while
+ * the picker is open — so this belongs to a `$derived` on the models, not to
+ * one a keystroke invalidates.
+ */
+export function releaseSections(models: readonly SelectableModel[]): readonly ModelSection[] {
+	const routers: SelectableModel[] = [];
 	const byMonth = new Map<string, SelectableModel[]>();
 
 	for (const model of models) {
+		// Routers pick a model per request, so their own release date groups
+		// nothing. They sit above the months rather than inside one.
+		if (model.isRouter) {
+			routers.push(model);
+			continue;
+		}
+
 		const month = monthOf(model);
 		const released = byMonth.get(month);
 
@@ -57,45 +55,45 @@ function releaseSections(models: readonly SelectableModel[]): readonly ModelSect
 		else byMonth.set(month, [model]);
 	}
 
-	return [...byMonth]
+	const months = [...byMonth]
 		.sort(([month], [other]) => other.localeCompare(month))
 		.map(([month, released]) => ({
 			id: month,
 			title: monthFormatter.format(new Date(`${month}-01T00:00:00Z`)),
-			models: released.toSorted((model, other) => other.createdAt - model.createdAt)
+			models: released.sort((model, other) => other.createdAt - model.createdAt)
 		}));
+
+	return routers.length === 0
+		? months
+		: [{ id: 'routers', title: 'Routers', models: routers }, ...months];
 }
 
 /**
- * The picker's list: routers first, then everything else by release month,
- * newest month first.
+ * What the reader typed, as one ranked list.
  *
- * A search flattens all of that into one ranked list. Grouping a search result
- * fragments it into one-row sections, which helps nobody — and while searching,
- * "best match" is the order the reader wants, not "most recent".
+ * Grouping a result set fragments it into one-row sections, which helps nobody,
+ * and while searching the order wanted is best match rather than most recent.
+ * The label is the only thing matched: it is what a row is looked up by, and
+ * provider gets a filter of its own rather than a second, invisible meaning here.
  */
-export function modelSections(
+export function searchSections(
 	models: readonly SelectableModel[],
 	search: string
 ): readonly ModelSection[] {
 	const query = search.trim().toLowerCase();
+	// A label the query opens ranks above one that merely contains it, so "opus"
+	// leads with Opus rather than with something that mentions it further in.
+	const opening: SelectableModel[] = [];
+	const containing: SelectableModel[] = [];
 
-	if (query !== '') {
-		const matches = models
-			.map((model) => ({ model, rank: rankOf(model, query) }))
-			.filter(({ rank }) => rank !== NO_MATCH)
-			.sort((match, other) => match.rank - other.rank)
-			.map(({ model }) => model);
+	for (const model of models) {
+		const label = model.label.toLowerCase();
 
-		return matches.length === 0 ? [] : [{ id: 'search', title: 'Best matches', models: matches }];
+		if (label.startsWith(query)) opening.push(model);
+		else if (label.includes(query)) containing.push(model);
 	}
 
-	const routers = models.filter((model) => model.isRouter);
-	const sections = releaseSections(models.filter((model) => !model.isRouter));
+	const matches = [...opening, ...containing];
 
-	// Routers have no release month worth grouping by — they pick a model per
-	// request — so they sit above the months rather than inside one.
-	return routers.length === 0
-		? sections
-		: [{ id: 'routers', title: 'Routers', models: routers }, ...sections];
+	return matches.length === 0 ? [] : [{ id: 'search', title: 'Best matches', models: matches }];
 }
