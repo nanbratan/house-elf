@@ -34,37 +34,40 @@ export interface StickToBottom {
 export function createStickToBottom(): StickToBottom {
 	let viewportElement: HTMLElement | undefined;
 	let pinned = $state(true);
-	// A smooth scroll to the end passes through every position on the way, each
-	// firing a scroll event. Those are ours, not the reader's, and without this
-	// the first one would unpin and undo the journey it is part of.
-	let chasingEnd = false;
+	// Where the scroller was at the last event, so the next one says which way the
+	// reader went. Position alone cannot: content arriving moves the end away from
+	// a reader who has not moved at all.
+	let lastScrollTop = 0;
 
-	function measure(): void {
-		if (!viewportElement) return;
-
-		const { scrollTop, scrollHeight, clientHeight } = viewportElement;
-		const atEnd = scrollHeight - (scrollTop + clientHeight) <= BOTTOM_EPSILON_PX;
-
-		if (chasingEnd && !atEnd) return;
-
-		chasingEnd = false;
-		pinned = atEnd;
+	function isAtEnd(element: HTMLElement): boolean {
+		const { scrollTop, scrollHeight, clientHeight } = element;
+		return scrollHeight - (scrollTop + clientHeight) <= BOTTOM_EPSILON_PX;
 	}
 
 	/**
-	 * The reader reaching for the page outranks any journey we are in the middle
-	 * of — browsers cancel a smooth scroll on these too, so the alternative is a
-	 * chase that never arrives and a pin that never lets go.
+	 * A scroll event says nothing about who caused it, and during a stream most of
+	 * them are ours — a chase to the end, reported a frame later, by which time the
+	 * next token has already made the page taller. Reading that as "not at the end"
+	 * lets go of a reader who never touched anything, and the stream runs away.
+	 *
+	 * So only moving up lets go. Content growing never moves the reader up, and a
+	 * chase towards the end never does either.
 	 */
-	function readerTookOver(): void {
-		chasingEnd = false;
+	function measure(): void {
+		if (!viewportElement) return;
+
+		const { scrollTop } = viewportElement;
+		const movedUp = scrollTop < lastScrollTop - BOTTOM_EPSILON_PX;
+		lastScrollTop = scrollTop;
+
+		if (isAtEnd(viewportElement)) pinned = true;
+		else if (movedUp) pinned = false;
 	}
 
 	function scrollToEnd(behavior: ScrollBehavior): void {
 		if (!viewportElement) return;
 
 		pinned = true;
-		chasingEnd = behavior === 'smooth';
 		viewportElement.scrollTo({ top: viewportElement.scrollHeight, behavior });
 	}
 
@@ -80,18 +83,17 @@ export function createStickToBottom(): StickToBottom {
 		viewport(node) {
 			viewportElement = node;
 
-			// Passive throughout: these only read scroll position, so the browser need
-			// not wait to find out whether we cancel the scroll.
+			// Passive: this only reads scroll position, so the browser need not wait
+			// to find out whether we cancel the scroll.
 			node.addEventListener('scroll', measure, { passive: true });
-			node.addEventListener('wheel', readerTookOver, { passive: true });
-			node.addEventListener('touchstart', readerTookOver, { passive: true });
-			measure();
+			// Whether to follow at all is decided by where the thread opens — at the
+			// end for a new one, partway up for a restored one.
+			lastScrollTop = node.scrollTop;
+			pinned = isAtEnd(node);
 
 			return {
 				destroy() {
 					node.removeEventListener('scroll', measure);
-					node.removeEventListener('wheel', readerTookOver);
-					node.removeEventListener('touchstart', readerTookOver);
 					viewportElement = undefined;
 				}
 			};

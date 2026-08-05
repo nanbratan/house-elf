@@ -92,17 +92,12 @@ function attach({ startAt = BOTTOM } = {}) {
 		for (const observer of observers) observer.fire();
 	}
 
-	/** The reader reaching for the page, rather than a scroll we caused. */
-	function wheel() {
-		viewport.dispatchEvent(new Event('wheel'));
-	}
-
 	function detach() {
 		attachedViewport?.destroy?.();
 		attachedContent?.destroy?.();
 	}
 
-	return { stick, viewport, content, scrolled, scrollTo, contentGrew, wheel, detach };
+	return { stick, viewport, content, scrolled, scrollTo, contentGrew, detach };
 }
 
 describe('sticking to the bottom', () => {
@@ -214,18 +209,109 @@ describe('sticking to the bottom', () => {
 		expect(stick.isPinned).toBe(true);
 	});
 
-	it('stops ignoring them once a wheel interrupts the journey', () => {
-		const { stick, scrollTo, wheel } = attach();
-		const midJourney = () => {
-			scrollTo(BOTTOM - 800);
-		};
+	it('stops ignoring them once the reader scrolls back up the page', () => {
+		const { stick, scrollTo } = attach();
 
 		scrollTo(0);
 		stick.scrollToEnd();
-		wheel();
+		// Part-way down the journey, and then further up than the journey has got:
+		// the reader has taken the page back, and a browser cancels the smooth scroll.
+		scrollTo(BOTTOM - 800);
+		scrollTo(BOTTOM - 900);
 
-		midJourney();
 		expect(stick.isPinned).toBe(false);
+	});
+
+	describe('while tokens stream in', () => {
+		/**
+		 * The harness above stands the scroller still; a stream does not. This one
+		 * runs whole frames in the order a browser runs them — the DOM grows and is
+		 * laid out, then scroll events queued by earlier programmatic scrolls are
+		 * dispatched, then ResizeObserver callbacks run — because the bug this
+		 * covers only appears when a scroll event lands after the next token has
+		 * already made the page taller.
+		 */
+		function stream() {
+			const stick = createStickToBottom();
+			const viewport = document.createElement('div');
+			const content = document.createElement('div');
+			viewport.append(content);
+
+			let scrollHeight = CONTENT_HEIGHT;
+			let scrollTop = BOTTOM;
+			let scrollEventPending = false;
+
+			Object.defineProperty(viewport, 'clientHeight', {
+				value: VIEWPORT_HEIGHT,
+				configurable: true
+			});
+			Object.defineProperty(viewport, 'scrollHeight', {
+				get: () => scrollHeight,
+				configurable: true
+			});
+			Object.defineProperty(viewport, 'scrollTop', {
+				get: () => scrollTop,
+				configurable: true
+			});
+
+			// The browser clamps to what there is to scroll, and reports the move on
+			// a later turn rather than from inside the call.
+			viewport.scrollTo = (options?: ScrollToOptions | number, y?: number) => {
+				const top = typeof options === 'object' ? (options.top ?? 0) : (y ?? 0);
+				scrollTop = Math.min(top, scrollHeight - VIEWPORT_HEIGHT);
+				scrollEventPending = true;
+			};
+
+			stick.viewport(viewport);
+			stick.content(content);
+
+			function frame({ grewBy = 0 } = {}) {
+				scrollHeight += grewBy;
+
+				if (scrollEventPending) {
+					scrollEventPending = false;
+					viewport.dispatchEvent(new Event('scroll'));
+				}
+
+				if (grewBy > 0) for (const observer of observers) observer.fire();
+			}
+
+			/** How far the end of the content is below the bottom of the viewport. */
+			function distanceFromEnd() {
+				return scrollHeight - scrollTop - VIEWPORT_HEIGHT;
+			}
+
+			function scrollBy(delta: number) {
+				scrollTop += delta;
+				viewport.dispatchEvent(new Event('scroll'));
+			}
+
+			return { stick, frame, distanceFromEnd, scrollBy };
+		}
+
+		it('keeps following when a token arrives before the scroll it caused is reported', () => {
+			const { stick, frame, distanceFromEnd } = stream();
+
+			frame({ grewBy: 200 });
+			frame({ grewBy: 200 });
+			frame({ grewBy: 200 });
+
+			expect(stick.isPinned).toBe(true);
+			expect(distanceFromEnd()).toBeLessThanOrEqual(2);
+		});
+
+		it('still lets go of a reader who scrolls up mid-stream', () => {
+			const { stick, frame, scrollBy } = stream();
+
+			frame({ grewBy: 200 });
+			scrollBy(-300);
+
+			expect(stick.isPinned).toBe(false);
+
+			frame({ grewBy: 200 });
+
+			expect(stick.isPinned).toBe(false);
+		});
 	});
 
 	describe('once the elements go away', () => {
@@ -238,12 +324,11 @@ describe('sticking to the bottom', () => {
 			expect(stick.isPinned).toBe(true);
 		});
 
-		it('does not act on a wheel or scroll after being told to let go', () => {
-			const { stick, scrollTo, wheel, detach } = attach();
+		it('does not act on a scroll after being told to let go', () => {
+			const { stick, scrollTo, detach } = attach();
 
 			stick.scrollToEnd();
 			detach();
-			wheel();
 			scrollTo(0);
 
 			expect(stick.isPinned).toBe(true);

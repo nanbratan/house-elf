@@ -123,6 +123,30 @@ async function emitParagraphs(page: Page, from: number, count: number): Promise<
 	);
 }
 
+/**
+ * The same text, but a paragraph at a time from a task of its own, which is how a
+ * live reply arrives: each server-sent chunk is its own callback, and several land
+ * between one frame and the next. Emitting a burst inside a single task hides the
+ * ordering that matters — the browser reports a scroll on the frame after it
+ * happens, by which time more text has already made the page taller.
+ */
+async function emitParagraphsAsTasks(page: Page, from: number, count: number): Promise<void> {
+	await page.evaluate(
+		({ start, total }) =>
+			new Promise<void>((done) => {
+				let index = 0;
+				const step = (): void => {
+					window.__chat.emit(`Paragraph ${String(start + index)} of the reply.\n\n`);
+					index += 1;
+					if (index < total) setTimeout(step, 8);
+					else done();
+				};
+				setTimeout(step, 8);
+			}),
+		{ start: from, total: count }
+	);
+}
+
 test.describe('a streaming reply', () => {
 	test.beforeEach(async ({ page }) => {
 		await stubChat(page);
@@ -168,6 +192,20 @@ test.describe('a streaming reply', () => {
 			expect(await distanceFromBottom(page)).toBeLessThan(20);
 		}).toPass({ timeout: 5000 });
 
+		await expect(page.getByRole('button', { name: 'Jump to latest' })).toHaveCount(0);
+	});
+
+	test('keeps the end in view when the text arrives a chunk at a time', async ({ page }) => {
+		await ask(page, 'Say a lot, slowly.');
+
+		await emitParagraphsAsTasks(page, 1, 30);
+		await expect(page.locator('article[data-role="assistant"]')).toContainText('Paragraph 30');
+
+		// Nothing was touched, so nothing may have let go: the end stays in view and
+		// the jump button, which only appears once following has stopped, does not.
+		await expect(async () => {
+			expect(await distanceFromBottom(page)).toBeLessThan(20);
+		}).toPass({ timeout: 5000 });
 		await expect(page.getByRole('button', { name: 'Jump to latest' })).toHaveCount(0);
 	});
 
