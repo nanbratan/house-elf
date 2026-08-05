@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -6,29 +6,45 @@ import { optionalThinking, selectableModel } from '../../helpers/models.ts';
 
 import ModelPicker from '../../../src/lib/components/chat/ModelPicker.svelte';
 
-const models = [
-	selectableModel({ id: 'anthropic/claude-opus-5', label: 'Opus 5', ...optionalThinking }),
-	selectableModel({
-		id: 'anthropic/claude-opus-4-5',
-		label: 'Opus 4.5',
-		...optionalThinking
-	}),
-	selectableModel({
-		id: 'anthropic/claude-sonnet-4-5',
-		label: 'Sonnet 4.5',
-		...optionalThinking
-	}),
-	selectableModel({
-		id: 'anthropic/claude-haiku-4-5',
-		label: 'Haiku 4.5',
-		...optionalThinking
-	}),
-	selectableModel({
-		id: 'openai/gpt-5.3-chat',
-		label: 'GPT-5.3 Chat',
-		...optionalThinking
-	})
-];
+const auto = selectableModel({
+	id: 'openrouter/auto',
+	label: 'Auto Router',
+	isRouter: true,
+	createdAt: Date.UTC(2025, 0, 1),
+	...optionalThinking
+});
+const opus5 = selectableModel({
+	id: 'anthropic/claude-opus-5',
+	label: 'Opus 5',
+	createdAt: Date.UTC(2026, 7, 3),
+	...optionalThinking
+});
+const opus45 = selectableModel({
+	id: 'anthropic/claude-opus-4-5',
+	label: 'Opus 4.5',
+	createdAt: Date.UTC(2026, 6, 24),
+	...optionalThinking
+});
+const sonnet = selectableModel({
+	id: 'anthropic/claude-sonnet-4-5',
+	label: 'Sonnet 4.5',
+	createdAt: Date.UTC(2026, 6, 20),
+	...optionalThinking
+});
+const haiku = selectableModel({
+	id: 'anthropic/claude-haiku-4-5',
+	label: 'Haiku 4.5',
+	createdAt: Date.UTC(2026, 6, 10),
+	...optionalThinking
+});
+const gpt = selectableModel({
+	id: 'openai/gpt-5.3-chat',
+	label: 'GPT-5.3 Chat',
+	createdAt: Date.UTC(2026, 6, 2),
+	...optionalThinking
+});
+
+const models = [auto, opus5, opus45, sonnet, haiku, gpt];
 
 afterEach(async () => {
 	// bits-ui locks scrolling by writing `overflow: hidden` and `pointer-events: none`
@@ -46,7 +62,7 @@ afterEach(async () => {
 });
 
 async function openPicker(
-	selectedModelId: string = models[0].id,
+	selectedModelId: string = opus5.id,
 	selectedModelLabel = 'Opus 5',
 	thinkingProps: { thinking?: boolean; canChooseThinking?: boolean } = {}
 ) {
@@ -87,7 +103,7 @@ describe('model picker', () => {
 		});
 
 		it('turns thinking back off', async () => {
-			const { user, onthinkingchange } = await openPicker(models[0].id, 'Opus 5', {
+			const { user, onthinkingchange } = await openPicker(opus5.id, 'Opus 5', {
 				thinking: true
 			});
 
@@ -105,14 +121,14 @@ describe('model picker', () => {
 			// `canChooseThinking` is false for the two capabilities that leave nothing
 			// to decide: mandatory reasoning (nothing to turn off) and no reasoning at
 			// all (nothing to turn on). Either way there is no question to ask.
-			await openPicker(models[0].id, 'Opus 5', { canChooseThinking: false });
+			await openPicker(opus5.id, 'Opus 5', { canChooseThinking: false });
 
 			expect(screen.queryByRole('switch')).not.toBeInTheDocument();
 		});
 	});
 
 	it('names thinking on the trigger, so an expensive setting is not a hidden one', async () => {
-		await openPicker(models[0].id, 'Opus 5', { thinking: true });
+		await openPicker(opus5.id, 'Opus 5', { thinking: true });
 
 		// The accessible name is asserted by openPicker, which finds the trigger by
 		// it. This is the visible half.
@@ -133,14 +149,69 @@ describe('model picker', () => {
 		});
 	});
 
-	it('shows each row as the label and nothing else', async () => {
-		// Ids, providers and prices stay out of the list until T1.7.4 designs them in.
+	it('shows each row as its label and the provider it comes from', async () => {
 		await openPicker();
 
-		expect(screen.getByRole('option', { name: 'Opus 5' })).toHaveTextContent(/^Opus 5$/);
+		expect(screen.getByRole('option', { name: 'Opus 5' })).toHaveTextContent(/^Opus 5 anthropic$/);
 		expect(screen.getByRole('option', { name: 'GPT-5.3 Chat' })).toHaveTextContent(
-			/^GPT-5\.3 Chat$/
+			/^GPT-5\.3 Chat openai$/
 		);
+	});
+
+	it('groups models under their release month, newest month first', async () => {
+		await openPicker();
+
+		// Compared as elements, so this asserts the order they appear in as well as
+		// that each exists.
+		expect(screen.getAllByRole('group')).toEqual([
+			screen.getByRole('group', { name: 'Routers' }),
+			screen.getByRole('group', { name: 'August 2026' }),
+			screen.getByRole('group', { name: 'July 2026' })
+		]);
+
+		const august = within(screen.getByRole('group', { name: 'August 2026' }));
+		expect(august.getAllByRole('option').map((row) => row.getAttribute('aria-label'))).toEqual([
+			'Opus 5'
+		]);
+
+		const july = within(screen.getByRole('group', { name: 'July 2026' }));
+		expect(july.getAllByRole('option').map((row) => row.getAttribute('aria-label'))).toEqual([
+			'Opus 4.5',
+			'Sonnet 4.5',
+			'Haiku 4.5',
+			'GPT-5.3 Chat'
+		]);
+	});
+
+	it('counts what is on the list beside the search box', async () => {
+		const { user } = await openPicker();
+
+		expect(screen.getByText('6 models')).toBeVisible();
+
+		await fireEvent.input(screen.getByRole('combobox', { name: 'Search models' }), {
+			target: { value: 'Opus' }
+		});
+
+		await waitFor(() => {
+			expect(screen.getByText('2 models')).toBeVisible();
+		});
+		await user.clear(screen.getByRole('combobox', { name: 'Search models' }));
+		await waitFor(() => {
+			expect(screen.getByText('6 models')).toBeVisible();
+		});
+	});
+
+	it('drops the month headers while searching, so results are not fragmented', async () => {
+		await openPicker();
+
+		await fireEvent.input(screen.getByRole('combobox', { name: 'Search models' }), {
+			target: { value: 'Opus' }
+		});
+
+		await waitFor(() => {
+			expect(screen.getAllByRole('group')).toHaveLength(1);
+		});
+		expect(screen.queryByRole('group', { name: 'August 2026' })).not.toBeInTheDocument();
 	});
 
 	it('finds every model whose label shares the searched words', async () => {
@@ -157,14 +228,27 @@ describe('model picker', () => {
 		});
 	});
 
-	it('searches the label only, not the ids behind it', async () => {
-		// `openai` is the provider slug of one model's id and appears in no label.
-		// Searching what is on screen is the whole contract; matching hidden fields
-		// would drop models out of the list for a reason the reader cannot see.
+	it('finds a model by the provider shown on its row', async () => {
+		// `openai` appears in no label, only in the provider beside it. It is on
+		// screen, so it is fair to search — the rule is that nothing invisible
+		// decides what the list contains.
 		await openPicker();
 
 		await fireEvent.input(screen.getByRole('combobox', { name: 'Search models' }), {
 			target: { value: 'openai' }
+		});
+
+		await waitFor(() => {
+			expect(screen.getByRole('option', { name: 'GPT-5.3 Chat' })).toBeVisible();
+		});
+		expect(screen.queryByRole('option', { name: 'Opus 5' })).not.toBeInTheDocument();
+	});
+
+	it('says so when nothing answers the search', async () => {
+		await openPicker();
+
+		await fireEvent.input(screen.getByRole('combobox', { name: 'Search models' }), {
+			target: { value: 'a model nobody has built' }
 		});
 
 		await waitFor(() => {
@@ -174,7 +258,7 @@ describe('model picker', () => {
 	});
 
 	it('marks the current model as selected for assistive technology', async () => {
-		await openPicker(models[2].id, 'Sonnet 4.5');
+		await openPicker(sonnet.id, 'Sonnet 4.5');
 
 		expect(screen.getByRole('option', { name: 'Sonnet 4.5' })).toHaveAttribute(
 			'aria-selected',
@@ -203,7 +287,7 @@ describe('model picker', () => {
 		await fireEvent.keyDown(search, { key: 'Enter' });
 
 		expect(onselect).toHaveBeenCalledOnce();
-		expect(onselect).toHaveBeenCalledWith(models[2].id);
+		expect(onselect).toHaveBeenCalledWith(sonnet.id);
 		await waitFor(() => {
 			expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 		});

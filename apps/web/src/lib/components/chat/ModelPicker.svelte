@@ -2,6 +2,8 @@
 	import type { SelectableModel } from '@house-elf/shared';
 	import { Command, Dialog } from 'bits-ui';
 
+	import { modelSections, providerName } from '$lib/utils/model-list';
+
 	const componentId = $props.id();
 	const modelListId = `${componentId}-model-list`;
 	const thinkingLabelId = `${componentId}-thinking-label`;
@@ -33,15 +35,10 @@
 	let search = $state('');
 	const selectedModel = $derived(models.find((model) => model.id === selectedModelId));
 
-	function matchesSearch(model: SelectableModel, query: string) {
-		if (query === '') return true;
-		return model.label.toLowerCase().includes(query);
-	}
-
-	const matches = $derived.by(() => {
-		const query = search.trim().toLowerCase();
-		return models.filter((model) => matchesSearch(model, query));
-	});
+	const sections = $derived(modelSections(models, search));
+	const matchCount = $derived(
+		sections.reduce((count, section) => count + section.models.length, 0)
+	);
 
 	function select(modelId: string) {
 		search = '';
@@ -89,7 +86,7 @@
 
 			<Command.Root
 				label="Models"
-				value={selectedModel?.label ?? ''}
+				value={selectedModelId}
 				shouldFilter={false}
 				loop
 				class="flex max-h-[min(30rem,80vh)] flex-col"
@@ -118,36 +115,55 @@
 						placeholder="Search models…"
 						class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-faint"
 					/>
+					<!-- Live, because it is how a filter or a search announces that it did
+					     something before the reader scrolls to find out. -->
+					<span aria-live="polite" class="shrink-0 text-xs text-faint">
+						{matchCount === 1 ? '1 model' : `${String(matchCount)} models`}
+					</span>
 				</div>
 
 				<Command.List id={modelListId} class="overflow-y-auto p-1.5">
-					{#if matches.length === 0}
+					{#if sections.length === 0}
 						<div class="px-3 py-8 text-center text-sm text-faint">No models found.</div>
 					{/if}
 
-					{#each matches as model (model.id)}
-						<Command.Item
-							value={model.label}
-							onSelect={() => {
-								select(model.id);
-							}}
-							aria-label={model.label}
-							class="flex cursor-default items-center rounded-lg px-2 py-2 text-sm outline-none data-selected:bg-raised"
-						>
-							<span class="flex-1">{model.label}</span>
-							{#if model.id === selectedModelId}
-								<svg
-									class="size-4 text-accent"
-									viewBox="0 0 16 16"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="1.75"
-									aria-hidden="true"
-								>
-									<path d="m3 8 3 3 7-7" />
-								</svg>
-							{/if}
-						</Command.Item>
+					{#each sections as section (section.id)}
+						<Command.Group>
+							<Command.GroupHeading
+								class="px-2 pt-3 pb-1 text-xs font-medium tracking-wide text-faint"
+							>
+								{section.title}
+							</Command.GroupHeading>
+							<Command.GroupItems>
+								{#each section.models as model (model.id)}
+									<Command.Item
+										value={model.id}
+										onSelect={() => {
+											select(model.id);
+										}}
+										aria-label={model.label}
+										class="flex cursor-default items-center gap-2 rounded-lg px-2 py-2 text-sm outline-none data-selected:bg-raised"
+									>
+										<span class="min-w-0 flex-1 truncate">{model.label}</span>
+										<!-- On screen because it is searchable: a model must not drop
+										     out of the list for a reason that was never shown. -->
+										<span class="shrink-0 text-xs text-faint">{providerName(model)}</span>
+										{#if model.id === selectedModelId}
+											<svg
+												class="size-4 shrink-0 text-accent"
+												viewBox="0 0 16 16"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="1.75"
+												aria-hidden="true"
+											>
+												<path d="m3 8 3 3 7-7" />
+											</svg>
+										{/if}
+									</Command.Item>
+								{/each}
+							</Command.GroupItems>
+						</Command.Group>
 					{/each}
 				</Command.List>
 			</Command.Root>
