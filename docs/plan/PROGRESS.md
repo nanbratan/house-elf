@@ -2449,6 +2449,54 @@ server-sent chunks actually arrive; stashing the fix fails that test alone.
 stability check times out, so anything observed through them about scrolling is an
 artifact. Headless Playwright renders; use it.
 
+### 2026-08-05 — T1.7.4 slice 2: the filter row, and three components instead of one
+
+The funnel, the derived filter row, and the count that follows it. `ModelPicker`
+does not know what a filter is: it holds a `ModelFilters` value, hands the whole
+catalog to the row, and calls `filterModels`. Three files, one job each —
+`model-filters.ts` decides what a catalog can be asked, `ModelFilters.svelte` asks
+it, `FilterSelect.svelte` is one dropdown.
+
+**The row is three dropdowns, not a wall of checkboxes** (the user's call, twice
+over). The first build dumped checkboxes into the panel; the second gave providers
+a searchable `Combobox` while the others were `Select`s. Both were wrong. There is
+no search anywhere now — 43 providers sorted alphabetically with their model count
+is a list you read, not one you query — and every filter is the same control, which
+is the whole reason `FilterSelect` exists. **`Free` is a standalone toggle**: it is
+a price, not a capability, even though it travels with the capabilities into
+`filterModels`.
+
+**The modal no longer changes height.** `Command.Root` was `max-h-…`, so the dialog
+shrank to fit whatever the filters left — picking `Free` collapsed it to half.
+Fixed height, and the list scrolls inside it.
+
+**Three jsdom stubs stand between bits-ui and a green test.** A floating layer
+never opened under test and the cause was two layers deep: `Select`'s trigger calls
+`hasPointerCapture`, which jsdom lacks, and bits-ui's `isReferenceHidden` reads
+`getClientRects()`, which jsdom always returns empty — so `isPositioned` stayed
+false, the wrapper kept `visibility: hidden`, and `getByRole('option')` found
+nothing though the options were in the DOM. Both stubs are in
+`tests/setup/dom-layout.ts` with the reason attached. **Verified by reading the
+installed source, not by guessing.**
+
+**The tests were restructured after the user asked why nothing was stubbed.** They
+were right: `ModelPicker` was driving a real dropdown two levels down, and
+`ModelFilters` was re-asserting rules `model-filters.test.ts` already owns. Now
+`ModelPicker` stubs `ModelFilters`, `ModelFilters` stubs `FilterSelect` and mocks
+the utilities, and `FilterSelect` has its own tests — the dropdown's behaviour is
+exercised once, at the leaf, instead of three times through ancestors.
+
+**A test that proved nothing, caught in review.** "Hands the filter row the whole
+catalog" passed with `models={listed}`, because `filterModels` early-returns the
+same array when no filter is active. It applies a filter first now.
+
+**Three mutations, three kills:** `models={listed}` on the child, `listed = models`
+in the picker, and letting `free` back into the capability list each failed exactly
+one test.
+
+**Browser-verified:** 229 models → provider `openai` 38 → plus `anthropic` 54;
+dialog height 543px before the row opened, with it open, and with `Free` on.
+
 ## Open questions
 
 Things needing a human answer. Remove once resolved.

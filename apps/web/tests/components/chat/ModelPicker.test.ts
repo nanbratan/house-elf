@@ -1,13 +1,20 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
+import { tick } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { modelFiltersStub } from '../../stubs/keys';
+import { stubProps } from '../../stubs/stub-props';
 import { optionalThinking, selectableModel } from '../../helpers/models.ts';
 
-import ModelPicker from '../../../src/lib/components/chat/ModelPicker.svelte';
+vi.mock('../../../src/lib/components/chat/ModelFilters.svelte', async () => ({
+	default: (await import('../../stubs/ModelFiltersStub.svelte')).default
+}));
+
+const ModelPicker = (await import('../../../src/lib/components/chat/ModelPicker.svelte')).default;
 
 const auto = selectableModel({
-	id: 'openrouter/auto',
+	id: '~openrouter/auto',
 	label: 'Auto Router',
 	isRouter: true,
 	createdAt: Date.UTC(2025, 0, 1),
@@ -17,7 +24,8 @@ const opus5 = selectableModel({
 	id: 'anthropic/claude-opus-5',
 	label: 'Opus 5',
 	createdAt: Date.UTC(2026, 7, 3),
-	...optionalThinking
+	...optionalThinking,
+	supportedParameters: ['temperature', 'reasoning', 'tools']
 });
 const opus45 = selectableModel({
 	id: 'anthropic/claude-opus-4-5',
@@ -35,12 +43,14 @@ const haiku = selectableModel({
 	id: 'anthropic/claude-haiku-4-5',
 	label: 'Haiku 4.5',
 	createdAt: Date.UTC(2026, 6, 10),
-	...optionalThinking
+	supportedParameters: ['temperature'],
+	isFree: true
 });
 const gpt = selectableModel({
 	id: 'openai/gpt-5.3-chat',
 	label: 'GPT-5.3 Chat',
 	createdAt: Date.UTC(2026, 6, 2),
+	inputModalities: ['text', 'image'],
 	...optionalThinking
 });
 
@@ -87,6 +97,18 @@ async function openPicker(
 	);
 
 	return { user, onselect, onthinkingchange };
+}
+
+/** Reports a set of filters as the filter row would, and lets the list settle. */
+async function applyFilters(filters: {
+	providers: ReadonlySet<string>;
+	modalities: ReadonlySet<string>;
+	capabilities: ReadonlySet<string>;
+}) {
+	const report = stubProps(modelFiltersStub).onchange;
+	if (typeof report !== 'function') throw new Error('The filter row was given no way to report');
+	(report as (chosen: typeof filters) => void)(filters);
+	await tick();
 }
 
 describe('model picker', () => {
@@ -291,5 +313,45 @@ describe('model picker', () => {
 		await waitFor(() => {
 			expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 		});
+	});
+
+	it('hands the filter row the whole catalog, not the narrowed list', async () => {
+		// Otherwise a filter would vanish the moment it was used and could not be
+		// taken back.
+		await openPicker();
+
+		await applyFilters({
+			providers: new Set(['openai']),
+			modalities: new Set(),
+			capabilities: new Set()
+		});
+
+		expect(stubProps(modelFiltersStub).models).toBe(models);
+	});
+
+	it('narrows the list to what the filter row lets through, and the count follows', async () => {
+		// What each filter means is ModelFilters' business; this is only that the
+		// picker listens to it.
+		await openPicker();
+
+		await applyFilters({
+			providers: new Set(['openai']),
+			modalities: new Set(),
+			capabilities: new Set()
+		});
+
+		expect(screen.getByText('1 model')).toBeVisible();
+		expect(screen.getByRole('option', { name: 'GPT-5.3 Chat' })).toBeVisible();
+		expect(screen.queryByRole('option', { name: 'Opus 5' })).not.toBeInTheDocument();
+	});
+
+	it('sends the id of a pointer model with its tilde intact', async () => {
+		// The tilde is stripped for reading only. It is part of the id the server
+		// resolves, so selecting must not hand back the tidied name.
+		const { user, onselect } = await openPicker();
+
+		await user.click(screen.getByRole('option', { name: 'Auto Router' }));
+
+		expect(onselect).toHaveBeenCalledExactlyOnceWith(auto.id);
 	});
 });

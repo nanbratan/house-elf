@@ -2,6 +2,8 @@
 	import type { SelectableModel } from '@house-elf/shared';
 	import { Command, Dialog } from 'bits-ui';
 
+	import ModelFilters from '$lib/components/chat/ModelFilters.svelte';
+	import { filterModels, type ModelFilters as Filters, noFilters } from '$lib/utils/model-filters';
 	import { providerName, releaseSections, searchSections } from '$lib/utils/model-list';
 
 	const componentId = $props.id();
@@ -33,14 +35,17 @@
 
 	let open = $state(false);
 	let search = $state('');
+	let filters = $state<Filters>(noFilters);
 	const selectedModel = $derived(models.find((model) => model.id === selectedModelId));
 
-	// Grouping the whole catalog depends on the catalog alone, so a keystroke
-	// re-runs the search and nothing else.
-	const grouped = $derived(releaseSections(models));
-	const sections = $derived(search.trim() === '' ? grouped : searchSections(models, search));
+	const listed = $derived(filterModels(models, filters));
+
+	// Grouping depends on the catalog and the filters, so a keystroke in the
+	// search box re-runs the search and nothing else.
+	const grouped = $derived(releaseSections(listed));
+	const sections = $derived(search.trim() === '' ? grouped : searchSections(listed, search));
 	const listedCount = $derived(
-		sections.reduce((count, { models: listed }) => count + listed.length, 0)
+		sections.reduce((count, { models: found }) => count + found.length, 0)
 	);
 	const countLabel = $derived(listedCount === 1 ? '1 model' : `${String(listedCount)} models`);
 
@@ -93,9 +98,9 @@
 				value={selectedModelId}
 				shouldFilter={false}
 				loop
-				class="flex max-h-[min(30rem,80vh)] flex-col"
+				class="flex h-[min(30rem,80vh)] flex-col"
 			>
-				<div class="flex items-center gap-2 border-b border-line px-3">
+				<div class="flex flex-wrap items-center gap-2 border-b border-line px-3">
 					<svg
 						class="size-4 shrink-0 text-faint"
 						viewBox="0 0 16 16"
@@ -119,9 +124,16 @@
 						placeholder="Search models…"
 						class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-faint"
 					/>
-					<!-- Live, because it is how a search announces that it did something
-					     before the reader scrolls to find out. -->
+					<!-- Live, because it is how a search or a filter announces that it did
+					     something before the reader scrolls to find out. -->
 					<span aria-live="polite" class="shrink-0 text-xs text-faint">{countLabel}</span>
+					<!-- Wraps onto its own line when opened, which is why the row wraps. -->
+					<ModelFilters
+						{models}
+						onchange={(chosen: Filters) => {
+							filters = chosen;
+						}}
+					/>
 				</div>
 
 				<Command.List id={modelListId} class="overflow-y-auto p-1.5">
@@ -147,8 +159,8 @@
 										class="flex cursor-default items-center gap-2 rounded-lg px-2 py-2 text-sm outline-none data-selected:bg-raised"
 									>
 										<span class="min-w-0 flex-1 truncate">{model.label}</span>
-										<!-- On screen because it is searchable: a model must not drop
-										     out of the list for a reason that was never shown. -->
+										<!-- On screen because it is filterable: a model must not drop out
+										     of the list for a reason that was never shown. -->
 										<span class="shrink-0 text-xs text-faint">{providerName(model)}</span>
 										{#if model.id === selectedModelId}
 											<svg

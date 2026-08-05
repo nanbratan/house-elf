@@ -1,7 +1,8 @@
 /**
- * jsdom implements no layout, and therefore no `ResizeObserver` or
- * `scrollIntoView`. Components that measure or reveal content have every right
- * to use both and should not know they are under test.
+ * jsdom implements no layout, and therefore no `ResizeObserver`,
+ * `scrollIntoView` or pointer capture. Components that measure, reveal content
+ * or track a pointer have every right to use them and should not know they are
+ * under test.
  */
 class InertResizeObserver implements ResizeObserver {
 	observe() {
@@ -21,4 +22,14 @@ class InertResizeObserver implements ResizeObserver {
 globalThis.ResizeObserver = InertResizeObserver;
 if (typeof HTMLElement !== 'undefined') {
 	HTMLElement.prototype.scrollIntoView = () => undefined;
+}
+if (typeof Element !== 'undefined') {
+	Element.prototype.hasPointerCapture = () => false;
+	Element.prototype.setPointerCapture = () => undefined;
+	Element.prototype.releasePointerCapture = () => undefined;
+	// Without layout every element claims no client rects, which is how a browser
+	// says "not rendered". Popovers take that at face value and refuse to appear.
+	Element.prototype.getClientRects = function (this: Element) {
+		return [this.getBoundingClientRect()] as unknown as DOMRectList;
+	};
 }
