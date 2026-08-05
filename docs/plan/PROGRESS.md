@@ -107,7 +107,7 @@ corrected before any code — see the decision-log entry of that date.
 - [x] T1.7.1 Server-side catalog fetch
 - [x] T1.7.1b The catalog comes from `/models/user`
 - [x] T1.7.3 A mid-stream error says what actually went wrong
-- [ ] T1.7.2 Shared schema rewrite
+- [x] T1.7.2 Shared schema rewrite
 - [ ] T1.7.4 Searchable, filterable, date-grouped model picker (model choice only)
 - [ ] T1.7.5 Documentation
 - [ ] T1.7.6 Pinned / favorite models
@@ -2391,6 +2391,63 @@ it is unambiguous about which binary runs — but without the false reason attac
 
 **Corrected:** [11d-m1.7-openrouter.md](11d-m1.7-openrouter.md) T1.7.1b now records
 the fixture substitutions; the `bunx` advice is `bun run` in both plan docs.
+
+### 2026-08-05 — T1.7.2: the schema rewrite, and a cache that stopped leaking
+
+The schema landed as written — `provider` for `family`, structured `reasoning`,
+pricing, `supportedParameters`, `createdAt`, `inputModalities` — and the
+hand-written allowlist is gone. Four things are worth recording because they are
+not what the task said.
+
+**The cache became an object, not a module of loose state.** T1.7.1 left a
+module-level `cachedModels` and a `cachedAt` beside the fetch, and T1.7.2 was
+about to add a by-id index next to them — a third variable every caller had to
+leave consistent. It is now one `OpenRouterCatalog` class with `list()` and
+`get(id)`; the TTL, the stale-serve on a failed refresh and the by-id map are
+private to it, and `models.ts` no longer knows the catalog is cached at all.
+
+**Thinking is gated on `supported_parameters`, not on the reasoning object.**
+Measured, not reasoned about: `openrouter/auto` publishes no `reasoning` object
+and still streams reasoning when asked for it. Gating on the object's presence
+would have silently disabled thinking on the default model.
+
+**An unknown id falls back to `openrouter/auto`, not to `models[0]`.** The first
+entry of a catalog sorted by release month is whatever OpenRouter shipped most
+recently — a random model wearing the costume of a default. The user's call;
+reverting it fails exactly the one test written for it.
+
+**Tests: `models.ts` is a unit test again.** It reached through the real catalog
+to `fetch` and a recorded fixture, so a change in either broke it for reasons that
+had nothing to do with mapping. `openRouterCatalog` is now stubbed there and
+tested only in its own file. The fixture assertions went with it: reading values
+back off untyped JSON asserts what lives somewhere else, so models are built by a
+typed `openRouterModel(overrides)` factory the compiler checks. The fixture is
+kept for the three tests that go through `fetch` and the Zod parse — which is the
+only thing it is evidence of, that the schema still fits the live API.
+
+### 2026-08-05 — The transcript let go of the bottom mid-stream
+
+Reported, not found by a test: while tokens streamed the view unpinned itself,
+the jump button appeared, and the reply ran off the bottom of the screen.
+
+**Cause.** `measure()` re-derived "following" from position on every scroll event.
+A scroll event says nothing about who caused it, and during a stream most of them
+are ours: the chase to the end is reported on the following frame, by which time
+another chunk has already made the page taller, so "am I at the end?" answers no
+and a reader who touched nothing is dropped. **Only an upward move now unpins;
+reaching the end re-pins.** The `chasingEnd` and `readerTookOver` flags and the
+`wheel`/`touchstart` listeners are all gone with it — position and direction say
+everything they were tracking, and cannot disagree with what is on screen.
+
+**Why the e2e suite did not catch it.** `emitParagraphs` emits every delta inside
+one `page.evaluate`, so the page grows once and the interleaving that causes the
+bug never happens. A second helper paces chunks as separate tasks, the way
+server-sent chunks actually arrive; stashing the fix fails that test alone.
+
+**A note on verifying in the browser.** The shared VS Code browser pages report
+`visibilityState: "hidden"` — ResizeObserver never fires and Playwright's click
+stability check times out, so anything observed through them about scrolling is an
+artifact. Headless Playwright renders; use it.
 
 ## Open questions
 
