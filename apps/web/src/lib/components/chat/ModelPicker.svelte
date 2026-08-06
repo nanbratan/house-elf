@@ -72,8 +72,13 @@
 	// search box re-runs the search and nothing else.
 	const grouped = $derived(releaseSections(browseList));
 	const sections = $derived(search.trim() === '' ? grouped : searchSections(listed, search));
+	// The count is everything on screen: the browse sections plus the pinned
+	// section when it is showing. While searching, the pinned section is hidden
+	// and `sections` already includes pinned ids (the search source is the full
+	// filtered list), so nothing is added.
 	const listedCount = $derived(
-		sections.reduce((count, { models: found }) => count + found.length, 0)
+		sections.reduce((count, { models: found }) => count + found.length, 0) +
+			(showPinned ? pinned.length : 0)
 	);
 	const countLabel = $derived(listedCount === 1 ? '1 model' : `${String(listedCount)} models`);
 

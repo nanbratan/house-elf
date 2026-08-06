@@ -606,5 +606,23 @@ describe('model picker', () => {
 				expect(pinnedSectionRendered()).toBe(false);
 			});
 		});
+
+		it('counts pinned models alongside the browse list, not just the browse list', async () => {
+			// The count is everything on screen. Pinning a model removes it from the
+			// browse list but adds it to the pinned section, so the total stays the
+			// same — 6 models. Without adding the pinned count, it would drop to 5.
+			const { user } = await openPicker();
+
+			expect(screen.getByText('6 models')).toBeVisible();
+
+			await user.click(starButton(opus5.label));
+			await waitFor(() => {
+				expect(pinnedSectionRendered()).toBe(true);
+			});
+
+			await waitFor(() => {
+				expect(screen.getByText('6 models')).toBeVisible();
+			});
+		});
 	});
 });
