@@ -2,9 +2,10 @@
 	import type { SelectableModel } from '@house-elf/shared';
 	import { Command, Dialog } from 'bits-ui';
 
+	import ModelDetails from '$lib/components/chat/ModelDetails.svelte';
 	import ModelFilters from '$lib/components/chat/ModelFilters.svelte';
 	import { filterModels, type ModelFilters as Filters, noFilters } from '$lib/utils/model-filters';
-	import { providerName, releaseSections, searchSections } from '$lib/utils/model-list';
+	import { releaseSections, searchSections } from '$lib/utils/model-list';
 
 	const componentId = $props.id();
 	const modelListId = `${componentId}-model-list`;
@@ -36,6 +37,9 @@
 	let open = $state(false);
 	let search = $state('');
 	let filters = $state<Filters>(noFilters);
+	// One details panel open at a time — an accordion, not a row of toggles, so
+	// the list does not grow a second scroll inside itself.
+	let detailsOpenId = $state<string | null>(null);
 	const selectedModel = $derived(models.find((model) => model.id === selectedModelId));
 
 	const listed = $derived(filterModels(models, filters));
@@ -156,24 +160,67 @@
 											select(model.id);
 										}}
 										aria-label={model.label}
-										class="flex cursor-default items-center gap-2 rounded-lg px-2 py-2 text-sm outline-none data-selected:bg-raised"
+										class="flex cursor-default flex-col gap-1 rounded-lg px-2 py-2 text-sm outline-none data-selected:bg-raised"
 									>
-										<span class="min-w-0 flex-1 truncate">{model.label}</span>
-										<!-- On screen because it is filterable: a model must not drop out
-										     of the list for a reason that was never shown. -->
-										<span class="shrink-0 text-xs text-faint">{providerName(model)}</span>
-										{#if model.id === selectedModelId}
-											<svg
-												class="size-4 shrink-0 text-accent"
-												viewBox="0 0 16 16"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="1.75"
-												aria-hidden="true"
+										<div class="flex items-center gap-2">
+											<span class="min-w-0 flex-1 truncate">{model.label}</span>
+											{#if model.id === selectedModelId}
+												<svg
+													class="size-4 shrink-0 text-accent"
+													viewBox="0 0 16 16"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="1.75"
+													aria-hidden="true"
+												>
+													<path d="m3 8 3 3 7-7" />
+												</svg>
+											{/if}
+											<!-- "More" sits at the far right edge so a thumb finds it in
+											     the same place on every row. The label is flex-1, so it
+											     absorbs the space the checkmark takes on the selected row —
+											     "More" never shifts when the checkmark appears. The
+											     checkmark stays just left of "More" (right of the label)
+											     rather than moving to the far left: a selection indicator
+											     on the right reads as "this one", and keeps the label
+											     flush left where a scanning eye starts. -->
+											<!-- svelte-ignore a11y_no_static_element_interactions -->
+											<span
+												onclick={(event) => {
+													event.stopPropagation();
+												}}
+												onkeydown={(event) => {
+													event.stopPropagation();
+												}}
 											>
-												<path d="m3 8 3 3 7-7" />
-											</svg>
-										{/if}
+												<button
+													type="button"
+													onclick={() => {
+														detailsOpenId = detailsOpenId === model.id ? null : model.id;
+													}}
+													aria-expanded={detailsOpenId === model.id}
+													class="shrink-0 text-xs text-muted transition-colors hover:text-content"
+												>
+													{detailsOpenId === model.id ? 'Less' : 'More'}
+												</button>
+											</span>
+										</div>
+										<!-- Details live inside the Command.Item so they move with it,
+										     but the "show more/less" toggle inside them must not select
+										     the model. Stopping propagation keeps the click from reaching
+										     the item's onSelect, so a reader can read the whole
+										     description without committing to the model. -->
+										<!-- svelte-ignore a11y_no_static_element_interactions -->
+										<div
+											onclick={(event) => {
+												event.stopPropagation();
+											}}
+											onkeydown={(event) => {
+												event.stopPropagation();
+											}}
+										>
+											<ModelDetails {model} open={detailsOpenId === model.id} />
+										</div>
 									</Command.Item>
 								{/each}
 							</Command.GroupItems>

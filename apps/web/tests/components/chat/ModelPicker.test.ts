@@ -2,13 +2,18 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/sve
 import userEvent from '@testing-library/user-event';
 import { tick } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { SelectableModel } from '@house-elf/shared';
 
-import { modelFiltersStub } from '../../stubs/keys';
-import { stubProps } from '../../stubs/stub-props';
+import { modelDetailsStub, modelFiltersStub } from '../../stubs/keys';
+import { stubProps, stubRenders } from '../../stubs/stub-props';
 import { optionalThinking, selectableModel } from '../../helpers/models.ts';
 
 vi.mock('../../../src/lib/components/chat/ModelFilters.svelte', async () => ({
 	default: (await import('../../stubs/ModelFiltersStub.svelte')).default
+}));
+
+vi.mock('../../../src/lib/components/chat/ModelDetails.svelte', async () => ({
+	default: (await import('../../stubs/ModelDetailsStub.svelte')).default
 }));
 
 const ModelPicker = (await import('../../../src/lib/components/chat/ModelPicker.svelte')).default;
@@ -171,12 +176,18 @@ describe('model picker', () => {
 		});
 	});
 
-	it('shows each row as its label and the provider it comes from', async () => {
+	it('shows each row as its label, without the provider column', async () => {
+		// The provider column was dropped: labels already begin with the provider
+		// ("Anthropic: …"), and provider now has its own filter, so the column
+		// duplicated the label except on ~…-latest rows. The row also carries a
+		// "More" button on the title row now (T1.7.4 slice 4), so the text is the
+		// label followed by "More" — the assertion still pins that no provider
+		// column is appended.
 		await openPicker();
 
-		expect(screen.getByRole('option', { name: 'Opus 5' })).toHaveTextContent(/^Opus 5 anthropic$/);
+		expect(screen.getByRole('option', { name: 'Opus 5' })).toHaveTextContent(/^Opus 5 More$/);
 		expect(screen.getByRole('option', { name: 'GPT-5.3 Chat' })).toHaveTextContent(
-			/^GPT-5\.3 Chat openai$/
+			/^GPT-5\.3 Chat More$/
 		);
 	});
 
@@ -353,5 +364,56 @@ describe('model picker', () => {
 		await user.click(screen.getByRole('option', { name: 'Auto Router' }));
 
 		expect(onselect).toHaveBeenCalledExactlyOnceWith(auto.id);
+	});
+
+	describe('model details', () => {
+		/** The props for one row's details, narrowed from the stub's `unknown` bag. */
+		function rowDetails(modelId: string): { model: SelectableModel; open: boolean } {
+			const found = stubRenders(modelDetailsStub).find(
+				(props) => (props.model as SelectableModel).id === modelId
+			);
+			if (found === undefined) throw new Error(`No details stub for ${modelId}`);
+			return found as { model: SelectableModel; open: boolean };
+		}
+
+		/** The "More"/"Less" button for one row, scoped to that row's option. */
+		function moreButton(label: string): HTMLElement {
+			const option = screen.getByRole('option', { name: label });
+			return within(option).getByRole('button');
+		}
+
+		it('hands each row its model, so the details show that row and not another', async () => {
+			await openPicker();
+
+			expect(() => rowDetails(opus5.id)).not.toThrow();
+			expect(() => rowDetails(gpt.id)).not.toThrow();
+		});
+
+		it('opens one row at a time, not several', async () => {
+			const { user } = await openPicker();
+
+			await user.click(moreButton(opus5.label));
+			await tick();
+			expect(rowDetails(opus5.id).open).toBe(true);
+
+			await user.click(moreButton(gpt.label));
+			await tick();
+			// Opening GPT closes Opus — one at a time, so the list does not grow a
+			// second scroll inside itself.
+			const openFlags = stubRenders(modelDetailsStub).map((props) => props.open);
+			expect(openFlags.filter(Boolean)).toHaveLength(1);
+		});
+
+		it('opening details does not select the model', async () => {
+			// The "More" control lives inside the Command.Item, but its click must not
+			// bubble up to the item's onSelect — a reader can open the details without
+			// committing to the model.
+			const { user, onselect } = await openPicker();
+
+			await user.click(moreButton(opus5.label));
+			await tick();
+
+			expect(onselect).not.toHaveBeenCalled();
+		});
 	});
 });

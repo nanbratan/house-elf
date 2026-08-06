@@ -146,6 +146,13 @@ conversation.
 Stub only. Raised during M1.7 and deliberately deferred; the document records why
 and what is already verified. Needs a planning session before any task list.
 
+## M2.6 — Image generation → [12c-m2.6-image-generation.md](12c-m2.6-image-generation.md)
+
+Stub only. Placed after M2.5 so the message-part renderer and its persistence are
+extended once rather than invented twice. Needs a planning session before any task
+list, and its first decision — which of OpenRouter's three image routes this app
+uses — changes the shape of everything after it.
+
 ## M3 — Menu agent → [13-m3-menu-agent.md](13-m3-menu-agent.md)
 
 - [ ] T3.1 Multi-agent support in the UI
@@ -2496,6 +2503,180 @@ one test.
 
 **Browser-verified:** 229 models → provider `openai` 38 → plus `anthropic` 54;
 dialog height 543px before the row opened, with it open, and with `Free` on.
+
+### 2026-08-06 — T1.7.4 slice 3: model details, without a hover target
+
+**Hover is rejected, and the plan is corrected.** T1.7.4 specified "an info card
+on the focused/hovered model." Hover does not exist on a phone, which is a
+first-class device for this app, and focus alone leaves the details invisible to
+a thumb. The plan document now says so in place of the hover bullet, and the
+correction is in this commit rather than a follow-up.
+
+**The user picked layout A: an info line of always-visible icons, plus a "More"
+control for the prose.** Two other layouts were built as a throwaway prototype
+and screenshotted at 390px before the choice — expand-in-place (B) and an
+overlay card (C). The user also named which facts earn a permanent icon (all
+six: tools/no-tools, thinking, temperature, effort, context, free), the screen
+reader label for the no-tools warning ("Cannot call tools"), and that the
+provider column on each row should go (labels already begin with the provider,
+and provider now has its own filter). Input and output modalities were added to
+the collapsible details at the user's request.
+
+**`ModelDetails` is its own component, stubbed out of the picker's tests.** The
+picker owns the accordion state (one row open at a time) and the contract it
+hands each row's details; `ModelDetails` owns the info line and the prose. The
+picker test stubs `ModelDetails` and exercises the contract — that opening
+details does not select the model, and that one row open at a time — by reading
+the toggle callback back from the recorded props and calling it, the way the
+testing rules require. `ModelDetails` has its own tests for the leaf behaviour:
+which icons render, the sr-only accessible name, and the More/Less toggle.
+
+**The "More" control does not select the model.** It lives inside the
+`Command.Item`, so its click would bubble up to the item's `onSelect` without
+intervention. A wrapper `div` stops propagation on click and keydown, so a
+reader can open the details without committing to the model. Verified in the
+browser: clicking "More" on the default router expanded its details and left the
+trigger reading "Auto Router"; clicking a different row's name selected it.
+
+**Tiered pricing reads as "from", unconditionally.** The schema carries only
+`prompt` and `completion`, not `pricing.overrides` (volume tiering, 44 of 337
+models), so the picker cannot detect whether a model's headline is a floor or
+an exact price. The label says "from $…/per 1M tokens" for every non-router
+model, which is honest for the tiered 44 and merely cautious for the rest.
+Adding `overrides` to the schema is a T1.7.1b/T1.7.2 concern, noted in the
+source, not this slice's.
+
+**Five mutations, five kills:** moving the no-tools fact off the lead, dropping
+the router "varies" branch, hardcoding `open={true}`, adding `select(model.id)`
+to the toggle handler, and changing the sr-only label each failed exactly one
+test.
+
+**Browser-verified at 390px:** 230 models; the info line renders under each name
+(thinking/temp/effort/context on the Auto Router, "No tools" + context on
+Fusion); "More" expands the description, price ("Varies" for the router),
+inputs, and settings list without selecting; clicking a row name selects and
+closes the dialog.
+
+### 2026-08-06 — T1.7.4 slice 4: drop the info line, "More" on the title row, expandable description
+
+**The user reversed two decisions from slice 3.** The always-visible info line
+of icons is gone — it overloaded the row, and the facts it carried are not
+worth a permanent line on every model. "More" moves from its own row up to the
+title row, beside the selected-model checkmark. The plan document's "info line
+and a More control" bullet is corrected again to describe the no-info-line
+layout, the same way the hover rejection was logged.
+
+**The facts the info line carried move into the collapsible as text.** The
+collapsible already showed context, price, inputs, settings, and knowledge
+cutoff; the icon facts (tools/no-tools, thinking, temperature, effort, context,
+free) join it as a compact text list above the description. `rowFacts`/`RowFact`
+in `model-details.ts` are repurposed to `factList`/`ModelFact` (text labels, an
+`isWarning` flag instead of the icon's `present`). `priceLabel`, `settingList`,
+and `contextLabel` survive unchanged.
+
+**The "cannot call tools" warning stays amber, inside the collapsible.** The
+user was asked where it should live now that the info line is gone, and chose
+amber text inside the collapsible over a marker on the title row. The
+accessible name is still "Cannot call tools". The trade the user accepted: a
+no-tools model gives no surface warning until the reader opens "More".
+
+**"More" is now a peer of the checkmark, so the picker owns it.** With the info
+line gone, `ModelDetails` renders only the collapsible (when open); the "More"
+button moved to `ModelPicker`'s title row. The checkmark sits just left of
+"More" (right of the label) rather than moving to the far left — a selection
+indicator on the right reads as "this one", and keeps the label flush left
+where a scanning eye starts. The label is `flex-1`, so it absorbs the space the
+checkmark takes on the selected row and "More" never shifts. The
+stop-propagation wrapper that keeps "More" from selecting the model survives
+the move (now a `<span>` around the button), and a second one wraps the
+collapsible so the description's "show more"/"show less" toggle does not
+select either.
+
+**The description is expandable.** OpenRouter descriptions run long (the Auto
+Router's was truncated mid-sentence on screen in slice 3); the collapsible now
+clamps `model.description` to three lines with a "show more"/"show less" toggle,
+so a reader can read the whole thing without the row growing unbounded by
+default. This is a second level of expand inside the collapsible, kept as a
+single toggle.
+
+**The picker test's contract changed.** `ModelDetails` no longer takes an
+`ontoggle` callback — the picker owns the toggle — so the stub records only
+`model` and `open`. The picker test's `model details` block now clicks the real
+"More" button (scoped to a row's option with `within`) instead of reading the
+toggle callback back from the stub. The "opening details does not select" and
+"opens one row at a time" tests survive; the "hands each row its model" test is
+unchanged. The `ModelDetails` test's `describe('the info line')` block (8
+tests) is replaced with `describe('the fact list')` (facts as text, no-tools
+amber) and `describe('the expandable description')` (clamp + toggle); the
+`describe('the More control')` block is replaced with `describe('when closed')`
+(renders nothing) and the surviving prose-details tests. The `rowFacts` util
+test block is renamed `factList` and matches the repurposed util.
+
+**Six mutations, six kills:** dropping `isWarning` (failed the amber-text test
+at both the util and component layers — different layers, not overlap),
+dropping the description clamp (failed the clamp + collapse tests), removing
+the "More" click stop-propagation (failed the does-not-select + one-at-a-time
+tests — collateral, the contract test is the load-bearing one), dropping the
+context fact (failed the context tests at both layers), rendering when closed
+(failed exactly one), and hardcoding `open={true}` (carried over from slice 3,
+still kills).
+
+**Browser-verified at 390px:** 230 models; each row is a single title line
+(label, checkmark on the selected row, "More" at the far right); clicking
+"More" on the Auto Router expanded its details (Thinking, Temperature, Thinking
+effort, 2M context as text; description clamped with "show more"; price
+"Varies"; inputs; settings) and left the trigger reading "Thinking Machines:
+Inkling Small"; clicking "show more" toggled to "show less"; the dialog stayed
+open through both. Stop-propagation confirmed: clicking "More" did not select.
+
+### 2026-08-06 — T1.7.4 slice 5: drop the expandable description, keep only warnings on the row
+
+**The user reversed two more decisions from slice 4.**
+
+**The expandable description is gone.** Slice 4 clamped `model.description` to
+three lines with a "show more"/"show less" toggle on the assumption that
+OpenRouter sent full descriptions and the client was truncating them. It is the
+other way around: the descriptions arrive already truncated from the API side
+(the Auto Router's ends mid-sentence in the response itself), so a client-side
+clamp has nothing to expand. The collapsible now renders `model.description` as
+a bare `<p>`, the way slice 3 did before the clamp was added. The
+`descriptionExpanded` state and its toggle button are removed.
+
+**Only warnings stay on the row above the description; the descriptive facts
+are dropped.** Slice 4 moved all six info-line facts (tools/no-tools, thinking,
+temperature, effort, context, free) into the collapsible as a text list. The
+user pointed out that the descriptive ones are already in the collapsible's
+settings list, context line, and price — repeating them as a fact list above
+the description is noise. What stays is the one thing that is a warning rather
+than a description: "Cannot call tools". `factList`/`ModelFact` in
+`model-details.ts` is repurposed to `warnings`/`ModelWarning` (only the no-tools
+warning, no `isWarning` flag — everything in the list is a warning, so the flag
+is redundant and the component renders the list amber unconditionally).
+`priceLabel`, `settingList`, and `contextLabel` survive unchanged; the
+`contextLabel` helper is now called only by the dl's context line, not by a
+fact list.
+
+**Tests follow.** `ModelDetails.test.ts`'s `describe('the fact list')` (8
+tests) and `describe('the expandable description')` (3 tests) are replaced with
+`describe('the warnings row')` (2 tests: amber when no tools, absent when
+tools). The `userEvent` import is dropped — nothing in the file clicks anymore.
+`model-details.test.ts`'s `factList` block is renamed `warnings` (2 tests).
+The picker test is unchanged — the stub contract (`model` + `open`) and the
+"More" button placement are the same as slice 4 left them.
+
+**Three mutations, three kills:** dropping the no-tools warning from `warnings`
+(failed the warns test at both the util and component layers — different
+layers, not overlap), dropping the amber class on the warning `<li>` (failed
+exactly one component test), and making `warnings` always push the no-tools
+warning (failed the does-not-warn tests at both layers).
+
+**Browser-verified at 390px:** the collapsible renders the description as a
+bare `<p>` (no clamp, no "show more"), then the dl (Context, Price, Inputs,
+Settings); no fact list, no expandable description; a model with tools shows no
+warnings row. The amber warning itself is covered by the mutation-proven
+tests — no live no-tools model was found in the current catalog to screenshot
+it in the browser, but the unit and component tests pin both its presence and
+its amber class.
 
 ## Open questions
 

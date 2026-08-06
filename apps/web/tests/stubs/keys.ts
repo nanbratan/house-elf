@@ -13,6 +13,7 @@ export const errorNoticeStub = Symbol('error-notice');
 export const filterSelectStub = Symbol('filter-select');
 export const markdownStub = Symbol('markdown');
 export const messagePartStub = Symbol('part');
+export const modelDetailsStub = Symbol('model-details');
 export const modelFiltersStub = Symbol('model-filters');
 export const modelPickerStub = Symbol('model-picker');
 export const reasoningStub = Symbol('reasoning');
