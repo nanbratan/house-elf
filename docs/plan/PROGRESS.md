@@ -110,7 +110,7 @@ corrected before any code — see the decision-log entry of that date.
 - [x] T1.7.2 Shared schema rewrite
 - [x] T1.7.4 Searchable, filterable, date-grouped model picker (model choice only)
 - [x] T1.7.5 Documentation
-- [ ] T1.7.6 Pinned / favorite models
+- [x] T1.7.6 Pinned / favorite models
 - [ ] T1.7.7 Per-model settings: the server contract
 - [ ] T1.7.8 The settings picker
 - [ ] **DoD verified**
@@ -2700,6 +2700,63 @@ are logged above; the tick was applied with this task rather than after slice 5,
 since this is the milestone's documentation boundary.
 
 `bun run verify` green — docs are not checked by it, but the tree stays green.
+
+### 2026-08-06 — T1.7.6: Pinned / favorite models
+
+**Pinning state lives inside the picker, not above it.** The first draft threaded
+`pinnedIds`, `ontogglepin`, `pinnedCollapsed`, and `ontogglepinnedsection` through
+ChatView → Composer → ModelPicker — four props on two components that have no
+use for them. The user pointed this out: pins are only the picker's concern, so
+`createPinnedModels` is called inside `ModelPicker.svelte` with `untrack`, and
+nothing above the picker knows pins exist. The prop surface of ChatView and
+Composer is unchanged from T1.7.4.
+
+**Two new components, not one.** `ModelRow.svelte` extracts the row (label,
+checkmark, star, "More", details) from the picker — the star and "More" buttons
+are the row's own behaviour, not the picker's. `PinnedSection.svelte` extracts
+the collapsible pinned section (header with count, pinned rows). The picker
+owns the accordion state (`detailsOpenId`) and the pin state, and delegates
+rendering to these two. The picker test stubs `PinnedSection` and `ModelDetails`
+and tests the contract; `PinnedSection` and `ModelRow` have their own tests with
+a `Command.Root` harness (bits-ui's `Command.Item` needs the context).
+
+**Snippets inside component tags are props, not local snippets.** The first
+attempt used a `{#snippet row(model)}` inside `Command.List` to avoid duplicating
+the row markup. svelte-check rejected it: a snippet declared inside a component
+tag is a prop of that component, so `Command.List` (and `Command.Root`, and
+`Dialog.Content`) each rejected the unknown `row` prop. Moving it to the
+top-level markup (between `</script>` and `<Dialog.Root>`) fixed the type error
+but introduced `@typescript-eslint/no-confusing-void-expression` on every
+`{@render row(model)}` — `@render` returns `void`. Extracting `ModelRow` as a
+component avoided both issues.
+
+**`pins.pinnedIds` is reactive in `$derived` but not in template expressions.**
+The `pinned` derived (`pinnedModels(models, pins.pinnedIds)`) updated correctly
+after `toggle` — the PinnedSection stub appeared. But `pinned={pins.pinnedIds.includes(model.id)}`
+on `ModelRow` did not — the star stayed "Pin" after a click. The getter on the
+state factory's return object reads `$state`, and `$derived` tracks that read,
+but the template expression does not. Using `pins.pinnedIds.includes(model.id)`
+directly (rather than through a `$derived` intermediary) fixed it. The
+`model-selection.svelte.ts` factory has the same getter pattern and works in
+ChatView, but ChatView reads it through `$derived` and component props, never
+in a bare template expression — which is why the issue surfaced here first.
+
+**`stubRenders` records mounts, not unmounts.** The first `pinnedSectionRendered()`
+helper checked `stubRenders(pinnedSectionStub).length > 0`, which stayed true
+after the PinnedSection was unmounted — the registry keeps every instance that
+was ever mounted. Checking `screen.queryByTestId('pinned-section')` instead
+tests whether the stub is currently in the document, which is the question.
+
+**`localStorage` must be cleared between picker tests.** The picker owns its
+pin state, which persists to `localStorage` via `onMount`. Without clearing it
+in `afterEach`, a pin from one test bleeds into the next.
+
+**Mutation-proven:** removing `sortPins` from `toggle` fails exactly the
+"sorts pins alphabetically" test; removing the `knownIds` filter from `restore`
+fails exactly the "drops a pinned id that is no longer in the catalog" test.
+
+`bun run verify` green: 84 server tests, 258 web tests, check/lint/format/build
+all clean.
 
 ## Open questions
 

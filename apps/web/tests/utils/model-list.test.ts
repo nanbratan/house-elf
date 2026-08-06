@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { providerName, releaseSections, searchSections } from '../../src/lib/utils/model-list.ts';
+import {
+	pinnedModels,
+	providerName,
+	releaseSections,
+	searchSections
+} from '../../src/lib/utils/model-list.ts';
 import { selectableModel } from '../helpers/models.ts';
 
 const opus = selectableModel({
@@ -108,5 +113,31 @@ describe('the provider a model is read as belonging to', () => {
 		// The tilde is part of the id and must survive being displayed next to a
 		// stripped copy of itself: without it, OpenRouter has no such model.
 		expect(pointer.id).toBe('~anthropic/claude-opus-latest');
+	});
+});
+
+describe('pinned models', () => {
+	it('resolves pinned ids to their models, sorted alphabetically', () => {
+		const result = pinnedModels(catalog, [sonnet.id, opus.id]);
+
+		expect(result.map((model) => model.id)).toEqual([opus.id, sonnet.id]);
+	});
+
+	it('drops a pinned id the catalog no longer carries', () => {
+		const result = pinnedModels(catalog, [opus.id, 'anthropic/claude-retired-1']);
+
+		expect(result.map((model) => model.id)).toEqual([opus.id]);
+	});
+
+	it('keeps the tilde on a pinned pointer id', () => {
+		const pointer = selectableModel({ id: '~anthropic/claude-opus-latest' });
+
+		const result = pinnedModels([pointer], ['~anthropic/claude-opus-latest']);
+
+		expect(result.map((model) => model.id)).toEqual(['~anthropic/claude-opus-latest']);
+	});
+
+	it('returns nothing for an empty pin list', () => {
+		expect(pinnedModels(catalog, [])).toEqual([]);
 	});
 });

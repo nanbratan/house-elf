@@ -4,7 +4,7 @@ import { tick } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SelectableModel } from '@house-elf/shared';
 
-import { modelDetailsStub, modelFiltersStub } from '../../stubs/keys';
+import { modelDetailsStub, modelFiltersStub, pinnedSectionStub } from '../../stubs/keys';
 import { stubProps, stubRenders } from '../../stubs/stub-props';
 import { optionalThinking, selectableModel } from '../../helpers/models.ts';
 
@@ -14,6 +14,10 @@ vi.mock('../../../src/lib/components/chat/ModelFilters.svelte', async () => ({
 
 vi.mock('../../../src/lib/components/chat/ModelDetails.svelte', async () => ({
 	default: (await import('../../stubs/ModelDetailsStub.svelte')).default
+}));
+
+vi.mock('../../../src/lib/components/chat/PinnedSection.svelte', async () => ({
+	default: (await import('../../stubs/PinnedSectionStub.svelte')).default
 }));
 
 const ModelPicker = (await import('../../../src/lib/components/chat/ModelPicker.svelte')).default;
@@ -61,7 +65,14 @@ const gpt = selectableModel({
 
 const models = [auto, opus5, opus45, sonnet, haiku, gpt];
 
+function escapeRegex(text: string): string {
+	return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 afterEach(async () => {
+	// The picker owns its pinned state, which persists to `localStorage`. Without
+	// clearing it, a pin from one test bleeds into the next.
+	localStorage.clear();
 	// bits-ui locks scrolling by writing `overflow: hidden` and `pointer-events: none`
 	// onto `document.body`, and restores the old style attribute ~24ms after the last
 	// lock is released. `cleanup()` only unmounts, so a test that left the modal open
@@ -366,7 +377,7 @@ describe('model picker', () => {
 		expect(onselect).toHaveBeenCalledExactlyOnceWith(auto.id);
 	});
 
-	describe('model details', () => {
+	describe('model rows', () => {
 		/** The props for one row's details, narrowed from the stub's `unknown` bag. */
 		function rowDetails(modelId: string): { model: SelectableModel; open: boolean } {
 			const found = stubRenders(modelDetailsStub).find(
@@ -378,8 +389,8 @@ describe('model picker', () => {
 
 		/** The "More"/"Less" button for one row, scoped to that row's option. */
 		function moreButton(label: string): HTMLElement {
-			const option = screen.getByRole('option', { name: label });
-			return within(option).getByRole('button');
+			const option = screen.getByRole('option', { name: new RegExp(`^${escapeRegex(label)}$`) });
+			return within(option).getByRole('button', { name: /^(More|Less)$/ });
 		}
 
 		it('hands each row its model, so the details show that row and not another', async () => {
@@ -405,8 +416,8 @@ describe('model picker', () => {
 		});
 
 		it('opening details does not select the model', async () => {
-			// The "More" control lives inside the Command.Item, but its click must not
-			// bubble up to the item's onSelect — a reader can open the details without
+			// The "More" control lives inside the row, but its click must not bubble
+			// up to the item's onSelect — a reader can open the details without
 			// committing to the model.
 			const { user, onselect } = await openPicker();
 
@@ -414,6 +425,186 @@ describe('model picker', () => {
 			await tick();
 
 			expect(onselect).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('pinned models', () => {
+		/** The star button for one row, scoped to that row's option. */
+		function starButton(label: string): HTMLElement {
+			const option = screen.getByRole('option', { name: new RegExp(`^${escapeRegex(label)}$`) });
+			return within(option).getByRole('button', {
+				name: new RegExp(`^Pin ${escapeRegex(label)}$|^Unpin ${escapeRegex(label)}$`)
+			});
+		}
+
+		/** Whether the PinnedSection stub is currently in the document. */
+		function pinnedSectionRendered(): boolean {
+			return screen.queryByTestId('pinned-section') !== null;
+		}
+
+		it('marks the star as not pressed for an unpinned model', async () => {
+			await openPicker();
+
+			const option = screen.getByRole('option', { name: 'Opus 5' });
+			const star = within(option).getByRole('button', { name: 'Pin Opus 5' });
+			expect(star).toHaveAttribute('aria-pressed', 'false');
+		});
+
+		it('does not show the pinned section when there are no pins', async () => {
+			await openPicker();
+
+			expect(pinnedSectionRendered()).toBe(false);
+		});
+
+		it('pins a model when the star is clicked, and does not select it', async () => {
+			const { user, onselect } = await openPicker();
+
+			await user.click(starButton(opus5.label));
+
+			expect(onselect).not.toHaveBeenCalled();
+			// Pinning renders the pinned section.
+			await waitFor(() => {
+				expect(pinnedSectionRendered()).toBe(true);
+			});
+		});
+
+		it('removes the pinned model from the main browse list', async () => {
+			// A pinned model lives in the pinned section, not the main list — two
+			// rows for the same model share one hover state under bits-ui's Command,
+			// which reads as the main list reacting to the pinned section.
+			const { user } = await openPicker();
+
+			expect(screen.getByRole('option', { name: 'Opus 5' })).toBeInTheDocument();
+
+			await user.click(starButton(opus5.label));
+
+			await waitFor(() => {
+				expect(screen.queryByRole('option', { name: 'Opus 5' })).not.toBeInTheDocument();
+			});
+		});
+
+		it('keeps a pinned model searchable by name', async () => {
+			// The main list drops pinned ids, but the search source keeps them: a
+			// pin is still a model the reader can look up, and search results are a
+			// flat list with no pinned section above them.
+			const { user } = await openPicker();
+
+			await user.click(starButton(opus5.label));
+			await waitFor(() => {
+				expect(pinnedSectionRendered()).toBe(true);
+			});
+			// The pinned model is gone from the browse list.
+			expect(screen.queryByRole('option', { name: 'Opus 5' })).not.toBeInTheDocument();
+
+			await fireEvent.input(screen.getByRole('combobox', { name: 'Search models' }), {
+				target: { value: 'Opus' }
+			});
+
+			await waitFor(() => {
+				expect(screen.getByRole('option', { name: 'Opus 5' })).toBeInTheDocument();
+			});
+			// The pinned section stays hidden while searching.
+			expect(pinnedSectionRendered()).toBe(false);
+		});
+
+		it('unpins when the star is clicked again, and the model returns to the main list', async () => {
+			const { user } = await openPicker();
+
+			await user.click(starButton(opus5.label));
+			await waitFor(() => {
+				expect(pinnedSectionRendered()).toBe(true);
+			});
+			// The pinned model left the main list, so its star is gone too — the
+			// unpin now comes from the pinned section's toggle.
+			await waitFor(() => {
+				expect(screen.queryByRole('option', { name: 'Opus 5' })).not.toBeInTheDocument();
+			});
+
+			const props = stubProps(pinnedSectionStub);
+			// The stub records props as `unknown`; the picker always passes a
+			// `(id: string) => void`, so the cast is sound.
+			(props.ontogglepin as (id: string) => void)(opus5.id);
+
+			await waitFor(() => {
+				expect(pinnedSectionRendered()).toBe(false);
+			});
+			// Unpinned, the model returns to the main browse list.
+			await waitFor(() => {
+				expect(screen.getByRole('option', { name: 'Opus 5' })).toBeInTheDocument();
+			});
+		});
+
+		it('hands the pinned section the resolved models, sorted, and the selected id', async () => {
+			const { user } = await openPicker();
+
+			// Pinned in insertion order sonnet → opus5, but the section receives them
+			// sorted alphabetically by id (opus5 < sonnet). If the sort were removed
+			// this assertion would fail — the test is load-bearing, not decorative.
+			await user.click(starButton(sonnet.label));
+			await user.click(starButton(opus5.label));
+			await waitFor(() => {
+				expect(pinnedSectionRendered()).toBe(true);
+			});
+
+			const props = stubProps(pinnedSectionStub);
+			expect((props.models as SelectableModel[]).map((m) => m.id)).toEqual([opus5.id, sonnet.id]);
+			expect(props.selectedModelId).toBe(opus5.id);
+			expect(props.collapsed).toBe(false);
+		});
+
+		it('hides the pinned section while searching, so results stay a flat list', async () => {
+			const { user } = await openPicker();
+
+			await user.click(starButton(opus5.label));
+			await waitFor(() => {
+				expect(pinnedSectionRendered()).toBe(true);
+			});
+
+			await fireEvent.input(screen.getByRole('combobox', { name: 'Search models' }), {
+				target: { value: 'Sonnet' }
+			});
+
+			await waitFor(() => {
+				expect(pinnedSectionRendered()).toBe(false);
+			});
+		});
+
+		it('forwards the collapse toggle to the pinned section', async () => {
+			const { user } = await openPicker();
+
+			await user.click(starButton(opus5.label));
+			await waitFor(() => {
+				expect(pinnedSectionRendered()).toBe(true);
+			});
+			const props = stubProps(pinnedSectionStub);
+			// The stub records props as `unknown`; the picker always passes a
+			// `() => void`, so the cast is sound.
+			const toggle = props.ontogglecollapsed as () => void;
+			expect(typeof toggle).toBe('function');
+			toggle();
+			await waitFor(() => {
+				expect(stubProps(pinnedSectionStub).collapsed).toBe(true);
+			});
+		});
+
+		it('forwards the pin toggle from the pinned section', async () => {
+			const { user } = await openPicker();
+
+			await user.click(starButton(opus5.label));
+			await waitFor(() => {
+				expect(pinnedSectionRendered()).toBe(true);
+			});
+
+			const props = stubProps(pinnedSectionStub);
+			// The stub records props as `unknown`; the picker always passes a
+			// `(id: string) => void`, so the cast is sound.
+			const toggle = props.ontogglepin as (id: string) => void;
+			expect(typeof toggle).toBe('function');
+			toggle(opus5.id);
+
+			await waitFor(() => {
+				expect(pinnedSectionRendered()).toBe(false);
+			});
 		});
 	});
 });

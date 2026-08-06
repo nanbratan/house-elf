@@ -69,6 +69,25 @@ export function releaseSections(models: readonly SelectableModel[]): readonly Mo
 }
 
 /**
+ * The pinned models, in the order they should be shown.
+ *
+ * Pins sort alphabetically, not by pin time — stable position beats recency for
+ * something the reader is trying to hit without reading. An id the catalog no
+ * longer carries is dropped: the catalog is the source of what exists, and a
+ * pin that points at nothing is not the reader's problem to clear.
+ */
+export function pinnedModels(
+	models: readonly SelectableModel[],
+	pinnedIds: readonly string[]
+): readonly SelectableModel[] {
+	const byId = new Map(models.map((model) => [model.id, model]));
+	return pinnedIds
+		.filter((id) => byId.has(id))
+		.map((id) => byId.get(id) as SelectableModel)
+		.sort((model, other) => model.id.localeCompare(other.id));
+}
+
+/**
  * What the reader typed, as one ranked list.
  *
  * Grouping a result set fragments it into one-row sections, which helps nobody,

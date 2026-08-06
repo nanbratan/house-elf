@@ -2,10 +2,13 @@
 	import type { SelectableModel } from '@house-elf/shared';
 	import { Command, Dialog } from 'bits-ui';
 
-	import ModelDetails from '$lib/components/chat/ModelDetails.svelte';
 	import ModelFilters from '$lib/components/chat/ModelFilters.svelte';
+	import ModelRow from '$lib/components/chat/ModelRow.svelte';
+	import PinnedSection from '$lib/components/chat/PinnedSection.svelte';
+	import { createPinnedModels } from '$lib/state/pinned-models.svelte';
 	import { filterModels, type ModelFilters as Filters, noFilters } from '$lib/utils/model-filters';
-	import { releaseSections, searchSections } from '$lib/utils/model-list';
+	import { pinnedModels, releaseSections, searchSections } from '$lib/utils/model-list';
+	import { untrack } from 'svelte';
 
 	const componentId = $props.id();
 	const modelListId = `${componentId}-model-list`;
@@ -34,6 +37,11 @@
 		onthinkingchange
 	}: ModelPickerProps = $props();
 
+	// Pinned models are the picker's own concern — nothing above it needs to know
+	// which models are pinned, so the state lives here. `untrack` because the
+	// catalog is fetched once and does not change during the picker's lifetime.
+	const pins = untrack(() => createPinnedModels(models));
+
 	let open = $state(false);
 	let search = $state('');
 	let filters = $state<Filters>(noFilters);
@@ -44,9 +52,25 @@
 
 	const listed = $derived(filterModels(models, filters));
 
+	// The pinned section shows the reader's pins regardless of active filters — a
+	// pin is not a filter — and renders only when there is at least one pin. It is
+	// hidden while a search is active so results stay a flat ranked list rather
+	// than a section above one.
+	const pinned = $derived(pinnedModels(models, pins.pinnedIds));
+	const showPinned = $derived(pinned.length > 0 && search.trim() === '');
+
+	// A pinned model lives in the pinned section, not in the main list — two
+	// rows for the same model share one hover state under bits-ui's Command,
+	// which reads as the main list reacting to the pinned section. The main list
+	// drops pinned ids, but the search source keeps them: a pin is still a model
+	// the reader can look up by name, and search results are a flat list with no
+	// pinned section above them.
+	const pinnedIdSet = $derived(new Set(pinned.map((model) => model.id)));
+	const browseList = $derived(listed.filter((model) => !pinnedIdSet.has(model.id)));
+
 	// Grouping depends on the catalog and the filters, so a keystroke in the
 	// search box re-runs the search and nothing else.
-	const grouped = $derived(releaseSections(listed));
+	const grouped = $derived(releaseSections(browseList));
 	const sections = $derived(search.trim() === '' ? grouped : searchSections(listed, search));
 	const listedCount = $derived(
 		sections.reduce((count, { models: found }) => count + found.length, 0)
@@ -63,6 +87,14 @@
 		setTimeout(() => {
 			open = false;
 		}, 0);
+	}
+
+	function togglePin(modelId: string) {
+		pins.toggle(modelId);
+	}
+
+	function toggleDetails(modelId: string) {
+		detailsOpenId = detailsOpenId === modelId ? null : modelId;
 	}
 </script>
 
@@ -141,8 +173,23 @@
 				</div>
 
 				<Command.List id={modelListId} class="overflow-y-auto p-1.5">
-					{#if sections.length === 0}
+					{#if sections.length === 0 && !showPinned}
 						<div class="px-3 py-8 text-center text-sm text-faint">No models found.</div>
+					{/if}
+
+					{#if showPinned}
+						<PinnedSection
+							models={pinned}
+							{selectedModelId}
+							collapsed={pins.collapsed}
+							ontogglecollapsed={() => {
+								pins.toggleCollapsed();
+							}}
+							ontogglepin={togglePin}
+							ontoggledetails={toggleDetails}
+							onselect={select}
+							{detailsOpenId}
+						/>
 					{/if}
 
 					{#each sections as section (section.id)}
@@ -154,74 +201,15 @@
 							</Command.GroupHeading>
 							<Command.GroupItems>
 								{#each section.models as model (model.id)}
-									<Command.Item
-										value={model.id}
-										onSelect={() => {
-											select(model.id);
-										}}
-										aria-label={model.label}
-										class="flex cursor-default flex-col gap-1 rounded-lg px-2 py-2 text-sm outline-none data-selected:bg-raised"
-									>
-										<div class="flex items-center gap-2">
-											<span class="min-w-0 flex-1 truncate">{model.label}</span>
-											{#if model.id === selectedModelId}
-												<svg
-													class="size-4 shrink-0 text-accent"
-													viewBox="0 0 16 16"
-													fill="none"
-													stroke="currentColor"
-													stroke-width="1.75"
-													aria-hidden="true"
-												>
-													<path d="m3 8 3 3 7-7" />
-												</svg>
-											{/if}
-											<!-- "More" sits at the far right edge so a thumb finds it in
-											     the same place on every row. The label is flex-1, so it
-											     absorbs the space the checkmark takes on the selected row —
-											     "More" never shifts when the checkmark appears. The
-											     checkmark stays just left of "More" (right of the label)
-											     rather than moving to the far left: a selection indicator
-											     on the right reads as "this one", and keeps the label
-											     flush left where a scanning eye starts. -->
-											<!-- svelte-ignore a11y_no_static_element_interactions -->
-											<span
-												onclick={(event) => {
-													event.stopPropagation();
-												}}
-												onkeydown={(event) => {
-													event.stopPropagation();
-												}}
-											>
-												<button
-													type="button"
-													onclick={() => {
-														detailsOpenId = detailsOpenId === model.id ? null : model.id;
-													}}
-													aria-expanded={detailsOpenId === model.id}
-													class="shrink-0 text-xs text-muted transition-colors hover:text-content"
-												>
-													{detailsOpenId === model.id ? 'Less' : 'More'}
-												</button>
-											</span>
-										</div>
-										<!-- Details live inside the Command.Item so they move with it,
-										     but the "show more/less" toggle inside them must not select
-										     the model. Stopping propagation keeps the click from reaching
-										     the item's onSelect, so a reader can read the whole
-										     description without committing to the model. -->
-										<!-- svelte-ignore a11y_no_static_element_interactions -->
-										<div
-											onclick={(event) => {
-												event.stopPropagation();
-											}}
-											onkeydown={(event) => {
-												event.stopPropagation();
-											}}
-										>
-											<ModelDetails {model} open={detailsOpenId === model.id} />
-										</div>
-									</Command.Item>
+									<ModelRow
+										{model}
+										selected={model.id === selectedModelId}
+										pinned={pins.pinnedIds.includes(model.id)}
+										detailsOpen={detailsOpenId === model.id}
+										ontogglepin={togglePin}
+										ontoggledetails={toggleDetails}
+										onselect={select}
+									/>
 								{/each}
 							</Command.GroupItems>
 						</Command.Group>
