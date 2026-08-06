@@ -108,8 +108,8 @@ corrected before any code — see the decision-log entry of that date.
 - [x] T1.7.1b The catalog comes from `/models/user`
 - [x] T1.7.3 A mid-stream error says what actually went wrong
 - [x] T1.7.2 Shared schema rewrite
-- [ ] T1.7.4 Searchable, filterable, date-grouped model picker (model choice only)
-- [ ] T1.7.5 Documentation
+- [x] T1.7.4 Searchable, filterable, date-grouped model picker (model choice only)
+- [x] T1.7.5 Documentation
 - [ ] T1.7.6 Pinned / favorite models
 - [ ] T1.7.7 Per-model settings: the server contract
 - [ ] T1.7.8 The settings picker
@@ -2677,6 +2677,29 @@ warnings row. The amber warning itself is covered by the mutation-proven
 tests — no live no-tools model was found in the current catalog to screenshot
 it in the browser, but the unit and component tests pin both its presence and
 its amber class.
+
+### 2026-08-06 — T1.7.5: Documentation
+
+Docs-only task. The OpenRouter-catalog decision is recorded as **D15** in
+[01-decisions.md](01-decisions.md), consolidating the deviations scattered across
+the PROGRESS entries from 2026-08-03 through 2026-08-06 into the durable record:
+why a live fetch replaces the static allowlist, why `/models/user` and not the
+public `/models`, why privacy and icons were both dropped (different measured
+reasons), why there is no persisted snapshot, why `openrouter/auto` stays the
+default despite its unknowable per-message cost, why settings live in a second
+picker, why the picker groups by release month, why hover was rejected, and why
+the `~…-latest` pointers are offered.
+
+**`.env.example` billing note updated.** T1.7.1b switched the catalog to
+`/models/user`, which requires the API key to read — not just to use a model.
+The note now says so, alongside the existing billing note about OpenRouter
+credits.
+
+**T1.7.4 ticked.** The picker's five slices are complete and their deviations
+are logged above; the tick was applied with this task rather than after slice 5,
+since this is the milestone's documentation boundary.
+
+`bun run verify` green — docs are not checked by it, but the tree stays green.
 
 ## Open questions
 

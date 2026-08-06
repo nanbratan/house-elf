@@ -377,3 +377,117 @@ count in the UI. The boolean is the whole feature. If the budget needs tuning la
 that is a constant on the server, changed in a commit — not a client-facing control.
 (A real effort-level control is now planned as its own task, M1.7's T1.7.7, once
 OpenRouter models with graduated effort levels — not just on/off — are in scope.)
+
+---
+
+## D15 — The model catalog: live fetch from OpenRouter, not a static allowlist
+
+**Chosen:** the picker is driven by a live fetch of OpenRouter's
+`GET /api/v1/models/user` through the Mastra server, which caches it server-side
+with a one-hour TTL and stale-serve on a failed refresh (the `OpenRouterCatalog`
+class). There is no persisted snapshot, no client-side cache, and no hand-maintained
+list. The static nine-entry Anthropic allowlist from M1.5 is gone.
+
+**Why a live fetch replaces the allowlist.** OpenRouter fronts 337 models from 52
+providers, and Mastra's model router resolves them under an `openrouter/` prefix.
+Hand-typing that list, or its per-model capabilities, does not scale and goes stale
+immediately — a new model ships and the picker does not know until someone edits a
+file. A live fetch means the picker always reflects what OpenRouter actually
+offers, including new models the day they appear.
+
+**Why `/models/user` and not the public `/models`.** Measured live against this
+account on 2026-08-04: the public `/models` returns 338 models with no key; the
+`?zdr=true` filter returns 220 but drops every `openrouter/*` router (including the
+default `openrouter/auto`) and 10 of 11 `~…-latest` pointers, because a router has
+no endpoint of its own to carry a ZDR guarantee; `/models/user` returns 230, keeps
+the routers, and applies the account's real privacy settings. It is a strict subset
+of `/models` — the arithmetic is `220 zdr + 16 unfilterable (6 routers + 10
+pointers) − 6 free models that log prompts`. So it needs no client-side privacy
+logic at all: change a setting on the website and the picker follows without a
+deploy. The trade-off is that it requires the API key to read, not just to use —
+which is why `OPENROUTER_API_KEY` is `required()` in `env.ts` and the `.env.example`
+billing note says so.
+
+**Why privacy and icons were both dropped, for different measured reasons.**
+Privacy: no ZDR, retention, or training flag exists on the model object or the
+endpoints response — only policy _links_ and a country on `/api/v1/providers`, and
+the useful status (which providers log prompts) is a human-typed table in
+OpenRouter's docs with no API behind it. A badge that needs data the API does not
+carry would be a hand-maintained lookup table that goes stale — the same standing
+maintenance cost that got icons cut. Icons: no icon field on the model object; the
+`@lobehub/icons-static-svg` route needs a hand-maintained slug mapping (about seven
+aliases, about twenty providers with no icon) that goes stale as OpenRouter adds
+providers; OpenRouter's own icon assets sit at an undocumented path not derivable
+from the author slug (of a dozen probed live, only `Anthropic.svg` and `OpenAI.svg`
+resolved). Both are text-only decisions, each with a second measured reason behind
+it.
+
+**Why there is no persisted snapshot.** OpenRouter serves the endpoint through
+Cloudflare with `stale-if-error=3600`, so an origin outage is absorbed at the edge.
+The only case a snapshot covers is our own server restarting offline, where
+OpenRouter is also the transport and nothing can be sent anyway. A snapshot would
+have meant inventing this repo's first hand-rolled table a milestone before M2
+decides how tables are made. The in-memory TTL cache is enough.
+
+**Why `openrouter/auto` is the default despite its unknowable per-message cost.**
+`openrouter/auto` is deprecated in favour of `openrouter/auto-beta`, which
+benchmarks far better (83.8% vs 50.0% on GPQA Diamond). OpenRouter performs the
+slug swap themselves when the switch happens, so the id we hold keeps working and
+gets the better router for free. Migrating now would buy the improvement earlier at
+the cost of a user-visible id change made twice. Its per-message cost is the
+sentinel `"-1"` — "billed at whatever the chosen model costs, unknowable in
+advance" — and the thinking toggle is inert on a first visit; both accepted
+knowingly. The default can never dangle, and no model id is hand-typed.
+
+**Why settings live in a second picker (T1.7.8), not inside the model picker.**
+The settings vary far too much per model to show inline the way M1.5's picker did:
+`temperature` on 279 models, `reasoning_effort` on 79, `verbosity` on 11, and the
+frontier models most likely to be picked have no temperature at all. A searchable
+dialog over 325 models cannot live in a submenu, and the model picker is already
+large. A second trigger opens a `SettingsPicker` holding thinking, effort,
+temperature, verbosity, max output tokens and seed, each gated on the selected
+model's own `supported_parameters`, each with an inline description, persisted per
+model id. The settings trigger carries a visible summary rather than a bare icon,
+because per-model persistence means switching models swaps an entire profile.
+
+**Why the picker groups by release month, not by provider.** Decided 2026-08-04
+after evaluating OpenRouter's own picker: 52 providers mostly holding one to three
+community fine-tunes is a lot of menu for little payoff. Provider is a filter with
+its own search box, not a two-level menu. Newest-first matches what a personal tool
+is actually used for, and a flat list with a filter row is simpler to build and
+keyboard-navigate.
+
+**Why hover was rejected for the model details.** The phone is a first-class device
+and has no hover. The details are behind a "More" control on the title row that
+expands in place. An always-visible info line of icons was built (slice 3) and then
+reversed (2026-08-06, slice 4): it overloaded the row, and the descriptive facts it
+carried are already in the collapsible's settings list, context line, and price.
+What stays on the row is the one thing that is a warning rather than a description:
+"Cannot call tools" (65 models whose `supported_parameters` omits `tools`), as
+amber text inside the collapsible.
+
+**Why the `~…-latest` pointers are offered, not filtered.** Picking
+`~anthropic/claude-opus-latest` follows Anthropic forward; picking the concrete id
+stays put. Those are two different things to want. The tilde is part of the id and
+must never reach the wire stripped — it is stripped for display and filtering only.
+Stripping belongs in a derived display value; `~anthropic/claude-opus-latest` is the
+pointer, and `anthropic/claude-opus-latest` without the tilde is not a model
+OpenRouter has.
+
+**Rejected — a Postgres snapshot of the catalog.** Covered above: the edge cache
+absorbs the likely failure, and a snapshot would mean a hand-rolled table before M2.
+
+**Rejected — privacy badges and provider icons.** Covered above: no sufficient
+source for either, and both carry a standing maintenance cost.
+
+**Rejected — `?zdr=true` as the catalog endpoint.** Drops every router including
+the default; a filter that works at the endpoint level cannot see routers.
+
+**Rejected — provider grouping in the picker.** Replaced by release-month grouping
+with provider as a filter.
+
+**Rejected — hover cards and an always-visible info line for model details.** Hover
+does not exist on a phone; the info line overloaded the row.
+
+**Rejected — migrating to `openrouter/auto-beta` now.** OpenRouter swaps the slug
+themselves; migrating now means a user-visible id change made twice.
