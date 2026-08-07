@@ -68,6 +68,19 @@ pre-commit:
 pre-push:
   parallel: true
   jobs:
+    # Issues live in a Dolt database that git does not track — `.beads/embeddeddolt/`
+    # is ignored, and `bd`'s own backup is local-only, so without this the issues
+    # never leave the machine. Pushing them alongside the code is the natural pairing:
+    # one sync per unit of work, rather than a network round-trip on every
+    # `bd create`.
+    #
+    # Deliberately not `fail: false`. A silent sync failure is how the two halves
+    # drift apart, and the recovery — someone else's clone missing a week of issues —
+    # is far worse than a push you have to retry. `LEFTHOOK=0 git push` is the escape
+    # hatch when the Dolt remote is down and the code cannot wait.
+    - name: beads
+      run: bd dolt push
+
     - name: format
       run: bun run format:check .
 
