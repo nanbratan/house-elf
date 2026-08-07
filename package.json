@@ -22,6 +22,7 @@
 		"test:e2e": "playwright test",
 		"build": "bun run --filter '*' build",
 		"verify": "bun run check && bun run lint && bun run format:check . && bun run test && bun run build",
+		"verify:fast": "bash scripts/verify-fast.sh",
 		"db:up": "docker compose -f infra/docker-compose.yml up -d --wait",
 		"db:down": "docker compose -f infra/docker-compose.yml down"
 	},
