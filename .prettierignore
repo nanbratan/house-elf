@@ -9,3 +9,15 @@ bun.lock
 # Vendored agent skills — third-party content, kept byte-identical to upstream.
 .agents
 skills-lock.json
+
+# Same rule, other vendors: the Beads plugin manifest ships from upstream, and
+# Serena rewrites its own config. Neither is ours to reformat.
+.copilot-plugin
+.serena
+
+# Tool-owned state and generated agent config. `bd`, Claude Code and Codex each
+# rewrite these on their own schedule; formatting them is a fight we would lose
+# every time one of them regenerates.
+.beads
+.claude
+.codex
