@@ -9,6 +9,11 @@
 		{
 			"files": "*.svelte",
 			"options": { "parser": "svelte" }
+		},
+		{
+			"comment": "prettier-plugin-tailwindcss resolves the theme from one stylesheet to sort classes. The two apps have different token sets, so each needs its own or the React app's classes sort against tokens it does not have.",
+			"files": "apps/web-react/**",
+			"options": { "tailwindStylesheet": "./apps/web-react/src/styles/app.css" }
 		}
 	]
 }

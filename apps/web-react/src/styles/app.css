@@ -1,0 +1,240 @@
+@import 'tailwindcss';
+
+/*
+ * shadcn's stock `new-york-v4` slate palette, dark values, copied verbatim from the
+ * registry (https://ui.shadcn.com/r/colors/slate.json, cssVarsV4.dark) so that files
+ * copied out of `vendor/ai-elements/` drop in unedited. Do not rename these tokens:
+ * their names ARE the contract with the vendored components, which carry 219
+ * references to them.
+ *
+ * The app is dark-only, so the dark values sit directly in `:root` and there is no
+ * light block. Re-tinting to a house palette is a change to the values below and
+ * nothing else — house-elf-shi.7 records the previous slate/periwinkle oklch numbers.
+ */
+:root {
+	--radius: 0.625rem;
+
+	--background: oklch(0.129 0.042 264.695);
+	--foreground: oklch(0.984 0.003 247.858);
+	--card: oklch(0.208 0.042 265.755);
+	--card-foreground: oklch(0.984 0.003 247.858);
+	--popover: oklch(0.208 0.042 265.755);
+	--popover-foreground: oklch(0.984 0.003 247.858);
+	--primary: oklch(0.929 0.013 255.508);
+	--primary-foreground: oklch(0.208 0.042 265.755);
+	--secondary: oklch(0.279 0.041 260.031);
+	--secondary-foreground: oklch(0.984 0.003 247.858);
+	--muted: oklch(0.279 0.041 260.031);
+	--muted-foreground: oklch(0.704 0.04 256.788);
+	--accent: oklch(0.279 0.041 260.031);
+	--accent-foreground: oklch(0.984 0.003 247.858);
+	--destructive: oklch(0.704 0.191 22.216);
+	--border: oklch(1 0 0 / 10%);
+	--input: oklch(1 0 0 / 15%);
+	--ring: oklch(0.551 0.027 264.364);
+
+	--sidebar: oklch(0.208 0.042 265.755);
+	--sidebar-foreground: oklch(0.984 0.003 247.858);
+	--sidebar-primary: oklch(0.488 0.243 264.376);
+	--sidebar-primary-foreground: oklch(0.984 0.003 247.858);
+	--sidebar-accent: oklch(0.279 0.041 260.031);
+	--sidebar-accent-foreground: oklch(0.984 0.003 247.858);
+	--sidebar-border: oklch(1 0 0 / 10%);
+	--sidebar-ring: oklch(0.551 0.027 264.364);
+
+	/*
+	 * Ours, not shadcn's. shadcn has two text tiers (foreground, muted-foreground);
+	 * the Svelte app used three, and the third — timestamps and placeholders — was
+	 * its single most-used token at 23 usages. Added rather than collapsed into
+	 * muted-foreground so that distinction survives the port.
+	 */
+	--faint: oklch(0.551 0.027 264.364);
+}
+
+/*
+ * `dark:` variants key off a class rather than `prefers-color-scheme`. The palette
+ * above is unconditionally dark, so under the media-query default a visitor whose OS
+ * is set to light would get dark colours with every `dark:` utility inert — vendored
+ * components would render half-themed. The class is set on <html> in `__root.tsx`.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+	--color-faint: var(--faint);
+
+	--color-sidebar: var(--sidebar);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-ring: var(--sidebar-ring);
+
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+	html {
+		/* Makes form controls and scrollbars render dark too. */
+		color-scheme: dark;
+	}
+
+	body {
+		background-color: var(--color-background);
+		color: var(--color-foreground);
+	}
+
+	:focus-visible {
+		outline: 2px solid var(--color-ring);
+		outline-offset: 2px;
+	}
+}
+
+/*
+ * Rendered model output. Markdown produces bare tags — `<h2>`, `<ul>`, `<pre>` — with
+ * no classes to hook onto, so they are styled here rather than in the component.
+ * Carried over from the Svelte app with its token references translated; nothing in
+ * this scaffold renders markdown yet.
+ *
+ * house-elf-shi.11 adopts Streamdown, which ships styling of its own. If it covers
+ * this, delete this layer there rather than maintaining two.
+ */
+@layer components {
+	.markdown {
+		line-height: 1.65;
+	}
+
+	.markdown > :first-child {
+		margin-block-start: 0;
+	}
+
+	.markdown > :last-child {
+		margin-block-end: 0;
+	}
+
+	.markdown p,
+	.markdown ul,
+	.markdown ol,
+	.markdown blockquote,
+	.markdown pre,
+	.markdown table {
+		margin-block: 0.75em;
+	}
+
+	.markdown h1,
+	.markdown h2,
+	.markdown h3,
+	.markdown h4 {
+		margin-block: 1.2em 0.5em;
+		font-weight: 600;
+		line-height: 1.3;
+	}
+
+	.markdown h1 {
+		font-size: 1.35em;
+	}
+
+	.markdown h2 {
+		font-size: 1.2em;
+	}
+
+	.markdown h3 {
+		font-size: 1.05em;
+	}
+
+	.markdown ul,
+	.markdown ol {
+		padding-inline-start: 1.5em;
+	}
+
+	.markdown ul {
+		list-style: disc;
+	}
+
+	.markdown ol {
+		list-style: decimal;
+	}
+
+	.markdown li {
+		margin-block: 0.25em;
+	}
+
+	.markdown a {
+		color: var(--color-primary);
+		text-decoration: underline;
+		text-underline-offset: 2px;
+	}
+
+	.markdown blockquote {
+		border-inline-start: 2px solid var(--color-border);
+		padding-inline-start: 0.9em;
+		color: var(--color-muted-foreground);
+	}
+
+	.markdown hr {
+		margin-block: 1.5em;
+		border-color: var(--color-border);
+	}
+
+	/* Inline code. Fenced blocks are `pre > code` and keep Shiki's colours. */
+	.markdown :not(pre) > code {
+		border-radius: 0.25rem;
+		background-color: var(--color-muted);
+		padding: 0.1em 0.35em;
+		font-size: 0.9em;
+	}
+
+	.markdown pre {
+		overflow-x: auto;
+		border: 1px solid var(--color-border);
+		border-radius: 0.5rem;
+		padding: 0.75rem 0.9rem;
+		font-size: 0.9em;
+		line-height: 1.5;
+	}
+
+	.markdown table {
+		display: block;
+		overflow-x: auto;
+		border-collapse: collapse;
+	}
+
+	.markdown th,
+	.markdown td {
+		border: 1px solid var(--color-border);
+		padding: 0.35em 0.6em;
+		text-align: start;
+	}
+
+	.markdown th {
+		background-color: var(--color-muted);
+		font-weight: 600;
+	}
+
+	.markdown img {
+		max-width: 100%;
+		border-radius: 0.5rem;
+	}
+}

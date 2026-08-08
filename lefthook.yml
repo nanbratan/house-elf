@@ -18,11 +18,11 @@ pre-commit:
     # (.eslintcache), both git-ignored. `--cache-strategy content` beats the default
     # `metadata` — a cache an mtime can fool does not belong in front of a commit.
     - name: format
-      glob: '*.{ts,js,mjs,svelte,json,jsonc,css,md,yml,yaml,html}'
+      glob: '*.{ts,tsx,js,jsx,mjs,svelte,json,jsonc,css,md,yml,yaml,html}'
       run: bun run format:check {staged_files}
 
     - name: lint
-      glob: '*.{ts,js,mjs,svelte}'
+      glob: '*.{ts,tsx,js,jsx,mjs,svelte}'
       run: bun run lint {staged_files}
 
     # `vitest related` runs only the tests that import the staged files, directly or
@@ -37,6 +37,11 @@ pre-commit:
     - name: test-web
       root: apps/web/
       glob: '*.{ts,svelte}'
+      run: bun run test:related {staged_files}
+
+    - name: test-web-react
+      root: apps/web-react/
+      glob: '*.{ts,tsx}'
       run: bun run test:related {staged_files}
 
 # `bun run verify`, decomposed — but split by workspace, not by stage.
@@ -133,3 +138,21 @@ pre-push:
             run: bun run --filter '@house-elf/server' test
           - name: build
             run: bun run --filter '@house-elf/server' build
+
+    - name: web-react
+      glob:
+        - 'apps/web-react/**'
+        - 'packages/**'
+        - 'package.json'
+        - 'bun.lock'
+        - 'tsconfig.base.json'
+        - 'vitest.shared.ts'
+      group:
+        piped: true
+        jobs:
+          - name: check
+            run: bun run --filter '@house-elf/web-react' check
+          - name: test
+            run: bun run --filter '@house-elf/web-react' test
+          - name: build
+            run: bun run --filter '@house-elf/web-react' build

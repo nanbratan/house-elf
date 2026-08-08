@@ -56,8 +56,12 @@ matching() {
 # Filters by workspace prefix and strips it, so the workspace's own script receives
 # paths relative to its root. Vitest needs this: SvelteKit's Vite plugin resolves
 # `$lib` and `$app` against the working directory, so the run must happen in there.
+#
+# Newlines are flattened to spaces: the result is interpolated into a `bash -c`
+# string, and a multi-line value there runs the first path as the command and every
+# remaining line as its own command.
 in_workspace() {
-	matching "$2" | grep "^$1" | sed "s|^$1||" || true
+	matching "$2" | grep "^$1" | sed "s|^$1||" | tr '\n' ' ' || true
 }
 
 FAILED=""
@@ -79,11 +83,12 @@ if [ "$ALL" -eq 1 ]; then
 	run types bunx tsc --noEmit --incremental -p tsconfig.json
 	run test:server bun run --filter '@house-elf/server' test:unit
 	run test:web bun run --filter '@house-elf/web' test:unit
+	run test:web-react bun run --filter '@house-elf/web-react' test:unit
 else
-	FMT=$(matching '\.(ts|js|mjs|svelte|json|jsonc|css|md|yml|yaml|html)$')
+	FMT=$(matching '\.(ts|tsx|js|jsx|mjs|svelte|json|jsonc|css|md|yml|yaml|html)$')
 	[ -n "$FMT" ] && run format bun run format:check $FMT
 
-	SRC=$(matching '\.(ts|js|mjs|svelte)$')
+	SRC=$(matching '\.(ts|tsx|js|jsx|mjs|svelte)$')
 	if [ -n "$SRC" ]; then
 		run lint bun run lint $SRC
 		# Unscoped: tsc has no useful per-file mode here, and incremental costs ~2s.
@@ -99,6 +104,11 @@ else
 	WEB=$(in_workspace 'apps/web/' '\.(ts|svelte)$')
 	if [ -n "$WEB" ]; then
 		run test:web bash -c "cd apps/web && bun run test:related $WEB"
+	fi
+
+	WEB_REACT=$(in_workspace 'apps/web-react/' '\.(ts|tsx)$')
+	if [ -n "$WEB_REACT" ]; then
+		run test:web-react bash -c "cd apps/web-react && bun run test:related $WEB_REACT"
 	fi
 fi
 
