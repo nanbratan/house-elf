@@ -48,7 +48,8 @@ export default mergeConfig(
 				],
 
 				thresholds: {
-					// Tools are real logic with real side effects (03-testing.md).
+					// Tools are real logic with real side effects
+					// (.github/instructions/testing.instructions.md).
 					'src/mastra/tools/**': {
 						lines: 90,
 						branches: 85

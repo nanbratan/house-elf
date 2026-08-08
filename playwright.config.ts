@@ -1,8 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * E2E is deliberately small (see 03-testing.md): genuine user journeys, plus the
- * handful of assertions jsdom cannot make because it has no layout engine.
+ * E2E is deliberately small (see .github/instructions/testing.instructions.md):
+ * genuine user journeys, plus the handful of assertions jsdom cannot make because
+ * it has no layout engine.
  */
 export default defineConfig({
 	testDir: './tests/e2e',
