@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# The pre-commit hook, runnable on demand.
+# The pre-commit hook, runnable on demand. This is the gate to run before a commit.
 #
-# `bun run verify` is the real gate and stays the bar for finishing a task. It is also
-# slow, because it is unscoped: every workspace checked, tested with coverage, and
-# built. That is the wrong tool to reach for after editing three files.
+# `bun run verify` is unscoped and slow: every workspace checked, tested with
+# coverage, and built. That is the wrong tool to reach for after editing three files,
+# and nothing needs it there — the pre-push hook runs the same work decomposed per
+# workspace, and CI runs it serially after that. Reach for it by hand only when a
+# change could have broken something outside the files it touched.
 #
 # This runs the same checks the pre-commit hook runs, over the same set of files the
 # commit would contain — staged if anything is staged, otherwise everything changed
@@ -103,7 +105,6 @@ fi
 echo
 if [ -n "$FAILED" ]; then
 	echo "✗ failed:$FAILED"
-	echo "  (this is the fast gate — 'bun run verify' is still the bar before a task is done)"
 	exit 1
 fi
-echo "✓ fast checks passed — run 'bun run verify' before calling the task done"
+echo "✓ fast checks passed"

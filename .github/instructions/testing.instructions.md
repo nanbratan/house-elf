@@ -5,8 +5,31 @@ applyTo: '**/*.test.ts, **/*.spec.ts, **/*.svelte.test.ts, apps/*/tests/**, test
 
 # Testing
 
-Strategy and layer boundaries live in [docs/plan/03-testing.md](../../docs/plan/03-testing.md).
 These are the rules about how an individual test is written.
+
+## Agents are non-deterministic; almost everything around them is not
+
+Only one thing here is genuinely untestable — whether the prose a model produced is
+_good_. Everything else is ordinary software and gets ordinary tests:
+
+| What you are testing                           | How                                     |
+| ---------------------------------------------- | --------------------------------------- |
+| Tool logic — render, parse, calculate          | Unit tests, side effects injected       |
+| Whether the agent calls the right tool         | `MockLanguageModelV2` from `ai/test`    |
+| Whether memory persists and is scoped right    | Integration tests against real Postgres |
+| Whether a workflow branches, suspends, resumes | Integration tests, mocked models        |
+| UI rendering of stream parts                   | Component tests, synthetic streams      |
+| Whether the CV it wrote is any good            | Not unit-testable. Evals, or your eyes. |
+
+`MockLanguageModelV2` is load-bearing: you supply a scripted response, including tool
+calls and streamed chunks, and the agent runs deterministically with no network and
+no cost. Verify its import path against the installed `ai` package — do not recall it.
+
+**Never assert on model prose.** No `expect(response).toContain('protein')`. Assert on
+tool calls, structured output shape, and persisted state.
+
+**No network in unit or integration tests.** Real provider calls are slow, costly and
+flaky.
 
 ## A test asserts an outcome, not a mechanism
 
@@ -40,6 +63,25 @@ every in-repo child component with a minimal stub. Test leaf behavior at the lea
 parent tests cover only parent-owned behavior and the child contract (props and
 callbacks). Do not repeat a grandchild interaction through each ancestor.
 Cross-component user flows belong in E2E tests.
+
+Query by role and accessible name, not by CSS selector, so tests survive markup
+refactors. Feed synthetic `UIMessage` fixtures — never run a model.
+
+Rune-heavy logic (`.svelte.ts`) is tested directly with `$state`, `$effect.root` and
+`flushSync`, without mounting a component. Prefer this: if logic can be extracted
+from a component and tested in isolation, extract it. Where both exist, the
+`.svelte.ts` test owns the rules and the component test owns only the wiring — that
+the behaviour is attached to the right elements, and that what it decides reaches the
+screen.
+
+> **jsdom has no layout engine**, so `scrollHeight`, `scrollTop`,
+> `getBoundingClientRect` and `IntersectionObserver` do not behave realistically.
+> Stubbing those numbers is fair when what is under test is our own arithmetic — "is
+> 200px from the bottom still following?" is our rule, not the browser's. It is not
+> fair as evidence that scrolling works: that a `scroll` event fires at all, that
+> `scrollTo` moves anything, that a `ResizeObserver` notices. Those go to Playwright,
+> and to a real browser, before the task is called done. A unit test that dispatches
+> its own `scroll` event cannot discover that nothing dispatches it in real life.
 
 ## A stub renders nothing and invents nothing
 
@@ -81,7 +123,7 @@ framework moves.
 ## A test is not done until a mutation proves it
 
 Green means nothing on its own. Break the code the test claims to cover and watch it
-fail — then restore. Record the mutation in the PROGRESS entry when it is load-bearing.
+fail — then restore. Record the mutation in the bead's notes when it is load-bearing.
 
 Each mutation should fail **exactly one** test. A mutation that fails nothing means
 the test is decorative; one that fails five means the tests overlap.
@@ -94,14 +136,42 @@ A fix that never had a red test does not stay fixed.
 ## Coverage is a floor, not a goal
 
 Thresholds exist to catch whole files nobody tested. Do not write a test to move a
-number — a test that exists only for coverage is worse than the gap it fills.
+number — a test that exists only for coverage is worse than the gap it fills. If a
+threshold is pushing you toward a meaningless test, exclude the file in the Vitest
+config with a written reason instead.
+
+| Area                               | Line | Branch |
+| ---------------------------------- | ---- | ------ |
+| `packages/shared`                  | 100% | 100%   |
+| `apps/server/src/mastra/tools`     | 90%  | 85%    |
+| `apps/server/src/mastra/workflows` | 85%  | 80%    |
+| `apps/web/src/lib`                 | 85%  | 80%    |
+| Global floor                       | 80%  | 75%    |
+
+Excluded deliberately, each with a comment in the config: `src/mastra/index.ts` (pure
+wiring), agent definition files (prompts and config — their behaviour is tested via
+mocked-model integration tests), SvelteKit `+layout`/`+page` boilerplate with no
+logic, generated and type-only files.
 
 ## Placement
 
 - `src/**/*.test.ts` — unit. Pure logic, no I/O, no containers. This is the subset
   the pre-commit hook runs, so it must stay fast.
-- `tests/**/*.integration.test.ts` — needs real Postgres (`bun run db:up`).
-- `tests/e2e/*.spec.ts` — Playwright, real browser.
+- `tests/**/*.integration.test.ts` — needs real Postgres (`bun run db:up`). Real
+  Postgres and real pgvector, because the things most likely to break — memory
+  scoping, vector queries, workflow snapshots — are precisely what a mock would hide.
+  Give each test a unique resource and thread prefix so they can run in parallel.
+- `tests/e2e/*.spec.ts` — Playwright, real browser. Slow and brittle by nature, so
+  keep them to genuine user journeys plus the assertions jsdom cannot make. Fewer
+  than ten, total.
 
-Run the whole gate with `bun run verify` from the repo root. Running `bun run test`
-inside `apps/web` only runs the web workspace — the server tests never execute.
+Tests must be order-independent and parallel-safe: unique ids per test, no shared
+mutable fixtures.
+
+Delete tests that no longer earn their keep. One that breaks on every refactor
+without ever catching a bug is a liability.
+
+`bun run verify:fast` runs only the tests that import your changed files, which is
+the right loop while working. When you do run a workspace's tests directly, run them
+from the repo root — `bun run test` inside `apps/web` only runs the web workspace,
+and the server tests never execute.

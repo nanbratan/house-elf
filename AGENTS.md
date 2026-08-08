@@ -35,8 +35,10 @@ user teaches you a new one, capture it: `.github/skills/capture-convention/SKILL
    Done is met and verified _by running the app_, not by reading the code.
 4. **Do not scaffold ahead.** If the current milestone does not need a file, do not
    create it. Premature abstraction is the main risk on a one-person project.
-5. **Every task ends green.** `bun run verify` (check, lint, format:check, test,
-   build) must pass before a task is done — per task, not per milestone. Never defer
+5. **Every task ends green.** `bun run verify:fast` (format, lint, types, and the
+   tests importing your changed files) must pass before every commit. The pre-push
+   hook runs the full gate and CI runs it again — do not run the slow `bun run
+verify` by hand unless the change reaches beyond the files it touched. Never defer
    tests to "later". A bug fix starts with a failing test.
 6. **Ask when the plan is ambiguous.** It is deliberately not exhaustive about UI
    micro-decisions. Ask rather than guess on anything user-visible.
@@ -50,7 +52,7 @@ Bun (not npm/node) · SvelteKit 2 + Svelte 5 runes · Tailwind v4 · Mastra · P
 
 ```bash
 bun run dev       # everything
-bun run verify    # the gate — must pass before any task is done
+bun run verify:fast   # the gate before every commit — scoped, seconds
 bun run test      # unit + integration + component, with coverage thresholds
 ```
 

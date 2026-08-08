@@ -24,8 +24,23 @@ browser, and show the output.
 
 ## Finish green, per task
 
-`bun run verify` must pass before a task is done — not before a milestone. Restore any
-mutation or debug edit before committing; check the diff for leftovers.
+`bun run verify:fast` must pass before every commit. It runs the pre-commit hook's
+checks — format, lint, types, and only the tests that import your changed files —
+scoped to what the commit contains, so it costs seconds.
+
+Do not run the full `bun run verify` routinely. The pre-push hook already runs that
+gate, decomposed per workspace and skipping what your change cannot have broken, and
+CI runs it unscoped after that. Reach for it by hand only when you have reason to
+think something outside your changed files broke — a dependency bump, a config
+change, a moved file.
+
+Restore any mutation or debug edit before committing; check the diff for leftovers.
+
+## Commits
+
+Conventional commits (`feat:`, `fix:`, `chore:`, `test:`). One commit per completed
+task, not one per milestone. A bug-fix commit contains the failing test that
+reproduces it.
 
 ## Stop at the task boundary
 

@@ -5,8 +5,8 @@ applyTo: '**/*.ts, **/*.svelte, **/*.js, **/*.mjs'
 
 # TypeScript & code style
 
-Project conventions live in [docs/plan/02-conventions.md](../../docs/plan/02-conventions.md).
-These are the rules about writing the code itself.
+These are the rules about writing the code itself. Why a technology was chosen is in
+Beads: `bd list --all --type decision`.
 
 ## Types
 
@@ -14,8 +14,13 @@ These are the rules about writing the code itself.
 - No type assertions to silence the compiler. An assertion is a claim the compiler
   cannot check — if you need one, comment why it is safe.
 - Validate at system boundaries (request bodies, env, tool inputs) with Zod, then
-  trust the type inside.
+  trust the type inside. Prefer `z.infer<typeof schema>` over declaring the shape
+  twice.
+- ES modules only: `"module": "ES2022"`, `"moduleResolution": "bundler"`,
+  `"strict": true`. CommonJS does not work with Mastra.
 - TypeScript is pinned exactly. Do not bump it as a side effect of another change.
+- Write code so it can be tested: inject side effects — clock, filesystem, process
+  spawn, `fetch` — rather than reaching for them inside a tool body.
 
 ## Errors
 
@@ -55,8 +60,8 @@ Three that are never worth writing:
 
 - **Comments on absent code.** "There is deliberately no X filter here." The reader
   cannot see the thing you did not do, so this reads as a warning about code that
-  exists. If a rejected approach needs recording, it belongs in the plan document,
-  where the alternatives already live.
+  exists. A rejected approach belongs in a Beads decision issue, where the
+  alternatives already live.
 - **Changelog comments.** "Now uses Y instead of Z", "kept for T1.7.4". Git knows. A
   comment describing an edit is addressed to a reviewer who will be gone by the next
   commit.
@@ -81,20 +86,91 @@ dependencies added to test our own glue are usually not worth it.
 
 Bun only — never `npm`, `pnpm`, `yarn`, or `npx`. Use `bunx` for one-off tools.
 
+## Mastra
+
+Your training data on Mastra is **wrong** — constructor signatures, option names and
+method names have all changed. A type error in Mastra code is far more likely to be
+stale knowledge than a genuine mistake. Never write it from memory.
+
+The `mastra` MCP server (`searchMastraDocs`, `readMastraDocs`, `getMastraExports`)
+indexes the docs embedded in the installed packages and is the cheapest place to
+start. **It under-reports, so a null result from it proves nothing.** Measured on
+2026-08-08: `listMastraPackages` omitted `@mastra/pg` although it ships a full
+`dist/docs/`; `getMastraExportDetails` for `Agent` failed with "No SOURCE_MAP.json
+found for @mastra/core"; and `searchMastraDocs` found nothing for "working memory
+resource scope", which `docs-memory-working-memory.md` states in its opening lines.
+
+So when the MCP comes back empty or thin, go to the files — they are the authority,
+and they match the installed version exactly:
+
+1. `ls node_modules/@mastra/` — see what is actually installed.
+2. Read `node_modules/@mastra/<pkg>/dist/docs/references/`, grep included.
+3. If that does not answer it, read the `.d.ts` in the same package.
+
+Never invent a model id. Run `.agents/skills/mastra/scripts/provider-registry.mjs`
+for valid `provider/model` strings. `apps/server/src/mastra/models.ts` is the only
+place ids are written down.
+
+Every tool gets a `description` and a Zod `inputSchema`, with a description on each
+field. Those descriptions are prompt text — write them for the model, not for a
+human reader.
+
+Agent instructions live in the agent file as a template literal, not in a separate
+prompt file, until there are more than about five agents.
+
 ## Placement
 
 - One agent per file in `apps/server/src/mastra/agents/`, one tool per file in
   `tools/`, one middleware per file in `middleware/`.
 - A file whose kind has a folder goes in it. The first second-of-its-kind creates the
   folder; one file does not.
-- No `utils/` junk drawer. Domain modules keep domain names.
+- No `utils/` junk drawer. Domain modules keep domain names — the model allowlist and
+  error shaping stay at the root of `src/mastra/`.
 - `src/mastra/index.ts` only wires things together — no logic.
 - SvelteKit server routes are a thin proxy: zero business logic, which lives on the
   Mastra server.
 
+### Web
+
+- `src/lib/components/<area>/` holds components and nothing else. Constants go to
+  `src/lib/constants/`, plain modules to `src/lib/utils/`, reusable reactive
+  behaviour to `src/lib/state/` as `*.svelte.ts`. Nothing lives in the root of
+  `src/lib/` — the first file to need a folder creates it rather than settling there.
+- `apps/web/tests/` mirrors `src/`. A component's test is named for the component:
+  `ToolCard.svelte` → `tests/components/chat/ToolCard.test.ts`. Mirrored paths keep
+  names unambiguous, so no test needs a suffix to stay unique.
+- A string constant repeated across components (states, modes, keys) gets a named
+  `as const` object in its own module, and `satisfies` the upstream type where one
+  exists. Do not spell the same literal in two files.
+
+## Environment
+
+All secrets live in `.env` at the repo root and are never committed. Keep
+`.env.example` current — every variable, with a comment. The server reads env at
+startup and fails loudly on a missing required value.
+
 ## Svelte
 
 Svelte 5 runes only. No `export let`, no legacy stores.
+
+Tailwind utility classes inline. No component library — add `bits-ui` only when a
+real accessibility need appears, such as a dialog or a dropdown.
+
+Keep the chat message renderer part-driven: switch on the message part `type`
+(`text`, `reasoning`, `tool-*`, `source`) so an unknown part type degrades gracefully
+rather than crashing.
+
+### Shared reactive behaviour is a `.svelte.ts` module
+
+Svelte's answer to a hook: a `.svelte.ts` module exporting a `create*` factory that
+owns the `$state`/`$derived` and returns getters. No `use` prefix — in Svelte, `use:`
+means an action.
+
+### An `$effect` reads only what it must
+
+Every reactive value an effect reads is a reason for it to re-run, and re-running
+fires its cleanup. A timer inside an effect that reads its own writes will cancel
+itself.
 
 ### Props get a named type
 

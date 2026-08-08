@@ -84,16 +84,14 @@ bun run verify:fast
 ```
 
 This is the pre-commit hook, on demand: format, lint, types, and only the tests that
-import your changed files. Seconds, not minutes. Use it freely as you work.
+import your changed files. Seconds, not minutes. Use it freely as you work, and make
+it pass before every commit.
 
-Then, **before the commit is offered for review**:
-
-```bash
-bun run verify
-```
-
-`verify:fast` is a fast filter, not the bar. The standing rule is _every task ends
-green_ — `check`, `lint`, `format:check`, `test`, `build`, all passing.
+Do not run the full `bun run verify` as a matter of course — it is unscoped and slow,
+and the pre-push hook already runs that work decomposed per workspace, with CI
+running it serially after that. Reach for it by hand only when the change could have
+broken something outside the files it touched: a dependency bump, a config or build
+change, a moved or deleted file.
 
 Restore any debug edit or mutation probe, and read your own diff for leftovers:
 

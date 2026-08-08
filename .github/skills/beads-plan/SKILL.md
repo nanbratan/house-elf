@@ -122,7 +122,7 @@ Rules that hold in this repo:
 
 - Slice by **layer or capability**, never by file type. There is no "write the tests"
   chunk — tests ship with the code that needs them, always.
-- Every chunk ends green: `bun run verify` passes with it.
+- Every chunk ends green: `bun run verify:fast` passes with it.
 - Every chunk is independently reviewable. If chunk 3 is meaningless without chunk 4,
   they are one chunk.
 - Size it to a focused session. If you cannot state the deliverable in one sentence,
