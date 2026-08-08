@@ -3,7 +3,7 @@ import type { UIDataTypes, UIMessagePart, UITools } from 'ai';
 
 import { partState } from '../../constants/part-state.ts';
 import { MessageResponse } from './MessageResponse.tsx';
-import { Shimmer } from './Shimmer.tsx';
+import { Shimmer } from '../vendor/ai-elements/shimmer.tsx';
 
 export interface MessagePartProps {
 	part: UIMessagePart<UIDataTypes, UITools>;

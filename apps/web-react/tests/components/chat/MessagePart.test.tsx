@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { MessagePart } from '../../../src/lib/components/chat/MessagePart.tsx';
 import { MessageResponse } from '../../../src/lib/components/chat/MessageResponse.tsx';
-import { Shimmer } from '../../../src/lib/components/chat/Shimmer.tsx';
+import { Shimmer } from '../../../src/lib/components/vendor/ai-elements/shimmer.tsx';
 
 // The renderer and the shimmer are tested at their own boundaries; here they
 // are stubs whose call history records what MessagePart handed them.
@@ -14,7 +14,7 @@ vi.mock('../../../src/lib/components/chat/MessageResponse.tsx', () => ({
 	))
 }));
 
-vi.mock('../../../src/lib/components/chat/Shimmer.tsx', () => ({
+vi.mock('../../../src/lib/components/vendor/ai-elements/shimmer.tsx', () => ({
 	Shimmer: vi.fn(({ children }: { children?: ReactNode }) => <span>{children}</span>)
 }));
 

@@ -11,7 +11,7 @@ import { ErrorNotice } from './ErrorNotice.tsx';
 import { Message } from './Message.tsx';
 import { MessageContent } from './MessageContent.tsx';
 import { MessagePart } from './MessagePart.tsx';
-import { Shimmer } from './Shimmer.tsx';
+import { Shimmer } from '../vendor/ai-elements/shimmer.tsx';
 
 export interface MessageTranscriptProps {
 	messages: UIMessage[];
