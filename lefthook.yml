@@ -34,8 +34,14 @@ pre-commit:
       glob: '*.ts'
       run: bun run test:related {staged_files}
 
+    # `exclude` is load-bearing: lefthook's `root` filter is a plain string prefix, so
+    # without it `apps/web/` also swallows `apps/web-react/` files and hands this job
+    # paths like `.-react/tests/router.test.ts`. Vitest finds nothing in them and exits
+    # 0, so the job reported green while testing nothing.
     - name: test-web
       root: apps/web/
+      exclude:
+        - 'apps/web-react/**'
       glob: '*.{ts,svelte}'
       run: bun run test:related {staged_files}
 
