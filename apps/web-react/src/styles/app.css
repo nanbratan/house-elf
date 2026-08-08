@@ -1,6 +1,14 @@
 @import 'tailwindcss';
 
 /*
+ * Supplies `animate-in`, `fade-in-*`, `zoom-in-*` and `slide-in-from-*`, used by 14
+ * vendored components. They import no stylesheet themselves — `shadcn init` would
+ * normally add this line, and we do not run it. Missing it fails silently: the
+ * utilities are undefined, so components render with no transition.
+ */
+@import 'tw-animate-css';
+
+/*
  * shadcn's stock `new-york-v4` slate palette, dark values, copied verbatim from the
  * registry (https://ui.shadcn.com/r/colors/slate.json, cssVarsV4.dark) so that files
  * copied out of `vendor/ai-elements/` drop in unedited. Do not rename these tokens:

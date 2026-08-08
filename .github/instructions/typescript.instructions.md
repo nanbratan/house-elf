@@ -36,6 +36,12 @@ Beads: `bd list --all --type decision`.
 
 Comment **why**, never **what**. The code says what it does.
 
+The reader is an agent with a token budget, not a browser of prose. A comment earns
+its place only if someone would act differently for having read it — that is the whole
+test. Justification, narrative, and the reasoning that led you to the code fail it:
+they cost every future reader tokens and get skipped. Keep the conclusion, drop the
+argument for it.
+
 The comments worth writing record something the next reader cannot see: a constraint
 in someone else's library, a decision and its rejected alternative, a bug that was
 caused by the obvious version of this code.
@@ -55,7 +61,7 @@ If you delete or reverse a change, delete its comment. A comment explaining code
 is no longer there tells the next reader a decision was made and gives them no way to
 find out which.
 
-Three that are never worth writing:
+Four that are never worth writing:
 
 - **Comments on absent code.** "There is deliberately no X filter here." The reader
   cannot see what you did not do, so it reads as a warning about code that exists. A
@@ -64,6 +70,9 @@ Three that are never worth writing:
 - **Statistics for their own sake.** One measurement that forces a decision earns its
   line — `supported_efforts` is never null, so absent means on/off. A table of counts
   nobody acts on is a notebook entry.
+- **Comments that argue.** Rehearsing the evidence, alternatives or measurements
+  behind a line in order to justify it. The bead holds the reasoning; the source keeps
+  the conclusion.
 
 If a note has no reader who would act differently for having read it, it does not go
 in the source.

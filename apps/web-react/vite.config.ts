@@ -168,7 +168,17 @@ export default defineConfig(({ mode }) =>
 					// tested at its own boundary. Keeping them logic-free is also what
 					// keeps the router's code-splitting working, since a route file that
 					// exports anything else opts out of it.
-					'src/routes/index.tsx'
+					'src/routes/index.tsx',
+
+					// Unedited copies out of `vendor/ai-elements/` — third-party markup,
+					// so testing it would be testing shadcn. Excluded as a directory
+					// because one copy is large enough to sink the threshold alone
+					// (`prompt-input.tsx` is 1,463 lines against 433 of app source).
+					//
+					// Tracks UNEDITED, not location: a component that needs a
+					// behavioural change moves out into `src/lib/components/` and is
+					// tested there. Compose around these files rather than editing them.
+					'src/lib/components/vendor/**'
 				]
 			}
 		}
