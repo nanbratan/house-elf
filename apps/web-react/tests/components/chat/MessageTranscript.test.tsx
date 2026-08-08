@@ -93,10 +93,48 @@ describe('MessageTranscript', () => {
 		expect(messageParts().map((part) => part.type)).toEqual(['text', 'reasoning', 'text']);
 	});
 
-	it('shows a waiting indicator while the reply is submitted', () => {
+	it('shows a waiting indicator from send until the first visible content', () => {
 		renderTranscript({ status: 'submitted' });
+		expect(shimmerTexts()).toContain('Waiting for a reply…');
+	});
+
+	it('keeps the waiting indicator while a stream has no rendered parts yet', () => {
+		// The status flips to streaming on the response stream's first chunk, which
+		// is bookkeeping (start/step-start), not visible text — the gap the user
+		// sees as a frozen UI.
+		renderTranscript({
+			status: 'streaming',
+			messages: [
+				{ id: 'message-1', role: 'user', parts: [{ type: 'text', text: 'Hello' }] },
+				{ id: 'message-2', role: 'assistant', parts: [] }
+			]
+		});
 
 		expect(shimmerTexts()).toContain('Waiting for a reply…');
+	});
+
+	it('drops the waiting indicator once the assistant message has a part', () => {
+		renderTranscript({
+			status: 'streaming',
+			messages: [
+				{ id: 'message-1', role: 'user', parts: [{ type: 'text', text: 'Hello' }] },
+				{ id: 'message-2', role: 'assistant', parts: [{ type: 'text', text: 'Hi' }] }
+			]
+		});
+
+		expect(shimmerTexts()).not.toContain('Waiting for a reply…');
+	});
+
+	it('renders no per-message role labels in a two-party conversation', () => {
+		renderTranscript({
+			messages: [
+				{ id: 'message-1', role: 'user', parts: [{ type: 'text', text: 'Hello' }] },
+				{ id: 'message-2', role: 'assistant', parts: [{ type: 'text', text: 'Hi' }] }
+			]
+		});
+
+		expect(screen.queryByText('You')).not.toBeInTheDocument();
+		expect(screen.queryByText('house-elf')).not.toBeInTheDocument();
 	});
 
 	it('passes errors to the error notice with the retry callback', () => {

@@ -38,6 +38,11 @@ function messagePartKey(
 
 export function MessageTranscript({ messages, status, error, onRetry }: MessageTranscriptProps) {
 	const busy = status === chatStatus.submitted || status === chatStatus.streaming;
+	const lastMessage = messages.at(-1);
+	// The status leaves 'submitted' on the response stream's first chunk, which is
+	// bookkeeping, not visible content — without this the indicator unmounts into a
+	// dead gap between send and the first rendered part.
+	const waiting = busy && (lastMessage === undefined || lastMessage.parts.length === 0);
 
 	return (
 		<Conversation className="min-h-0">
@@ -48,22 +53,20 @@ export function MessageTranscript({ messages, status, error, onRetry }: MessageT
 					</ConversationEmptyState>
 				) : null}
 
-				{messages.map((message) => (
-					<Message from={message.role} key={message.id}>
-						<div className="mb-1 text-xs font-medium text-faint">
-							{message.role === 'user' ? 'You' : 'house-elf'}
-						</div>
-						<MessageContent>
-							{message.parts.map((part, occurrence) => (
-								<MessagePart key={messagePartKey(message.id, part, occurrence)} part={part} />
-							))}
-						</MessageContent>
-					</Message>
-				))}
+				{messages.map((message) =>
+					message.parts.length === 0 ? null : (
+						<Message from={message.role} key={message.id}>
+							<MessageContent>
+								{message.parts.map((part, occurrence) => (
+									<MessagePart key={messagePartKey(message.id, part, occurrence)} part={part} />
+								))}
+							</MessageContent>
+						</Message>
+					)
+				)}
 
-				{status === chatStatus.submitted ? (
+				{waiting ? (
 					<Message from="assistant">
-						<div className="mb-1 text-xs font-medium text-faint">house-elf</div>
 						<MessageContent className="text-muted-foreground">
 							<Shimmer>Waiting for a reply…</Shimmer>
 						</MessageContent>
