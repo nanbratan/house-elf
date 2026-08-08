@@ -7,29 +7,26 @@ applyTo: '**/*.test.ts, **/*.spec.ts, **/*.svelte.test.ts, apps/*/tests/**, test
 
 These are the rules about how an individual test is written.
 
-## Agents are non-deterministic; almost everything around them is not
+## Model non-determinism is not an excuse
 
-Only one thing here is genuinely untestable — whether the prose a model produced is
-_good_. Everything else is ordinary software and gets ordinary tests:
+Only one thing is genuinely untestable: whether the prose a model produced is _good_.
+Everything else is ordinary software.
 
-| What you are testing                           | How                                     |
-| ---------------------------------------------- | --------------------------------------- |
-| Tool logic — render, parse, calculate          | Unit tests, side effects injected       |
-| Whether the agent calls the right tool         | `MockLanguageModelV2` from `ai/test`    |
-| Whether memory persists and is scoped right    | Integration tests against real Postgres |
-| Whether a workflow branches, suspends, resumes | Integration tests, mocked models        |
-| UI rendering of stream parts                   | Component tests, synthetic streams      |
-| Whether the CV it wrote is any good            | Not unit-testable. Evals, or your eyes. |
+`MockLanguageModelV2` from `ai/test` is what makes the agent layer testable — supply
+a scripted response, including tool calls and streamed chunks, and the agent runs
+deterministically with no network and no cost. Verify its import path against the
+installed `ai` package rather than recalling it.
 
-`MockLanguageModelV2` is load-bearing: you supply a scripted response, including tool
-calls and streamed chunks, and the agent runs deterministically with no network and
-no cost. Verify its import path against the installed `ai` package — do not recall it.
+**Never assert on model prose.** No `expect(response).toContain('protein')`. Assert
+on tool calls, structured output shape, and persisted state.
 
-**Never assert on model prose.** No `expect(response).toContain('protein')`. Assert on
-tool calls, structured output shape, and persisted state.
+**No network in unit or integration tests.** Mock the model.
 
-**No network in unit or integration tests.** Real provider calls are slow, costly and
-flaky.
+Which layer: tool logic is a unit test with side effects injected. Whether the agent
+picks the right tool is `MockLanguageModelV2`. Whether memory scopes correctly, or a
+workflow branches, suspends and resumes, is an integration test against real Postgres
+with the model mocked. Whether the prose is any _good_ is not unit-testable — evals,
+or your eyes.
 
 ## A test asserts an outcome, not a mechanism
 
@@ -64,34 +61,31 @@ parent tests cover only parent-owned behavior and the child contract (props and
 callbacks). Do not repeat a grandchild interaction through each ancestor.
 Cross-component user flows belong in E2E tests.
 
-Query by role and accessible name, not by CSS selector, so tests survive markup
-refactors. Feed synthetic `UIMessage` fixtures — never run a model.
+Query by role and accessible name, not by CSS selector. Feed synthetic `UIMessage`
+fixtures — never run a model.
 
 Rune-heavy logic (`.svelte.ts`) is tested directly with `$state`, `$effect.root` and
-`flushSync`, without mounting a component. Prefer this: if logic can be extracted
-from a component and tested in isolation, extract it. Where both exist, the
-`.svelte.ts` test owns the rules and the component test owns only the wiring — that
-the behaviour is attached to the right elements, and that what it decides reaches the
-screen.
+`flushSync`, without mounting. Prefer this: if logic can be extracted from a component
+and tested in isolation, extract it. Where both exist, the `.svelte.ts` test owns the
+rules and the component test owns only the wiring.
 
 > **jsdom has no layout engine**, so `scrollHeight`, `scrollTop`,
 > `getBoundingClientRect` and `IntersectionObserver` do not behave realistically.
-> Stubbing those numbers is fair when what is under test is our own arithmetic — "is
-> 200px from the bottom still following?" is our rule, not the browser's. It is not
-> fair as evidence that scrolling works: that a `scroll` event fires at all, that
-> `scrollTo` moves anything, that a `ResizeObserver` notices. Those go to Playwright,
-> and to a real browser, before the task is called done. A unit test that dispatches
-> its own `scroll` event cannot discover that nothing dispatches it in real life.
+> Stubbing those numbers is fair when our own arithmetic is under test — "is 200px
+> from the bottom still following?" is our rule, not the browser's. It is not
+> evidence that scrolling works: that a `scroll` event fires at all, that `scrollTo`
+> moves anything, that a `ResizeObserver` notices. Those need Playwright and a real
+> browser. A unit test that dispatches its own `scroll` event cannot discover that
+> nothing dispatches it in real life.
 
 ## A stub renders nothing and invents nothing
 
 A child stub records the props it was handed and renders a bare marker element. It
-never grows buttons, labels, or text of its own — invented markup is an assumption
-about the child that no real component has to honour, and a test that clicks it is
-testing the stub.
+never grows buttons, labels or text of its own — invented markup is an assumption no
+real component has to honour, and a test that clicks it is testing the stub.
 
 To exercise a callback the parent passed down, read it back from the recorded props
-and call it. Do not add an affordance to the stub so the test has something to click.
+and call it:
 
 ```ts
 render(ChatView, props);

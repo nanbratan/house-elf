@@ -51,26 +51,22 @@ installed version, not recalled.
 
 ### A comment must survive the code it describes
 
-Every comment is attached to something. If you delete or reverse a change, delete its
-comment too — a doc comment left floating above nothing, or one explaining why code
-that is no longer there was written, tells the next reader that a decision was made
-and gives them no way to find out which.
+If you delete or reverse a change, delete its comment. A comment explaining code that
+is no longer there tells the next reader a decision was made and gives them no way to
+find out which.
 
 Three that are never worth writing:
 
 - **Comments on absent code.** "There is deliberately no X filter here." The reader
-  cannot see the thing you did not do, so this reads as a warning about code that
-  exists. A rejected approach belongs in a Beads decision issue, where the
-  alternatives already live.
-- **Changelog comments.** "Now uses Y instead of Z", "kept for T1.7.4". Git knows. A
-  comment describing an edit is addressed to a reviewer who will be gone by the next
-  commit.
+  cannot see what you did not do, so it reads as a warning about code that exists. A
+  rejected approach belongs in a Beads decision issue.
+- **Changelog comments.** "Now uses Y instead of Z", "kept for T1.7.4". Git knows.
 - **Statistics for their own sake.** One measurement that forces a decision earns its
   line — `supported_efforts` is never null, so absent means on/off. A table of counts
-  nobody acts on is a notebook entry, not a comment.
+  nobody acts on is a notebook entry.
 
-This file is not a notebook. If a note has no reader who would act differently for
-having read it, it does not go in the source.
+If a note has no reader who would act differently for having read it, it does not go
+in the source.
 
 ## Scope
 
@@ -89,23 +85,18 @@ Bun only — never `npm`, `pnpm`, `yarn`, or `npx`. Use `bunx` for one-off tools
 ## Mastra
 
 Your training data on Mastra is **wrong** — constructor signatures, option names and
-method names have all changed. A type error in Mastra code is far more likely to be
-stale knowledge than a genuine mistake. Never write it from memory.
+method names have all changed. Never write it from memory; a type error in Mastra
+code is more likely stale knowledge than a real mistake.
 
-The `mastra` MCP server (`searchMastraDocs`, `readMastraDocs`, `getMastraExports`)
-indexes the docs embedded in the installed packages and is the cheapest place to
-start. **It under-reports, so a null result from it proves nothing.** Measured on
-2026-08-08: `listMastraPackages` omitted `@mastra/pg` although it ships a full
-`dist/docs/`; `getMastraExportDetails` for `Agent` failed with "No SOURCE_MAP.json
-found for @mastra/core"; and `searchMastraDocs` found nothing for "working memory
-resource scope", which `docs-memory-working-memory.md` states in its opening lines.
+Start with the `mastra` MCP server (`searchMastraDocs`, `readMastraDocs`). **It
+under-reports, so an empty result proves nothing** — measured 2026-08-08, it omitted
+`@mastra/pg` despite its full `dist/docs/`, failed on `Agent` with "No SOURCE_MAP.json
+found", and missed "working memory resource scope" that
+`docs-memory-working-memory.md` states in its opening lines.
 
-So when the MCP comes back empty or thin, go to the files — they are the authority,
-and they match the installed version exactly:
-
-1. `ls node_modules/@mastra/` — see what is actually installed.
-2. Read `node_modules/@mastra/<pkg>/dist/docs/references/`, grep included.
-3. If that does not answer it, read the `.d.ts` in the same package.
+When it comes back empty or thin, read the files — they match the installed version.
+`ls node_modules/@mastra/` for what is actually installed, then grep
+`node_modules/@mastra/<pkg>/dist/docs/references/`, then the `.d.ts`.
 
 Never invent a model id. Run `.agents/skills/mastra/scripts/provider-registry.mjs`
 for valid `provider/model` strings. `apps/server/src/mastra/models.ts` is the only
