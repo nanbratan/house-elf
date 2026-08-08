@@ -245,3 +245,34 @@
 		border-radius: 0.5rem;
 	}
 }
+
+@layer components {
+	.shimmer-text {
+		background: linear-gradient(
+			90deg,
+			var(--muted-foreground) 40%,
+			var(--foreground) 50%,
+			var(--muted-foreground) 60%
+		);
+		background-size: 200% 100%;
+		background-clip: text;
+		color: transparent;
+		animation: shimmer-text 1.6s linear infinite;
+	}
+
+	@keyframes shimmer-text {
+		to {
+			background-position: -200% center;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		/* The shimmer works by colour: transparent text over background-clip. Stopping
+		 * the animation without restoring a real colour would leave invisible text. */
+		.shimmer-text {
+			animation: none;
+			background: none;
+			color: var(--muted-foreground);
+		}
+	}
+}
