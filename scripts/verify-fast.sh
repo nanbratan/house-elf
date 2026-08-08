@@ -80,7 +80,8 @@ run() {
 if [ "$ALL" -eq 1 ]; then
 	run format bun run format:check .
 	run lint bun run lint
-	run types bunx tsc --noEmit --incremental -p tsconfig.json
+	# The root `check` script: root tsc, then every workspace's own check.
+	run types bun run check
 	run test:server bun run --filter '@house-elf/server' test:unit
 	run test:web bun run --filter '@house-elf/web' test:unit
 	run test:web-react bun run --filter '@house-elf/web-react' test:unit
@@ -94,6 +95,31 @@ else
 		# Unscoped: tsc has no useful per-file mode here, and incremental costs ~2s.
 		run types bunx tsc --noEmit --incremental -p tsconfig.json
 	fi
+
+	# The root project above includes only `vitest.shared.ts`, `playwright.config.ts`
+	# and `tests/`, so on its own it type-checks no application source at all. Each
+	# workspace is a separate tsconfig and needs its own run.
+	#
+	# `tsc -p` has no useful per-file mode, so the unit of scoping is the workspace,
+	# not the file, and each workspace's own `check` script stays the single
+	# definition of *how* it is checked — plain tsc in most, svelte-check in
+	# apps/web. This only decides which ones run.
+	CHECK=""
+	for ws in server web web-react; do
+		if [ -n "$(in_workspace "apps/$ws/" '\.(ts|tsx|svelte)$')" ]; then
+			CHECK="$CHECK @house-elf/$ws"
+		fi
+	done
+
+	# packages/shared is imported by the apps, so a type change there surfaces in its
+	# dependents rather than in itself — checking it alone would prove nothing.
+	if [ -n "$(in_workspace 'packages/shared/' '\.ts$')" ]; then
+		CHECK="@house-elf/shared @house-elf/server @house-elf/web @house-elf/web-react"
+	fi
+
+	for ws in $CHECK; do
+		run "check:${ws#@house-elf/}" bun run --filter "$ws" check
+	done
 
 	# `vitest related` runs only the tests importing these files, transitively.
 	SERVER=$(in_workspace 'apps/server/' '\.ts$')
