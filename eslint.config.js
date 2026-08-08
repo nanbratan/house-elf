@@ -22,9 +22,9 @@ export default tseslint.config(
 			'apps/web-react/src/routeTree.gen.ts',
 			// Vendored agent skills — third-party scripts, not this project's code.
 			'.agents/',
-			// The ai-elements catalogue: reference material to read and copy out of,
-			// never imported. See vendor/ai-elements/README.md.
-			'vendor/'
+			// The ai-elements catalogue: third-party reference material, byte-identical
+			// to upstream. Customised components live in src/lib/components/ instead.
+			'apps/web-react/src/lib/components/vendor/'
 		]
 	},
 
