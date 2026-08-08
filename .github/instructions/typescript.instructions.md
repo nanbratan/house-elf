@@ -133,6 +133,9 @@ prompt file, until there are more than about five agents.
 - A string constant repeated across components (states, modes, keys) gets a named
   `as const` object in its own module, and `satisfies` the upstream type where one
   exists. Do not spell the same literal in two files.
+- A map keyed by a union type is declared `satisfies Record<Union, T>`, so a member
+  added upstream is a compile error rather than a silent `undefined` at runtime —
+  `src/lib/constants/tool-state.ts` does this against the SDK's `ToolState`.
 
 ## Environment
 

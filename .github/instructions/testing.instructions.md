@@ -1,6 +1,6 @@
 ---
 description: 'Use when writing, reviewing, or changing tests — unit, component, integration, or e2e. Covers what a test may assert, mocking and stubbing limits, mutation-proving, and where test files live.'
-applyTo: '**/*.test.ts, **/*.spec.ts, **/*.svelte.test.ts, apps/*/tests/**, tests/**'
+applyTo: '**/*.test.ts, **/*.test.tsx, **/*.spec.ts, **/*.spec.tsx, **/*.svelte.test.ts, apps/*/tests/**, tests/**'
 ---
 
 # Testing
@@ -53,21 +53,25 @@ A status code returned by a stubbed `json()` is the stub's value, not the code's
 Before writing an `expect`, ask: could this fail if the implementation were wrong?
 If the answer is no, delete it.
 
-## Test Svelte components at their own boundary
+## Test a component at its own boundary
 
-For Svelte component units, render the component under test directly and replace
-every in-repo child component with a minimal stub. Test leaf behavior at the leaf;
-parent tests cover only parent-owned behavior and the child contract (props and
-callbacks). Do not repeat a grandchild interaction through each ancestor.
-Cross-component user flows belong in E2E tests.
+Render the component under test directly and replace every in-repo child component
+with a minimal stub. Test leaf behavior at the leaf; parent tests cover only
+parent-owned behavior and the child contract (props and callbacks). Do not repeat a
+grandchild interaction through each ancestor. Cross-component user flows belong in
+E2E tests.
+
+This is what makes a component safe to use anywhere: it is independent, its own
+logic is proven, and no consumer's test depends on its internals.
 
 Query by role and accessible name, not by CSS selector. Feed synthetic `UIMessage`
 fixtures — never run a model.
 
-Rune-heavy logic (`.svelte.ts`) is tested directly with `$state`, `$effect.root` and
-`flushSync`, without mounting. Prefer this: if logic can be extracted from a component
-and tested in isolation, extract it. Where both exist, the `.svelte.ts` test owns the
-rules and the component test owns only the wiring.
+Logic extracted from a component is tested without mounting: a Svelte `.svelte.ts`
+module directly with `$state`, `$effect.root` and `flushSync`; a React hook with
+`renderHook`. Prefer this — if logic can be extracted and tested in isolation,
+extract it. Where both exist, the extracted module's test owns the rules and the
+component test owns only the wiring.
 
 > **jsdom has no layout engine**, so `scrollHeight`, `scrollTop`,
 > `getBoundingClientRect` and `IntersectionObserver` do not behave realistically.
