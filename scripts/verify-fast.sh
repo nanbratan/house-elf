@@ -31,13 +31,18 @@ trap 'rm -f "$LIST"' EXIT
 if [ "$ALL" -eq 0 ]; then
 	# Staged, unstaged and untracked, all against HEAD, so a partially staged commit
 	# is still fully covered. Deleted paths fall out via the -f test.
+	#
+	# `vendor/` is dropped for the same reason eslint and prettier ignore it, but it
+	# has to be dropped *here* as well: those tools only skip an ignored file
+	# silently when they discover it themselves. Named explicitly on the command
+	# line — which is exactly what this scope does — eslint reports it instead.
 	{
 		git diff --name-only --cached --diff-filter=ACMR
 		git diff --name-only --diff-filter=ACMR
 		git ls-files --others --exclude-standard
 	} | sort -u | while IFS= read -r f; do
 		[ -n "$f" ] && [ -f "$f" ] && printf '%s\n' "$f"
-	done >"$LIST"
+	done | { grep -v '^vendor/' || true; } >"$LIST"
 
 	if [ ! -s "$LIST" ]; then
 		echo "▸ nothing changed against HEAD — use --all to check everything"

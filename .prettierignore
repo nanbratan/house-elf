@@ -10,6 +10,10 @@ bun.lock
 .agents
 skills-lock.json
 
+# The ai-elements catalogue, snapshotted from its registry as reference material.
+# Reformatting it would make the next `diff` against upstream unreadable.
+vendor
+
 # Same rule, other vendors: the Beads plugin manifest ships from upstream, and
 # Serena rewrites its own config. Neither is ours to reformat.
 .copilot-plugin
