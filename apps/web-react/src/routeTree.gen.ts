@@ -10,11 +10,23 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CIdRouteImport } from './routes/c/$id'
+import { Route as CNewRouteImport } from './routes/c/new'
 import { Route as ApiChatAgentIdRouteImport } from './routes/api/chat/$agentId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CIdRoute = CIdRouteImport.update({
+  id: '/c/$id',
+  path: '/c/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CNewRoute = CNewRouteImport.update({
+  id: '/c/new',
+  path: '/c/new',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiChatAgentIdRoute = ApiChatAgentIdRouteImport.update({
@@ -25,27 +37,35 @@ const ApiChatAgentIdRoute = ApiChatAgentIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/c/$id': typeof CIdRoute
+  '/c/new': typeof CNewRoute
   '/api/chat/$agentId': typeof ApiChatAgentIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/c/$id': typeof CIdRoute
+  '/c/new': typeof CNewRoute
   '/api/chat/$agentId': typeof ApiChatAgentIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/c/$id': typeof CIdRoute
+  '/c/new': typeof CNewRoute
   '/api/chat/$agentId': typeof ApiChatAgentIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/chat/$agentId'
+  fullPaths: '/' | '/c/$id' | '/c/new' | '/api/chat/$agentId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/chat/$agentId'
-  id: '__root__' | '/' | '/api/chat/$agentId'
+  to: '/' | '/c/$id' | '/c/new' | '/api/chat/$agentId'
+  id: '__root__' | '/' | '/c/$id' | '/c/new' | '/api/chat/$agentId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CIdRoute: typeof CIdRoute
+  CNewRoute: typeof CNewRoute
   ApiChatAgentIdRoute: typeof ApiChatAgentIdRoute
 }
 
@@ -56,6 +76,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/c/$id': {
+      id: '/c/$id'
+      path: '/c/$id'
+      fullPath: '/c/$id'
+      preLoaderRoute: typeof CIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/c/new': {
+      id: '/c/new'
+      path: '/c/new'
+      fullPath: '/c/new'
+      preLoaderRoute: typeof CNewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/chat/$agentId': {
@@ -70,6 +104,8 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CIdRoute: CIdRoute,
+  CNewRoute: CNewRoute,
   ApiChatAgentIdRoute: ApiChatAgentIdRoute,
 }
 export const routeTree = rootRouteImport

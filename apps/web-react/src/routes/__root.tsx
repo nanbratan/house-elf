@@ -1,6 +1,7 @@
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router';
-import type { ReactNode } from 'react';
+import { Outlet, createRootRoute } from '@tanstack/react-router';
 
+import { AppShell } from '../lib/components/shell/AppShell.tsx';
+import { RootDocument } from '../lib/components/shell/RootDocument.tsx';
 import appCss from '../styles/app.css?url';
 
 export const Route = createRootRoute({
@@ -10,30 +11,19 @@ export const Route = createRootRoute({
 			{ name: 'viewport', content: 'width=device-width, initial-scale=1' },
 			{ title: 'house-elf' }
 		],
-		links: [{ rel: 'stylesheet', href: appCss }]
+		links: [
+			{ rel: 'stylesheet', href: appCss },
+			{ rel: 'icon', href: '/favicon.svg' }
+		]
 	}),
+	component: RootShell,
 	shellComponent: RootDocument
 });
 
-interface RootDocumentProps {
-	children: ReactNode;
-}
-
-/**
- * Owns the whole HTML document — Start has no `app.html`. `HeadContent` renders what
- * the `head` options above produce, and `Scripts` emits the client bundle, so a route
- * that forgets neither is a blank page.
- */
-function RootDocument({ children }: RootDocumentProps) {
+function RootShell() {
 	return (
-		<html lang="en" className="dark">
-			<head>
-				<HeadContent />
-			</head>
-			<body>
-				{children}
-				<Scripts />
-			</body>
-		</html>
+		<AppShell>
+			<Outlet />
+		</AppShell>
 	);
 }
