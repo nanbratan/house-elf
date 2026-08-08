@@ -39,11 +39,11 @@ Do not capture:
 | How tests are written, mocked, or proven            | `.github/instructions/testing.instructions.md`      |
 | Code style, types, errors, comments, file placement | `.github/instructions/typescript.instructions.md`   |
 | How we work: verification, scope, workflow          | `.github/instructions/code-quality.instructions.md` |
-| A decision and its alternatives, with reasoning     | `docs/plan/01-decisions.md`                         |
-| What happened and what it taught us                 | `docs/plan/PROGRESS.md`                             |
+| A decision and its alternatives, with reasoning     | `bd create --type=decision`                         |
+| What happened and what it taught us                 | `bd update <id> --append-notes`                     |
 
-The instructions files hold the rule. The plan documents hold the story. A big lesson
-gets both: a one-line rule and a PROGRESS entry explaining how it was learned.
+The instructions files hold the rule. Beads holds the story. A big lesson gets both:
+a one-line rule, and a note on the issue explaining how it was learned.
 
 `code-quality.instructions.md` loads on every request — keep it short. Prefer the
 scoped files.

@@ -44,18 +44,18 @@ reproduces it.
 
 ## Stop at the task boundary
 
-One task at a time. Stop after each for review and commit. Tick it in
-`docs/plan/PROGRESS.md` as you finish it, not in a batch at the end.
+One task at a time. Stop after each for review and commit. Close it in Beads
+(`bd close <id>`) as you finish it, not in a batch at the end.
 
 ## Ask rather than guess
 
-On anything user-visible, or where the plan is ambiguous, ask. A wrong guess costs
+On anything user-visible, or where an issue is ambiguous, ask. A wrong guess costs
 more than a question.
 
 ## Believe the packages
 
-If a plan document contradicts what an installed package does, the package is right.
-Fix the document in the same change and log the deviation in `PROGRESS.md`.
+If an issue contradicts what an installed package does, the package is right. Correct
+the issue with `bd update <id>` in the same change.
 
 ## Capture what you are taught
 

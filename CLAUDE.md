@@ -1,6 +1,11 @@
 # Project Instructions for AI Agents
 
-This file provides instructions and context for AI coding agents working on this project.
+Read [AGENTS.md](AGENTS.md) — it is the working agreement for this repo, and it
+applies here unchanged. [README.md](README.md) describes what the project is.
+
+Work is tracked in Beads: `bd prime` for the workflow, `bd ready` for what to pick
+up. Code and test conventions live in
+[.github/instructions/](.github/instructions/) and are not optional.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:6cd5cc61 -->
 
@@ -62,18 +67,12 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 
 ## Build & Test
 
-_Add your build and test commands here_
-
-```bash
-# Example:
-# npm install
-# npm test
-```
+`bun run verify:fast` before every commit. See [AGENTS.md](AGENTS.md) for the rest.
 
 ## Architecture Overview
 
-_Add a brief overview of your project architecture_
+See [README.md](README.md).
 
 ## Conventions & Patterns
 
-_Add your project-specific conventions here_
+See [.github/instructions/](.github/instructions/).

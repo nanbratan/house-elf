@@ -6,8 +6,8 @@ import fixture from './openrouter-catalog.fixture.json';
  * The fixture is a verbatim slice of a real `GET /api/v1/models/user` response
  * recorded on 2026-08-04, not a hand-written shape — the whole reason earlier
  * drafts of this milestone were wrong is that its response was described from
- * memory. It will drift as OpenRouter's catalog moves; see the note in
- * PROGRESS.md.
+ * memory. It will drift as OpenRouter's catalog moves; see the notes on
+ * house-elf-c6r.2.
  *
  * The module caches at module scope, so each case imports it afresh to start
  * cold, the same pattern `env.test.ts` uses.
