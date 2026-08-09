@@ -1,7 +1,7 @@
 import type { SelectableModel } from '@house-elf/shared';
 import { useId, useState } from 'react';
 
-import { usePinnedModels } from '../../state/pinned-models.ts';
+import { usePinnedModels } from '../../hooks/pinned-models.ts';
 import {
 	filterModels,
 	noFilters,
