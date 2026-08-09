@@ -1,9 +1,16 @@
-import { getToolName, isReasoningUIPart, isTextUIPart, isToolUIPart } from 'ai';
+import { isReasoningUIPart, isTextUIPart, isToolUIPart } from 'ai';
 import type { UIDataTypes, UIMessagePart, UITools } from 'ai';
 
 import { partState } from '../../constants/part-state.ts';
 import { MessageResponse } from './MessageResponse.tsx';
-import { Shimmer } from '../vendor/ai-elements/shimmer.tsx';
+import { Reasoning, ReasoningContent, ReasoningTrigger } from '../vendor/ai-elements/reasoning.tsx';
+import {
+	Tool,
+	ToolContent,
+	ToolHeader,
+	ToolInput,
+	ToolOutput
+} from '../vendor/ai-elements/tool.tsx';
 
 export interface MessagePartProps {
 	part: UIMessagePart<UIDataTypes, UITools>;
@@ -20,25 +27,28 @@ export function MessagePart({ part }: MessagePartProps) {
 
 	if (isReasoningUIPart(part)) {
 		return (
-			<div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
-				<div className="mb-2 text-xs font-medium tracking-wide uppercase">
-					{part.state === partState.streaming ? <Shimmer>Reasoning</Shimmer> : 'Reasoning'}
-				</div>
-				<MessageResponse isAnimating={part.state === partState.streaming}>
-					{part.text}
-				</MessageResponse>
-			</div>
+			<Reasoning isStreaming={part.state === partState.streaming}>
+				<ReasoningTrigger />
+				<ReasoningContent>{part.text}</ReasoningContent>
+			</Reasoning>
 		);
 	}
 
 	if (isToolUIPart(part)) {
-		const stateLabel = part.state.replaceAll('-', ' ');
-
 		return (
-			<div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
-				<p className="font-medium text-foreground">{getToolName(part)}</p>
-				<p className="mt-1 text-xs">{'errorText' in part ? part.errorText : stateLabel}</p>
-			</div>
+			<Tool>
+				{part.type === 'dynamic-tool' ? (
+					<ToolHeader type={part.type} state={part.state} toolName={part.toolName} />
+				) : (
+					<ToolHeader type={part.type} state={part.state} />
+				)}
+				<ToolContent>
+					{/* JSON.stringify(undefined) crashes CodeBlock's tokenizer; the first
+					input-streaming chunk arrives before any argument text does. */}
+					{part.input !== undefined && <ToolInput input={part.input} />}
+					<ToolOutput output={part.output} errorText={part.errorText} />
+				</ToolContent>
+			</Tool>
 		);
 	}
 

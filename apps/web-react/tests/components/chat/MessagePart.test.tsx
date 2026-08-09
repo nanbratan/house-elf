@@ -4,22 +4,47 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { MessagePart } from '../../../src/lib/components/chat/MessagePart.tsx';
 import { MessageResponse } from '../../../src/lib/components/chat/MessageResponse.tsx';
-import { Shimmer } from '../../../src/lib/components/vendor/ai-elements/shimmer.tsx';
+import {
+	Reasoning,
+	ReasoningContent
+} from '../../../src/lib/components/vendor/ai-elements/reasoning.tsx';
+import {
+	ToolHeader,
+	ToolInput,
+	ToolOutput
+} from '../../../src/lib/components/vendor/ai-elements/tool.tsx';
 
-// The renderer and the shimmer are tested at their own boundaries; here they
-// are stubs whose call history records what MessagePart handed them.
+// The renderer and the vendor Tool/Reasoning families are tested at their own
+// boundaries; here they are stubs whose call history records what MessagePart
+// handed them. Stubs that receive children must render them, or MessagePart's
+// own composition (nesting ToolInput/ToolOutput inside ToolContent inside
+// Tool) disappears from the test.
 vi.mock('../../../src/lib/components/chat/MessageResponse.tsx', () => ({
 	MessageResponse: vi.fn(({ children }: { children?: ReactNode }) => (
 		<div data-testid="message-response">{children}</div>
 	))
 }));
 
-vi.mock('../../../src/lib/components/vendor/ai-elements/shimmer.tsx', () => ({
-	Shimmer: vi.fn(({ children }: { children?: ReactNode }) => <span>{children}</span>)
+vi.mock('../../../src/lib/components/vendor/ai-elements/reasoning.tsx', () => ({
+	Reasoning: vi.fn(({ children }: { children?: ReactNode }) => <div>{children}</div>),
+	ReasoningTrigger: vi.fn(() => <div data-testid="reasoning-trigger" />),
+	ReasoningContent: vi.fn(({ children }: { children?: ReactNode }) => <div>{children}</div>)
+}));
+
+vi.mock('../../../src/lib/components/vendor/ai-elements/tool.tsx', () => ({
+	Tool: vi.fn(({ children }: { children?: ReactNode }) => <div>{children}</div>),
+	ToolHeader: vi.fn(() => <div data-testid="tool-header" />),
+	ToolContent: vi.fn(({ children }: { children?: ReactNode }) => <div>{children}</div>),
+	ToolInput: vi.fn(() => <div data-testid="tool-input" />),
+	ToolOutput: vi.fn(() => <div data-testid="tool-output" />)
 }));
 
 const responseProps = () => vi.mocked(MessageResponse).mock.lastCall?.[0];
-const shimmerTexts = () => vi.mocked(Shimmer).mock.calls.map(([props]) => props.children);
+const reasoningProps = () => vi.mocked(Reasoning).mock.lastCall?.[0];
+const reasoningContentProps = () => vi.mocked(ReasoningContent).mock.lastCall?.[0];
+const toolHeaderProps = () => vi.mocked(ToolHeader).mock.lastCall?.[0];
+const toolInputProps = () => vi.mocked(ToolInput).mock.lastCall?.[0];
+const toolOutputProps = () => vi.mocked(ToolOutput).mock.lastCall?.[0];
 
 describe('MessagePart', () => {
 	it('hands text parts to the markdown renderer', () => {
@@ -34,21 +59,21 @@ describe('MessagePart', () => {
 		expect(responseProps()?.isAnimating).toBe(true);
 	});
 
-	it('renders reasoning parts with a shimmering label while streaming', () => {
+	it('tells vendor Reasoning when a reasoning part is still streaming', () => {
 		render(<MessagePart part={{ type: 'reasoning', text: 'Thinking…', state: 'streaming' }} />);
 
-		expect(shimmerTexts()).toContain('Reasoning');
-		expect(responseProps()?.children).toBe('Thinking…');
+		expect(reasoningProps()?.isStreaming).toBe(true);
+		expect(reasoningContentProps()?.children).toBe('Thinking…');
+		expect(screen.getByTestId('reasoning-trigger')).toBeInTheDocument();
 	});
 
-	it('renders a finished reasoning part with a static label', () => {
+	it('tells vendor Reasoning when a reasoning part has finished', () => {
 		render(<MessagePart part={{ type: 'reasoning', text: 'Done thinking', state: 'done' }} />);
 
-		expect(shimmerTexts()).not.toContain('Reasoning');
-		expect(screen.getByText('Reasoning')).toBeInTheDocument();
+		expect(reasoningProps()?.isStreaming).toBe(false);
 	});
 
-	it('renders tool parts with their tool name', () => {
+	it('renders a static tool part with its type and state', () => {
 		render(
 			<MessagePart
 				part={{
@@ -60,8 +85,59 @@ describe('MessagePart', () => {
 			/>
 		);
 
-		expect(screen.getByText('searchDocs')).toBeInTheDocument();
-		expect(screen.getByText('input available')).toBeInTheDocument();
+		expect(toolHeaderProps()).toMatchObject({ type: 'tool-searchDocs', state: 'input-available' });
+		expect(toolHeaderProps()?.toolName).toBeUndefined();
+		expect(toolInputProps()?.input).toEqual({ query: 'streaming' });
+	});
+
+	it('passes the tool name for a dynamic tool part', () => {
+		render(
+			<MessagePart
+				part={{
+					type: 'dynamic-tool',
+					toolName: 'searchDocs',
+					toolCallId: 'call-1',
+					input: { query: 'streaming' },
+					state: 'input-available'
+				}}
+			/>
+		);
+
+		expect(toolHeaderProps()).toMatchObject({ type: 'dynamic-tool', toolName: 'searchDocs' });
+	});
+
+	it('does not render ToolInput while the first argument chunk has not arrived', () => {
+		// The SDK's first input-streaming chunk carries input: undefined.
+		// JSON.stringify(undefined) crashes vendor CodeBlock's tokenizer, so
+		// ToolInput must not be rendered until there is something to show.
+		render(
+			<MessagePart
+				part={{
+					type: 'tool-searchDocs',
+					toolCallId: 'call-1',
+					input: undefined,
+					state: 'input-streaming'
+				}}
+			/>
+		);
+
+		expect(screen.queryByTestId('tool-input')).not.toBeInTheDocument();
+	});
+
+	it('passes output and errorText through to ToolOutput', () => {
+		render(
+			<MessagePart
+				part={{
+					type: 'tool-searchDocs',
+					toolCallId: 'call-1',
+					input: { query: 'streaming' },
+					output: { results: [] },
+					state: 'output-available'
+				}}
+			/>
+		);
+
+		expect(toolOutputProps()).toMatchObject({ output: { results: [] }, errorText: undefined });
 	});
 
 	it('renders nothing for an unrecognised part', () => {
