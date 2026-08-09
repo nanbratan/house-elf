@@ -8,6 +8,9 @@
 		"apps/*",
 		"packages/*"
 	],
+	"overrides": {
+		"shiki": "^4.4.1"
+	},
 	"scripts": {
 		"prepare": "lefthook install",
 		"dev": "bun run --filter '*' dev",
