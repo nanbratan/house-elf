@@ -355,28 +355,49 @@ declares `"style": "base-nova"`, `"baseColor": "mist"`.
 `sidebar-foreground`, `sidebar-accent`, `sidebar-accent-foreground`,
 `sidebar-border`, `sidebar-ring`.
 
-11 tokens diverge from mist and are the whole colour decision:
+**Decided: cyan accent, neutral text.** The six non-chart divergences below are not
+drift — they are a cyan theme someone already applied on top of mist. Cyan is the
+**control/accent fill** (switch, count pills, buttons); text stays white/grey. The
+four cyan tokens are adopted verbatim; `secondary`, `secondary-foreground` and
+`chart-1..5` are not cyan and go to mist.
+
+Adopted verbatim:
+
+| Token | Value |
+| --- | --- |
+| `--primary` | `oklch(0.45 0.085 224.283)` |
+| `--primary-foreground` | `oklch(0.984 0.019 200.873)` |
+| `--sidebar-primary` | `oklch(0.715 0.143 215.221)` |
+| `--sidebar-primary-foreground` | `oklch(0.302 0.056 229.695)` |
+
+`--primary` is a **fill only**. Verified contrast against the mist dark background
+(oklch→sRGB→WCAG, computed not asserted): `--primary-foreground` on `--primary` is
+**6.97:1** (passes), but `--primary` *as text* is **2.72:1** on background and
+**2.40:1** on the sidebar — both fail AA. So the three places that currently use it as
+text must move to neutral tokens:
+
+| Call site | Change |
+| --- | --- |
+| `shell/AppSidebar.tsx:52` | `bg-primary/10 text-primary` → `bg-sidebar-accent text-sidebar-accent-foreground`. Resolves itself when the sidebar primitive lands — that is its native active treatment. |
+| `chat/ModelRow.tsx:49` | selected checkmark `text-primary` → `text-foreground` |
+| `app.css:233` | `.markdown a { color: var(--color-primary) }` → `var(--color-foreground)` (already underlined) |
+
+Note `--sidebar-primary` is marginally outside sRGB and clamps to `#00b8db`.
+
+The remaining tokens diverge from mist and go to mist:
 
 | Token | Now (effective) | → mist (base-nova) |
 | --- | --- | --- |
-| `--primary` | `oklch(0.45 0.085 224.283)` | `oklch(0.925 0.005 214.3)` |
-| `--primary-foreground` | `oklch(0.984 0.019 200.873)` | `oklch(0.218 0.008 223.9)` |
 | `--secondary` | `oklch(0.274 0.006 286.033)` | `oklch(0.275 0.011 216.9)` |
 | `--secondary-foreground` | `oklch(0.985 0 0)` | `oklch(0.987 0.002 197.1)` |
-| `--sidebar-primary` | `oklch(0.715 0.143 215.221)` | `oklch(0.488 0.243 264.376)` |
-| `--sidebar-primary-foreground` | `oklch(0.302 0.056 229.695)` | `oklch(0.987 0.002 197.1)` |
 | `--chart-1` | `oklch(0.809 0.105 251.813)` | `oklch(0.872 0.007 219.6)` |
 | `--chart-2` | `oklch(0.623 0.214 259.815)` | `oklch(0.56 0.021 213.5)` |
 | `--chart-3` | `oklch(0.546 0.245 262.881)` | `oklch(0.45 0.017 213.2)` |
 | `--chart-4` | `oklch(0.488 0.243 264.376)` | `oklch(0.378 0.015 216)` |
 | `--chart-5` | `oklch(0.424 0.199 265.638)` | `oklch(0.275 0.011 216.9)` |
 
-⚠️ **`--primary` is the one to look at before agreeing.** Mist's dark `--primary` is
-near-white (L 0.925) with near-white-on-dark `--primary-foreground`. Today's is a
-mid-dark teal. `--primary` currently paints the `ThinkingRow` switch, the
-`FilterSelect` count pill, and the active sidebar link. Adopting mist wholesale — as
-decision 2 says — flips those to a light-on-dark treatment. That is a visible change,
-so per rule 4 it needs your explicit yes before the theme bead is worked.
+The chart tokens are kept on mist for consistency, but nothing renders them today —
+there is no chart surface in the app. They are inert either way.
 
 2 tokens are ours and survive untouched: `--radius: 0.625rem`, `--faint:
 oklch(0.551 0.027 264.364)`.
