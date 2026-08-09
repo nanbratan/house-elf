@@ -7,8 +7,11 @@
 # Escape hatch: `LEFTHOOK=0 git commit …`. Pre-push still catches you, and CI after
 # that.
 #
-# core.hooksPath is set to .beads/hooks (bd's recommended, git-tracked location for a
-# Dolt-backed install, so every clone gets hooks without a manual step). Lefthook
+# core.hooksPath is set to .beads/hooks, bd's recommended location for a Dolt-backed
+# install. The hook files themselves are generated, not committed — they are build
+# output of two installers, and a tracked copy only ever drifts from what the next
+# `bun install` writes. So a fresh clone has NO gate until `bun install` runs; that is
+# the first command in any setup, and CI runs the same checks regardless. Lefthook
 # treats any custom hooksPath as unsupported without --force, and without
 # no_auto_install it retries — and fails the same way — on every single hook run once
 # lefthook.yml drifts from its last-synced checksum, which prints the "Skipping hook
