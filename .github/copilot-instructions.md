@@ -2,19 +2,36 @@
 
 ## Finding code — hard rule
 
-Never search this repository with `grep`, `rg`, `find`, `glob`, or by opening files to
-look around. Two tools answer every search:
+Four tools, one decision tree — walk it in order for every question about this
+codebase:
 
-- **You can name the symbol** → serena: `find_symbol`,
-  `find_referencing_symbols`, `find_declaration`, `find_implementations`.
-  Authoritative for references, and the only tool that edits.
-- **You can only describe it** → claude-context `search_code`. Requires local Milvus:
-  `cd ~/.context/milvus && docker compose up -d`.
+1. **The question is vague — you don't know exactly what you're looking for**, e.g.
+   "where is auth handled" rather than "where is `handleAuth` used" → **claude-context**.
+   Semantic search over the already-indexed repo; it matches meaning, not exact
+   names or patterns. Requires local Milvus running:
+   `cd ~/.context/milvus && docker compose up -d`.
+2. **The question is a specific lookup, not a modification.** Two branches:
+   - **Structural or cross-cutting questions** — architecture, module structure,
+     complexity/hotspot signals, a call trace across repos/services, dead code,
+     impact/blast-radius analysis, cross-service HTTP/async links, or anything else
+     the persisted knowledge graph is built for → **codebase-memory**. Its
+     call/usage edges are confidence-scored, not exact — confirm with serena before
+     acting on one.
+   - **Anything else** — you know or can pattern-match the symbol's name and want
+     its exact declaration, references, or implementations in this repo →
+     **serena**. LSP-backed, so the answer is exact, not inferred.
+3. **You want to make a modification** — rename, delete, insert, or rewrite a
+   symbol → **serena**, always. It is the only one of the four allowed to write
+   code.
+4. **Only once 1–3 have genuinely been tried and none of them answer the
+   question** → fall back to opening/reading/editing files directly, or bash
+   commands (`grep`/`rg`/`find`/`glob` included). This is the last resort, not a
+   shortcut.
 
 Read a file only once a tool has told you which one, and read the smallest part of it
 that answers the question.
 
-Neither tool proves an export is unused — a JSX-only usage is easy to miss. `bun run
+None of these prove an export is unused — a JSX-only usage is easy to miss. `bun run
 check` is the arbiter before any delete, rename, or signature change.
 
 ## Issue tracking
