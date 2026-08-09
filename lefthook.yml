@@ -12,10 +12,15 @@
 # treats any custom hooksPath as unsupported without --force, and without
 # no_auto_install it retries — and fails the same way — on every single hook run once
 # lefthook.yml drifts from its last-synced checksum, which prints the "Skipping hook
-# sync" warning on every commit forever after. The root `prepare` script does the
+# sync" warning on every commit forever after. `scripts/install-hooks.sh` does the
 # actual sync (`lefthook install --force` then `bd hooks install --beads`, which
 # re-attaches the Beads block lefthook just overwrote); this flag just stops the
 # doomed-to-fail auto-retry from running, and re-running it manually never happens.
+#
+# That script also re-arms the gate afterwards. Beads appends its block *after*
+# lefthook's `call_lefthook` line, which silently made lefthook's exit code stop
+# reaching git — the jobs below ran, printed their failures, and the commit went
+# through regardless (house-elf-8nf). Read it before changing how hooks install.
 no_auto_install: true
 
 pre-commit:
