@@ -1,6 +1,6 @@
 ---
-description: 'Use when writing or changing TypeScript, Svelte, or server code in this repo. Covers typing discipline, error handling, comments, file placement, and dependency choices.'
-applyTo: '**/*.ts, **/*.svelte, **/*.js, **/*.mjs'
+description: 'Use when writing or changing TypeScript or server code in this repo. Covers typing discipline, error handling, comments, file placement, and dependency choices.'
+applyTo: '**/*.ts, **/*.js, **/*.mjs'
 ---
 
 # TypeScript & code style
@@ -127,17 +127,17 @@ prompt file, until there are more than about five agents.
 - No `utils/` junk drawer. Domain modules keep domain names — the model allowlist and
   error shaping stay at the root of `src/mastra/`.
 - `src/mastra/index.ts` only wires things together — no logic.
-- SvelteKit server routes are a thin proxy: zero business logic, which lives on the
-  Mastra server.
+- TanStack Start server routes are a thin proxy: zero business logic, which lives on
+  the Mastra server.
 
 ### Web
 
 - `src/lib/components/<area>/` holds components and nothing else. Constants go to
-  `src/lib/constants/`, plain modules to `src/lib/utils/`, reusable reactive
-  behaviour to `src/lib/state/` as `*.svelte.ts`. Nothing lives in the root of
-  `src/lib/` — the first file to need a folder creates it rather than settling there.
+  `src/lib/constants/`, plain modules to `src/lib/utils/`, reusable hooks to
+  `src/lib/hooks/`. Nothing lives in the root of `src/lib/` — the first file to need
+  a folder creates it rather than settling there.
 - `apps/web/tests/` mirrors `src/`. A component's test is named for the component:
-  `ToolCard.svelte` → `tests/components/chat/ToolCard.test.ts`. Mirrored paths keep
+  `ToolCard.tsx` → `tests/components/chat/ToolCard.test.tsx`. Mirrored paths keep
   names unambiguous, so no test needs a suffix to stay unique.
 - A string constant repeated across components (states, modes, keys) gets a named
   `as const` object in its own module, and `satisfies` the upstream type where one
@@ -151,51 +151,3 @@ prompt file, until there are more than about five agents.
 All secrets live in `.env` at the repo root and are never committed. Keep
 `.env.example` current — every variable, with a comment. The server reads env at
 startup and fails loudly on a missing required value.
-
-## Svelte
-
-Svelte 5 runes only. No `export let`, no legacy stores.
-
-Tailwind utility classes inline. No component library — add `bits-ui` only when a
-real accessibility need appears, such as a dialog or a dropdown.
-
-Keep the chat message renderer part-driven: switch on the message part `type`
-(`text`, `reasoning`, `tool-*`, `source`) so an unknown part type degrades gracefully
-rather than crashing.
-
-### Shared reactive behaviour is a `.svelte.ts` module
-
-Svelte's answer to a hook: a `.svelte.ts` module exporting a `create*` factory that
-owns the `$state`/`$derived` and returns getters. No `use` prefix — in Svelte, `use:`
-means an action.
-
-### An `$effect` reads only what it must
-
-Every reactive value an effect reads is a reason for it to re-run, and re-running
-fires its cleanup. A timer inside an effect that reads its own writes will cancel
-itself.
-
-### Props get a named type
-
-Declare component props as a named type above the `$props()` call, never inline in
-the destructuring. Inline annotations become unreadable past two props, and a named
-type can be exported and reused by whoever renders the component. An `interface`,
-because `consistent-type-definitions` rejects a `type` alias for an object shape.
-
-```svelte
-interface ModelPickerProps {
-	models: readonly SelectableModel[];
-	selectedModelId: string;
-	onselect: (modelId: string) => void;
-}
-
-let { models, selectedModelId, onselect }: ModelPickerProps = $props();
-```
-
-### Handlers are named functions
-
-Pass named functions to component props. An inline arrow is fine only for a trivial
-forward such as `onstop={() => chat.stop()}`; anything with a body, arguments to
-marshal, or more than one statement gets a named function declared in the script
-block. The markup should read as a list of what is wired, not as where the logic
-lives.

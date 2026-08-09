@@ -7,8 +7,8 @@ import { expect, test, type Page } from '@playwright/test';
  * and they dispatch their own `scroll` events — so they could never notice that
  * nothing fires one in a real browser. That is what these tests are for.
  *
- * The E2E run starts the SvelteKit dev server only, with no Mastra behind it, so the
- * stream has to be stubbed. It is stubbed at `fetch` rather than with a route
+ * The E2E run starts the TanStack Start dev server only, with no Mastra behind it, so
+ * the stream has to be stubbed. It is stubbed at `fetch` rather than with a route
  * fulfilment because a fulfilled response arrives whole, and a transcript that grows
  * in one jump cannot show whether the view follows a stream or merely lands at the
  * end of one. Emitting deltas on demand also removes the timing guesswork: the test
@@ -101,7 +101,7 @@ async function ask(page: Page, question: string): Promise<void> {
 /** How far the transcript is scrolled from its own end, in pixels. */
 function distanceFromBottom(page: Page): Promise<number> {
 	return page.evaluate(() => {
-		const view = document.querySelector('[role="log"]');
+		const view = document.querySelector('.transcript-scroll');
 		if (!view) throw new Error('no transcript');
 		return view.scrollHeight - (view.scrollTop + view.clientHeight);
 	});
@@ -182,7 +182,7 @@ test.describe('a streaming reply', () => {
 		// The transcript must actually overflow, or "stayed at the bottom" would be
 		// true for the uninteresting reason that there was nowhere else to be.
 		const overflow = await page.evaluate(() => {
-			const view = document.querySelector('[role="log"]');
+			const view = document.querySelector('.transcript-scroll');
 			if (!view) throw new Error('no transcript');
 			return view.scrollHeight - view.clientHeight;
 		});
@@ -219,7 +219,7 @@ test.describe('a streaming reply', () => {
 		// listens for, which would make this pass for the wrong reason. Repeated
 		// because a wheel tick is delivered asynchronously and one is not always
 		// enough to travel this far.
-		await page.locator('[role="log"]').hover();
+		await page.locator('.transcript-scroll').hover();
 		await expect(async () => {
 			await page.mouse.wheel(0, -600);
 			expect(await distanceFromBottom(page)).toBeGreaterThan(200);

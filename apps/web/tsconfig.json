@@ -1,20 +1,19 @@
 {
-	"extends": "./.svelte-kit/tsconfig.json",
+	"extends": "../../tsconfig.base.json",
 	"compilerOptions": {
+		"lib": ["ES2022", "DOM", "DOM.Iterable"],
+		"jsx": "react-jsx",
+		"types": ["vite/client"],
 		"rewriteRelativeImportExtensions": true,
-		"allowJs": true,
-		"checkJs": true,
-		"esModuleInterop": true,
-		"forceConsistentCasingInFileNames": true,
-		"resolveJsonModule": true,
-		"skipLibCheck": true,
-		"sourceMap": true,
-		"strict": true,
-		"moduleResolution": "bundler"
-	}
-	// Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
-	// except $lib which is handled by https://svelte.dev/docs/kit/configuration#files
-	//
-	// To make changes to top-level options such as include and exclude, we recommend extending
-	// the generated config; see https://svelte.dev/docs/kit/configuration#typescript
+		"paths": {
+			"~/*": ["./src/*"],
+			"@/registry/default/ui/*": ["./src/lib/components/vendor/ai-elements/ui/*"],
+			"@/registry/new-york-v4/ui/*": ["./src/lib/components/vendor/ai-elements/ui/*"],
+			"@/lib/utils": ["./src/lib/utils/cn.ts"],
+			"shiki": ["./node_modules/shiki"],
+			"shiki/*": ["./node_modules/shiki/*"]
+		}
+	},
+	"include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "tests/**/*.tsx", "vite.config.ts"],
+	"exclude": ["src/lib/components/vendor"]
 }

@@ -1,7 +1,8 @@
 # house-elf — agent instructions
 
-Personal AI assistant platform: SvelteKit chat UI → Mastra agent server → Postgres +
-pgvector. Single user, no deadline. [README.md](README.md) describes the architecture.
+Personal AI assistant platform: TanStack Start chat UI → Mastra agent server →
+Postgres + pgvector. Single user, no deadline. [README.md](README.md) describes the
+architecture.
 
 ## Where the rules are
 
@@ -11,7 +12,7 @@ automatically in VS Code — read the files directly if your tool does not:
 | File                           | Governs                                               |
 | ------------------------------ | ----------------------------------------------------- |
 | `code-quality.instructions.md` | Verification, scope, workflow. Applies to everything. |
-| `typescript.instructions.md`   | Types, errors, comments, placement, Mastra, Svelte.   |
+| `typescript.instructions.md`   | Types, errors, comments, placement, Mastra.           |
 | `react.instructions.md`        | Composition, render posture, hooks, JSX, TanStack.    |
 | `testing.instructions.md`      | What a test may assert, mocking limits, coverage.     |
 

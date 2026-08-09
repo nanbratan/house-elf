@@ -14,12 +14,8 @@ look around. Two tools answer every search:
 Read a file only once a tool has told you which one, and read the smallest part of it
 that answers the question.
 
-Two limits, so do not ask these tools to cover them:
-
-- `get_symbols_overview` on a `.svelte` file returns markup, not symbols. To see what
-  a component contains, open that file.
-- Neither tool proves an export is unused — a `.svelte` usage is easy to miss.
-  `bun run check` is the arbiter before any delete, rename, or signature change.
+Neither tool proves an export is unused — a JSX-only usage is easy to miss. `bun run
+check` is the arbiter before any delete, rename, or signature change.
 
 ## Issue tracking
 

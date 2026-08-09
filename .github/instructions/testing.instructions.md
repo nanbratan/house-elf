@@ -1,6 +1,6 @@
 ---
 description: 'Use when writing, reviewing, or changing tests — unit, component, integration, or e2e. Covers what a test may assert, mocking and stubbing limits, mutation-proving, and where test files live.'
-applyTo: '**/*.test.ts, **/*.test.tsx, **/*.spec.ts, **/*.spec.tsx, **/*.svelte.test.ts, apps/*/tests/**, tests/**'
+applyTo: '**/*.test.ts, **/*.test.tsx, **/*.spec.ts, **/*.spec.tsx, apps/*/tests/**, tests/**'
 ---
 
 # Testing
@@ -67,8 +67,7 @@ logic is proven, and no consumer's test depends on its internals.
 Query by role and accessible name, not by CSS selector. Feed synthetic `UIMessage`
 fixtures — never run a model.
 
-Logic extracted from a component is tested without mounting: a Svelte `.svelte.ts`
-module directly with `$state`, `$effect.root` and `flushSync`; a React hook with
+Logic extracted from a component is tested without mounting: a React hook with
 `renderHook`. Prefer this — if logic can be extracted and tested in isolation,
 extract it. Where both exist, the extracted module's test owns the rules and the
 component test owns only the wiring.
@@ -148,8 +147,8 @@ config with a written reason instead.
 
 Excluded deliberately, each with a comment in the config: `src/mastra/index.ts` (pure
 wiring), agent definition files (prompts and config — their behaviour is tested via
-mocked-model integration tests), SvelteKit `+layout`/`+page` boilerplate with no
-logic, generated and type-only files.
+mocked-model integration tests), generated router boilerplate with no logic (`routeTree.gen.ts`),
+generated and type-only files.
 
 ## Placement
 

@@ -46,7 +46,10 @@ export function MessageTranscript({ messages, status, error, onRetry }: MessageT
 
 	return (
 		<Conversation className="min-h-0">
-			<ConversationContent className="mx-auto flex w-full max-w-3xl gap-6 px-6 py-6">
+			<ConversationContent
+				className="mx-auto flex w-full max-w-3xl gap-6 px-6 py-6"
+				scrollClassName="transcript-scroll"
+			>
 				{messages.length === 0 && !busy && !error ? (
 					<ConversationEmptyState>
 						<p className="py-16 text-center text-sm text-faint">Ask anything.</p>
@@ -75,7 +78,7 @@ export function MessageTranscript({ messages, status, error, onRetry }: MessageT
 
 				{error ? <ErrorNotice error={error} onRetry={onRetry} /> : null}
 			</ConversationContent>
-			<ConversationScrollButton aria-label="Scroll to latest message" />
+			<ConversationScrollButton aria-label="Jump to latest" />
 		</Conversation>
 	);
 }

@@ -1,6 +1,6 @@
 ---
 description: 'Use when writing or changing React, TSX, or TanStack Start code in this repo. Covers composition and render posture, memoisation, component and hook structure, effects, JSX, styling, and vendored code.'
-applyTo: '**/*.tsx, apps/web-react/**/*.ts'
+applyTo: '**/*.tsx, apps/web/**/*.ts'
 ---
 
 # React & TanStack Start

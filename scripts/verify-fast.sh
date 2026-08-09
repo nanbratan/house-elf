@@ -59,8 +59,8 @@ matching() {
 }
 
 # Filters by workspace prefix and strips it, so the workspace's own script receives
-# paths relative to its root. Vitest needs this: SvelteKit's Vite plugin resolves
-# `$lib` and `$app` against the working directory, so the run must happen in there.
+# paths relative to its root — each workspace's `test:related` expects to run from
+# inside it.
 #
 # Newlines are flattened to spaces: the result is interpolated into a `bash -c`
 # string, and a multi-line value there runs the first path as the command and every
@@ -89,12 +89,11 @@ if [ "$ALL" -eq 1 ]; then
 	run types bun run check
 	run test:server bun run --filter '@house-elf/server' test:unit
 	run test:web bun run --filter '@house-elf/web' test:unit
-	run test:web-react bun run --filter '@house-elf/web-react' test:unit
 else
-	FMT=$(matching '\.(ts|tsx|js|jsx|mjs|svelte|json|jsonc|css|md|yml|yaml|html)$')
+	FMT=$(matching '\.(ts|tsx|js|jsx|mjs|json|jsonc|css|md|yml|yaml|html)$')
 	[ -n "$FMT" ] && run format bun run format:check $FMT
 
-	SRC=$(matching '\.(ts|tsx|js|jsx|mjs|svelte)$')
+	SRC=$(matching '\.(ts|tsx|js|jsx|mjs)$')
 	if [ -n "$SRC" ]; then
 		run lint bun run lint $SRC
 		# Unscoped: tsc has no useful per-file mode here, and incremental costs ~2s.
@@ -107,11 +106,10 @@ else
 	#
 	# `tsc -p` has no useful per-file mode, so the unit of scoping is the workspace,
 	# not the file, and each workspace's own `check` script stays the single
-	# definition of *how* it is checked — plain tsc in most, svelte-check in
-	# apps/web. This only decides which ones run.
+	# definition of *how* it is checked. This only decides which ones run.
 	CHECK=""
-	for ws in server web web-react; do
-		if [ -n "$(in_workspace "apps/$ws/" '\.(ts|tsx|svelte)$')" ]; then
+	for ws in server web; do
+		if [ -n "$(in_workspace "apps/$ws/" '\.(ts|tsx)$')" ]; then
 			CHECK="$CHECK @house-elf/$ws"
 		fi
 	done
@@ -119,7 +117,7 @@ else
 	# packages/shared is imported by the apps, so a type change there surfaces in its
 	# dependents rather than in itself — checking it alone would prove nothing.
 	if [ -n "$(in_workspace 'packages/shared/' '\.ts$')" ]; then
-		CHECK="@house-elf/shared @house-elf/server @house-elf/web @house-elf/web-react"
+		CHECK="@house-elf/shared @house-elf/server @house-elf/web"
 	fi
 
 	for ws in $CHECK; do
@@ -132,14 +130,9 @@ else
 		run test:server bash -c "cd apps/server && bun run test:related $SERVER"
 	fi
 
-	WEB=$(in_workspace 'apps/web/' '\.(ts|svelte)$')
+	WEB=$(in_workspace 'apps/web/' '\.(ts|tsx)$')
 	if [ -n "$WEB" ]; then
 		run test:web bash -c "cd apps/web && bun run test:related $WEB"
-	fi
-
-	WEB_REACT=$(in_workspace 'apps/web-react/' '\.(ts|tsx)$')
-	if [ -n "$WEB_REACT" ]; then
-		run test:web-react bash -c "cd apps/web-react && bun run test:related $WEB_REACT"
 	fi
 fi
 

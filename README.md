@@ -6,11 +6,11 @@ personal need shows up.
 
 ```
 ┌──────────────────────────────────────────────┐
-│  apps/web — SvelteKit 2 + Svelte 5 + Tailwind│
+│  apps/web — TanStack Start + React + Tailwind│
 │                                              │
 │  • Conversation list page                    │
 │  • Conversation / new-conversation page      │
-│  • @ai-sdk/svelte Chat  ← SSE stream         │
+│  • @ai-sdk/react Chat  ← SSE stream          │
 │  • Server routes = thin proxy (auth later)   │
 └───────────────────┬──────────────────────────┘
                     │ HTTP + SSE (AI SDK stream protocol)
@@ -47,7 +47,7 @@ such as file upload or PDF download.
 
 A separate API service would mean two deploy units, two sets of database access and
 a synchronisation problem, for no benefit at this scale. **Do not add one.**
-SvelteKit's server routes exist only as a thin proxy, so a session cookie can be
+TanStack Start's server routes exist only as a thin proxy, so a session cookie can be
 attached later and the Mastra origin kept off the public internet. They contain no
 business logic.
 
@@ -56,7 +56,7 @@ business logic.
 ```
 house-elf/
 ├─ apps/
-│  ├─ web/                 # SvelteKit app
+│  ├─ web/                 # TanStack Start app
 │  └─ server/              # Mastra app
 │     └─ src/mastra/
 │        ├─ index.ts       # Mastra instance: storage, agents, server
@@ -108,12 +108,12 @@ there, so hot reloading works normally.
 
 ## Ports
 
-| Port   | What                 | Notes                                         |
-| ------ | -------------------- | --------------------------------------------- |
-| `5173` | SvelteKit dev server | The UI.                                       |
-| `4111` | Mastra               | Studio at `/`, agent API at `/api`.           |
-| `5432` | Postgres             | Dev data. Persisted in a named volume.        |
-| `5433` | Postgres             | Integration tests. In tmpfs — resets on stop. |
+| Port   | What                      | Notes                                         |
+| ------ | ------------------------- | --------------------------------------------- |
+| `5173` | TanStack Start dev server | The UI.                                       |
+| `4111` | Mastra                    | Studio at `/`, agent API at `/api`.           |
+| `5432` | Postgres                  | Dev data. Persisted in a named volume.        |
+| `5433` | Postgres                  | Integration tests. In tmpfs — resets on stop. |
 
 ## Commands
 

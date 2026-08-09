@@ -1,16 +1,35 @@
-import '@testing-library/jest-dom/vitest';
-
-import { cleanup } from '@testing-library/svelte';
+import { cleanup } from '@testing-library/react';
 import { afterEach } from 'vitest';
 
-import { resetStubProps } from '../stubs/stub-props';
+import '@testing-library/jest-dom/vitest';
 
-// Testing Library only registers its own auto-cleanup when Vitest globals are
-// enabled. They are not, so unmount between tests explicitly — without this,
-// components accumulate in the document and role queries match the previous test's
-// markup as well as the current one's.
 afterEach(cleanup);
 
-// The stub prop recorder is module state, and modules are shared by every test in a
-// file, so it outlives the components that wrote to it.
-afterEach(resetStubProps);
+// jsdom does not implement ResizeObserver — cmdk's Command measures its list to
+// animate height changes, and throws `ReferenceError: ResizeObserver is not
+// defined` without this. A no-op is enough: nothing under test asserts on the
+// measurement, only on what cmdk renders.
+class ResizeObserverStub {
+	observe() {
+		return;
+	}
+	unobserve() {
+		return;
+	}
+	disconnect() {
+		return;
+	}
+}
+
+globalThis.ResizeObserver = ResizeObserverStub;
+
+// jsdom does not implement scrollIntoView either — cmdk calls it on the
+// selected item to keep it in view as the reader arrows through the list.
+// Assigned outright rather than guarded on the property: TypeScript's DOM lib
+// insists it already exists, so a truthiness check on it is unreachable by the
+// types even though jsdom genuinely lacks it at runtime. Guard on the global
+// instead, for parity with apps/web's tests/setup/dom-layout.ts and for
+// node-environment test files that share this setup but have no `Element`.
+if (typeof Element !== 'undefined') {
+	Element.prototype.scrollIntoView = () => undefined;
+}

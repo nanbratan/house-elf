@@ -20,8 +20,9 @@ export const mastra = new Mastra({
 			// Dynamic form: every agent registered above is reachable without a new
 			// route. Reasoning and sources are off by default; the UI renders both.
 			// `version` is left at its default ('v5'). For a text-only response the
-			// v5 and v6 chunk streams were verified byte-identical, so the choice is
-			// deferred to T1.4 when the real @ai-sdk/svelte client can decide it.
+			// v5 and v6 chunk streams were verified byte-identical, and `@ai-sdk/react`
+			// (house-elf-shi.11) confirmed v5 works end to end, so there was never a
+			// reason to move off the default.
 			chatRoute({
 				path: '/chat/:agentId',
 				sendReasoning: true,

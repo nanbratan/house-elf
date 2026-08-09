@@ -2,7 +2,7 @@
 
 **Reference material, not application code. Nothing here is ever imported.**
 
-Components are read, then copied _out_ of this directory into `apps/web-react` and
+Components are read, then copied _out_ of this directory into `apps/web` and
 edited there. This snapshot exists so `claude-context` and `codebase-memory` can index
 it, and an agent can see what ai-elements already offers before hand-rolling a
 replacement for it.

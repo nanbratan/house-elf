@@ -18,48 +18,33 @@ pre-commit:
     # (.eslintcache), both git-ignored. `--cache-strategy content` beats the default
     # `metadata` — a cache an mtime can fool does not belong in front of a commit.
     - name: format
-      glob: '*.{ts,tsx,js,jsx,mjs,svelte,json,jsonc,css,md,yml,yaml,html}'
+      glob: '*.{ts,tsx,js,jsx,mjs,json,jsonc,css,md,yml,yaml,html}'
       run: bun run format:check {staged_files}
 
     - name: lint
-      glob: '*.{ts,tsx,js,jsx,mjs,svelte}'
+      glob: '*.{ts,tsx,js,jsx,mjs}'
       run: bun run lint {staged_files}
 
     # `vitest related` runs only the tests that import the staged files, directly or
     # transitively. `root:` both filters the staged list to that workspace and runs
-    # there — the latter is required, because SvelteKit's Vite plugin resolves `$lib`
-    # and `$app` against the working directory.
+    # there.
     - name: test-server
       root: apps/server/
       glob: '*.ts'
       run: bun run test:related {staged_files}
 
-    # `exclude` is load-bearing: lefthook's `root` filter is a plain string prefix, so
-    # without it `apps/web/` also swallows `apps/web-react/` files and hands this job
-    # paths like `.-react/tests/router.test.ts`. Vitest finds nothing in them and exits
-    # 0, so the job reported green while testing nothing.
     - name: test-web
       root: apps/web/
-      exclude:
-        - 'apps/web-react/**'
-      glob: '*.{ts,svelte}'
-      run: bun run test:related {staged_files}
-
-    - name: test-web-react
-      root: apps/web-react/
       glob: '*.{ts,tsx}'
       run: bun run test:related {staged_files}
 
 # `bun run verify`, decomposed — but split by workspace, not by stage.
 #
-# The stages are not independent. `check`, `test` and `build` all run SvelteKit's
-# sync, and Kit's `write_if_changed` compares against a per-process Map, so every
-# fresh process rewrites the whole of `apps/web/.svelte-kit/` with a non-atomic
-# writeFileSync. Measured: while 12 syncs ran, a reader spinning on one generated file
-# saw it missing 5775 times and zero-length 400 times. Vitest is louder about the same
-# problem: it deletes and recreates `coverage/.tmp` and fails if a second run with the
-# same reportsDirectory touches it. Within a workspace those stages are therefore
-# piped; across workspaces, and against lint and format, nothing is shared.
+# The stages are not independent: `check`, `test` and `build` can each touch
+# generated files a workspace's tooling writes to disk (route-tree codegen, coverage
+# reports), and running two processes against the same workspace concurrently risks
+# them racing on those files. Within a workspace those stages are therefore piped;
+# across workspaces, and against lint and format, nothing is shared.
 #
 # `--filter` rather than `root:`, because `root:` scopes the staged file list but does
 # not make `bun run` resolve that workspace's package.json — it found the root one and
@@ -144,21 +129,3 @@ pre-push:
             run: bun run --filter '@house-elf/server' test
           - name: build
             run: bun run --filter '@house-elf/server' build
-
-    - name: web-react
-      glob:
-        - 'apps/web-react/**'
-        - 'packages/**'
-        - 'package.json'
-        - 'bun.lock'
-        - 'tsconfig.base.json'
-        - 'vitest.shared.ts'
-      group:
-        piped: true
-        jobs:
-          - name: check
-            run: bun run --filter '@house-elf/web-react' check
-          - name: test
-            run: bun run --filter '@house-elf/web-react' test
-          - name: build
-            run: bun run --filter '@house-elf/web-react' build

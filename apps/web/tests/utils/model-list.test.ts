@@ -50,8 +50,8 @@ describe('the picker list', () => {
 		// and it is the model a first visit starts on.
 		const [first, ...rest] = releaseSections(catalog);
 
-		expect(first.title).toBe('Routers');
-		expect(first.models).toEqual([auto]);
+		expect(first?.title).toBe('Routers');
+		expect(first?.models).toEqual([auto]);
 		expect(rest.map((section) => section.title)).toEqual(['August 2026', 'July 2026']);
 	});
 
@@ -81,7 +81,7 @@ describe('searching the picker', () => {
 	it('ranks a label the query starts above a label that merely contains it', () => {
 		const [matches] = searchSections([sonnet, opus], 'o');
 
-		expect(matches.models.map((model) => model.label)).toEqual(['Opus 5', 'Sonnet 4.5']);
+		expect(matches?.models.map((model) => model.label)).toEqual(['Opus 5', 'Sonnet 4.5']);
 	});
 
 	it('matches the label only, never the provider behind it', () => {
@@ -93,7 +93,7 @@ describe('searching the picker', () => {
 	it('matches whatever the reader typed, in any case, padded or not', () => {
 		const [matches] = searchSections([gpt, opus], '  OPUS ');
 
-		expect(matches.models).toEqual([opus]);
+		expect(matches?.models).toEqual([opus]);
 	});
 
 	it('has nothing to show for a query nothing answers', () => {

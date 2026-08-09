@@ -8,9 +8,6 @@
 		"apps/*",
 		"packages/*"
 	],
-	"overrides": {
-		"shiki": "^4.4.1"
-	},
 	"scripts": {
 		"prepare": "lefthook install",
 		"dev": "bun run --filter '*' dev",
@@ -34,18 +31,15 @@
 		"@playwright/test": "^1.62.1",
 		"@testing-library/dom": "^10.4.1",
 		"@testing-library/jest-dom": "^7.0.0",
-		"@testing-library/svelte": "^5.4.2",
 		"@testing-library/user-event": "^14.6.1",
 		"@vitest/coverage-v8": "^4.1.10",
 		"eslint": "^10.8.0",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-react-hooks": "^7.1.1",
-		"eslint-plugin-svelte": "^3.22.0",
 		"globals": "^17.8.0",
 		"jsdom": "^30.0.1",
 		"lefthook": "^2.1.10",
 		"prettier": "^3.9.6",
-		"prettier-plugin-svelte": "^4.1.1",
 		"prettier-plugin-tailwindcss": "^0.8.1",
 		"typescript": "6.0.3",
 		"typescript-eslint": "^8.65.0",
