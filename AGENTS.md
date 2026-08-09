@@ -15,6 +15,7 @@ automatically in VS Code — read the files directly if your tool does not:
 | `typescript.instructions.md`   | Types, errors, comments, placement, Mastra.           |
 | `react.instructions.md`        | Composition, render posture, hooks, JSX, TanStack.    |
 | `testing.instructions.md`      | What a test may assert, mocking limits, coverage.     |
+| `ui.instructions.md`           | shadcn components: ownership, base-ui, CLI, tokens.   |
 
 They are the working agreement, not suggestions. When the user teaches you a new one,
 capture it with the `capture-convention` skill rather than replying "noted".

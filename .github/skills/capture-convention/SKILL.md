@@ -38,6 +38,7 @@ Do not capture:
 | --------------------------------------------------- | --------------------------------------------------- |
 | How tests are written, mocked, or proven            | `.github/instructions/testing.instructions.md`      |
 | Code style, types, errors, comments, file placement | `.github/instructions/typescript.instructions.md`   |
+| shadcn components, base-ui, theme tokens            | `.github/instructions/ui.instructions.md`           |
 | How we work: verification, scope, workflow          | `.github/instructions/code-quality.instructions.md` |
 | A decision and its alternatives, with reasoning     | `bd create --type=decision`                         |
 | What happened and what it taught us                 | `bd update <id> --append-notes`                     |

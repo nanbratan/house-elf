@@ -107,12 +107,14 @@ A CSS module is for what Tailwind genuinely cannot express — keyframes, contai
 queries. React has no scoped `<style>`, so this is a real gap rather than a
 preference; reach for it only when the utility form does not exist.
 
-## Vendored code
+## Code from the shadcn registry
 
-`vendor/` is exempt from every rule in this repo. It is an unmodified reference copy
-and its diff against upstream must stay readable.
+`lib/components/ui/` and `lib/components/ai-elements/` hold registry code that is
+**ours**, not a reference copy: it meets every rule in this file in full, including the
+`use client` directive being stripped. TanStack Start does not use React Server
+Components, so the directive is inert noise that misleads the next reader into thinking
+a boundary exists.
 
-Copy out only what is needed, and the copy is then our code: it meets these rules in
-full, including the `use client` directive being stripped. TanStack Start does not use
-React Server Components, so the directive is inert noise that misleads the next reader
-into thinking a boundary exists.
+Bring a file in by copying only what the app uses, then restyling it in the same commit.
+[ui.instructions.md](./ui.instructions.md) has the full policy, the base-ui-only rule
+and the CLI traps.
