@@ -1,11 +1,10 @@
 import { useChat } from '@ai-sdk/react';
 import type { ModelCatalog } from '@house-elf/shared';
 import { DefaultChatTransport } from 'ai';
-import type { ChangeEvent, KeyboardEvent, SyntheticEvent } from 'react';
 import { useState } from 'react';
 
-import { chatStatus } from '../../constants/chat-status.ts';
-import { Button } from '@/registry/default/ui/button';
+import { useModelSelection } from '../../hooks/model-selection.ts';
+import { Composer } from './Composer.tsx';
 import { MessageTranscript } from './MessageTranscript.tsx';
 
 export interface ChatViewProps {
@@ -18,61 +17,36 @@ export function ChatView({ agentId, modelCatalog }: ChatViewProps) {
 }
 
 function ChatSession({ agentId, modelCatalog }: ChatViewProps) {
-	const [transport] = useState(
-		() =>
-			new DefaultChatTransport({
-				api: `/api/chat/${agentId}`,
-				body: { model: modelCatalog.initialModelId, thinking: false }
-			})
-	);
+	// `api` is the only fixed part of the transport: model and thinking travel
+	// per message instead (see `send` below), because the choice made at the
+	// moment of asking is the one that should apply, not whatever was initial.
+	const [transport] = useState(() => new DefaultChatTransport({ api: `/api/chat/${agentId}` }));
 	const chat = useChat({ transport });
-	const [draft, setDraft] = useState('');
-	const [isComposing, setIsComposing] = useState(false);
-	const busy = chat.status === chatStatus.submitted || chat.status === chatStatus.streaming;
-	const canSend = draft.trim().length > 0 && !busy;
-
-	function sendMessage() {
-		const text = draft.trim();
-		if (text.length === 0 || busy) {
-			return;
-		}
-
-		setDraft('');
-		void chat.sendMessage({ text });
-	}
-
-	function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
-		event.preventDefault();
-		sendMessage();
-	}
-
-	function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-		if (event.key !== 'Enter' || event.shiftKey || isComposing) {
-			return;
-		}
-
-		event.preventDefault();
-		sendMessage();
-	}
+	const modelSelection = useModelSelection(modelCatalog);
 
 	function retry() {
 		void chat.regenerate();
 	}
 
-	function handleCompositionStart() {
-		setIsComposing(true);
-	}
-
-	function handleCompositionEnd() {
-		setIsComposing(false);
-	}
-
-	function handleDraftChange(event: ChangeEvent<HTMLTextAreaElement>) {
-		setDraft(event.target.value);
+	function send(text: string) {
+		// A boolean is all that goes over the wire — what thinking costs the
+		// provider is the server's to say.
+		void chat.sendMessage(
+			{ text },
+			{ body: { model: modelSelection.selectedModelId, thinking: modelSelection.thinking } }
+		);
 	}
 
 	function stop() {
 		void chat.stop();
+	}
+
+	function selectModel(modelId: string) {
+		modelSelection.select(modelId);
+	}
+
+	function setThinking(thinking: boolean) {
+		modelSelection.setThinking(thinking);
 	}
 
 	return (
@@ -84,30 +58,17 @@ function ChatSession({ agentId, modelCatalog }: ChatViewProps) {
 				status={chat.status}
 			/>
 
-			<form className="border-t border-border px-4 py-3" onSubmit={handleSubmit}>
-				<div className="mx-auto flex max-w-3xl items-end gap-3 rounded-xl border border-border bg-card p-3">
-					<textarea
-						aria-label="Message"
-						className="min-h-24 flex-1 resize-none bg-transparent text-sm outline-none placeholder:text-faint"
-						onChange={handleDraftChange}
-						onCompositionEnd={handleCompositionEnd}
-						onCompositionStart={handleCompositionStart}
-						onKeyDown={handleKeyDown}
-						placeholder="Send a message…"
-						rows={3}
-						value={draft}
-					/>
-					{busy ? (
-						<Button onClick={stop} type="button" variant="outline">
-							Stop
-						</Button>
-					) : (
-						<Button disabled={!canSend} type="submit">
-							Send
-						</Button>
-					)}
-				</div>
-			</form>
+			<Composer
+				canChooseThinking={modelSelection.canChooseThinking}
+				models={modelCatalog.models}
+				onModelSelect={selectModel}
+				onSend={send}
+				onStop={stop}
+				onThinkingChange={setThinking}
+				selectedModelId={modelSelection.selectedModelId}
+				status={chat.status}
+				thinking={modelSelection.thinking}
+			/>
 		</div>
 	);
 }
