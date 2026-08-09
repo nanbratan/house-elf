@@ -7,10 +7,10 @@
  * utilities are undefined, so components render with no transition.
  */
 @import 'tw-animate-css';
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
-@import "@fontsource-variable/jetbrains-mono";
-@import "@fontsource-variable/ibm-plex-sans";
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+@import '@fontsource-variable/jetbrains-mono';
+@import '@fontsource-variable/ibm-plex-sans';
 
 /*
  * shadcn's stock `new-york-v4` slate palette, dark values, copied verbatim from the
@@ -142,22 +142,22 @@
 	html {
 		/* Makes form controls and scrollbars render dark too. */
 		color-scheme: dark;
-    /* @apply font-mono; */
-    @apply font-mono;
+		/* @apply font-mono; */
+		@apply font-mono;
 	}
 
 	body {
 		background-color: var(--color-background);
 		color: var(--color-foreground);
-    @apply bg-background text-foreground;
+		@apply bg-background text-foreground;
 	}
 
 	:focus-visible {
 		outline: 2px solid var(--color-ring);
 		outline-offset: 2px;
 	}
-  * {
-    @apply border-border outline-ring/50;
+	* {
+		@apply border-border outline-ring/50;
 	}
 }
 
