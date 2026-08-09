@@ -6,6 +6,17 @@
 #
 # Escape hatch: `LEFTHOOK=0 git commit …`. Pre-push still catches you, and CI after
 # that.
+#
+# core.hooksPath is set to .beads/hooks (bd's recommended, git-tracked location for a
+# Dolt-backed install, so every clone gets hooks without a manual step). Lefthook
+# treats any custom hooksPath as unsupported without --force, and without
+# no_auto_install it retries — and fails the same way — on every single hook run once
+# lefthook.yml drifts from its last-synced checksum, which prints the "Skipping hook
+# sync" warning on every commit forever after. The root `prepare` script does the
+# actual sync (`lefthook install --force` then `bd hooks install --beads`, which
+# re-attaches the Beads block lefthook just overwrote); this flag just stops the
+# doomed-to-fail auto-retry from running, and re-running it manually never happens.
+no_auto_install: true
 
 pre-commit:
   parallel: true

@@ -9,7 +9,7 @@
 		"packages/*"
 	],
 	"scripts": {
-		"prepare": "lefthook install",
+		"prepare": "lefthook install --force && (command -v bd >/dev/null 2>&1 && bd hooks install --beads || true)",
 		"dev": "bun run --filter '*' dev",
 		"dev:all": "bun run db:up && bun run dev",
 		"check": "tsc --noEmit --incremental -p tsconfig.json && bun run --filter '*' check",
