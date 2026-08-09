@@ -355,13 +355,12 @@ declares `"style": "base-nova"`, `"baseColor": "mist"`.
 `sidebar-foreground`, `sidebar-accent`, `sidebar-accent-foreground`,
 `sidebar-border`, `sidebar-ring`.
 
-**Decided: cyan accent, neutral text.** The six non-chart divergences below are not
-drift — they are a cyan theme someone already applied on top of mist. Cyan is the
-**control/accent fill** (switch, count pills, buttons); text stays white/grey. The
-four cyan tokens are adopted verbatim; `secondary`, `secondary-foreground` and
-`chart-1..5` are not cyan and go to mist.
+**Decided: cyan accent, blue charts, neutral text.** The divergences below are not
+drift — they are a theme someone already applied on top of mist. Cyan is the
+**control/accent fill** (switch, count pills, buttons); charts are **blue**; text
+stays white/grey. Only `secondary` and `secondary-foreground` go to mist.
 
-Adopted verbatim:
+Adopted verbatim (cyan accent + blue chart ramp):
 
 | Token | Value |
 | --- | --- |
@@ -369,6 +368,11 @@ Adopted verbatim:
 | `--primary-foreground` | `oklch(0.984 0.019 200.873)` |
 | `--sidebar-primary` | `oklch(0.715 0.143 215.221)` |
 | `--sidebar-primary-foreground` | `oklch(0.302 0.056 229.695)` |
+| `--chart-1` | `oklch(0.809 0.105 251.813)` |
+| `--chart-2` | `oklch(0.623 0.214 259.815)` |
+| `--chart-3` | `oklch(0.546 0.245 262.881)` |
+| `--chart-4` | `oklch(0.488 0.243 264.376)` |
+| `--chart-5` | `oklch(0.424 0.199 265.638)` |
 
 `--primary` is a **fill only**. Verified contrast against the mist dark background
 (oklch→sRGB→WCAG, computed not asserted): `--primary-foreground` on `--primary` is
@@ -390,14 +394,16 @@ The remaining tokens diverge from mist and go to mist:
 | --- | --- | --- |
 | `--secondary` | `oklch(0.274 0.006 286.033)` | `oklch(0.275 0.011 216.9)` |
 | `--secondary-foreground` | `oklch(0.985 0 0)` | `oklch(0.987 0.002 197.1)` |
-| `--chart-1` | `oklch(0.809 0.105 251.813)` | `oklch(0.872 0.007 219.6)` |
-| `--chart-2` | `oklch(0.623 0.214 259.815)` | `oklch(0.56 0.021 213.5)` |
-| `--chart-3` | `oklch(0.546 0.245 262.881)` | `oklch(0.45 0.017 213.2)` |
-| `--chart-4` | `oklch(0.488 0.243 264.376)` | `oklch(0.378 0.015 216)` |
-| `--chart-5` | `oklch(0.424 0.199 265.638)` | `oklch(0.275 0.011 216.9)` |
 
-The chart tokens are kept on mist for consistency, but nothing renders them today —
-there is no chart surface in the app. They are inert either way.
+Two tokens, both near-invisible in practice. `--secondary` paints the user message
+bubble (`chat/MessageContent.tsx:16`, `group-[.is-user]:bg-secondary`); the move to
+mist keeps lightness identical (0.274 → 0.275) and swings hue 286 → 217, but at
+chroma 0.006–0.011 both are effectively neutral dark grey, so the swing does not
+read. `--secondary-foreground` has **no consumer in app code** — the user bubble
+pairs `bg-secondary` with `text-foreground`, not its own foreground token.
+
+Nothing renders the chart tokens today — there is no chart surface — so the blue ramp
+is a forward-looking choice, inert until one exists.
 
 2 tokens are ours and survive untouched: `--radius: 0.625rem`, `--faint:
 oklch(0.551 0.027 264.364)`.
