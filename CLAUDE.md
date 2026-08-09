@@ -10,8 +10,7 @@ codebase:
 1. **The question is vague — you don't know exactly what you're looking for**, e.g.
    "where is auth handled" rather than "where is `handleAuth` used" → **claude-context**.
    Semantic search over the already-indexed repo; it matches meaning, not exact
-   names or patterns. Requires local Milvus running:
-   `cd ~/.context/milvus && docker compose up -d`.
+   names or patterns.
 2. **The question is a specific lookup, not a modification.** Two branches:
    - **Structural or cross-cutting questions** — architecture, module structure,
      complexity/hotspot signals, a call trace across repos/services, dead code,
@@ -79,16 +78,16 @@ Bun only — never `npm`, `pnpm`, `yarn`, `npx` (use `bunx` for one-off tools). 
 workspace commands from the repo root, not inside `apps/*` — e.g. `bun run test`
 inside `apps/web` only runs that workspace and silently skips the server tests.
 
-| Command | Does |
-| --- | --- |
-| `bun install` | Also installs git hooks (lefthook). |
-| `bun run dev:all` | `db:up` then both app servers. |
-| `bun run dev` | Both app servers; assumes DB is already up. |
-| `bun run verify:fast` | Pre-commit gate, scoped to the diff: format, lint, types, tests touching changed files. Seconds — run before every commit. |
-| `bun run verify` | Full gate: types, lint, format, tests, builds. Slow; pre-push hook and CI already run it — only run by hand for a dependency bump, config change, or moved/deleted file. |
-| `bun run test` | Unit + integration + component tests, with coverage, across workspaces. |
-| `bun run test:e2e` | Playwright; starts its own dev server. |
-| `bun run db:up` / `db:down` | Dev + test Postgres containers (test DB is tmpfs, resets on stop). |
+| Command                     | Does                                                                                                                                                                     |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `bun install`               | Also installs git hooks (lefthook).                                                                                                                                      |
+| `bun run dev:all`           | `db:up` then both app servers.                                                                                                                                           |
+| `bun run dev`               | Both app servers; assumes DB is already up.                                                                                                                              |
+| `bun run verify:fast`       | Pre-commit gate, scoped to the diff: format, lint, types, tests touching changed files. Seconds — run before every commit.                                               |
+| `bun run verify`            | Full gate: types, lint, format, tests, builds. Slow; pre-push hook and CI already run it — only run by hand for a dependency bump, config change, or moved/deleted file. |
+| `bun run test`              | Unit + integration + component tests, with coverage, across workspaces.                                                                                                  |
+| `bun run test:e2e`          | Playwright; starts its own dev server.                                                                                                                                   |
+| `bun run db:up` / `db:down` | Dev + test Postgres containers (test DB is tmpfs, resets on stop).                                                                                                       |
 
 Single test file/name: use the workspace's vitest directly, e.g.
 `cd apps/server && bunx vitest run path/to/file.test.ts -t "test name"`.
@@ -111,7 +110,7 @@ Postgres test `5433`.
   (via the `capture-convention` skill), not applied silently.
 - Issue tracking is **Beads**: `bd ready` for available work, `bd show <id>` for
   context, `bd list --all --type decision` for why a technology was chosen, `bd
-  prime` for full workflow context.
+prime` for full workflow context.
 
 ### TypeScript & code style (`typescript.instructions.md`)
 
