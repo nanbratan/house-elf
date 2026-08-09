@@ -1,0 +1,126 @@
+---
+description: 'Use when adding, changing, or re-syncing a shadcn component in apps/web. Covers the lib/components/ui carve-out from house style, the base-ui-only rule, and how to add or upgrade a component.'
+applyTo: 'apps/web/src/lib/components/ui/**, apps/web/src/lib/components/ai-elements/**'
+---
+
+# shadcn components
+
+**Proposal — not yet in force.** Raised by the shadcn adoption analysis
+(`.agents/shadcn-adoption-analysis.md`). Review, amend, then rename to
+`ui.instructions.md` to adopt.
+
+Why shadcn at all, and why base-ui: `bd list --all --type decision`.
+
+## The two directories
+
+- `lib/components/ui/` — shadcn registry primitives, upstream code **verbatim**.
+- `lib/components/ai-elements/` — ai-elements components, upstream code verbatim
+  except for the base-ui prop fixes recorded below.
+
+Everything else in `lib/components/<area>/` remains ordinary app code under the
+normal house rules. These two directories are the only carve-out.
+
+## Carve-out from house style
+
+Inside these two directories only, upstream style wins over house style. The point is
+that `shadcn add --overwrite` and `shadcn diff` keep working; a reformatted file makes
+every future upgrade a manual merge.
+
+Specifically exempt:
+
+- **kebab-case filenames** (`dropdown-menu.tsx`), not PascalCase.
+- **Upstream formatting** — double quotes, no semicolons, upstream import order.
+  Keep these paths in `.prettierignore` and off the lint rules that would rewrite
+  them.
+- **`export { Foo }` footers** rather than `export function` at the declaration.
+  The no-default-export rule still applies (upstream uses named exports anyway).
+- **No `interface FooProps` above the component.** Upstream types props inline off
+  the base-ui primitive (`ButtonPrimitive.Props & VariantProps<…>`); restating it
+  would drift.
+- **Props spreading.** These _are_ leaf DOM wrappers, which the house rule already
+  allows.
+
+Not exempt — these still apply:
+
+- No `any`, no assertions to silence the compiler.
+- The files are **typechecked and linted**. That is the entire safety mechanism: the
+  old `vendor/` tree was excluded from `tsconfig.json`, ESLint and Prettier, so a
+  primitive swap broke its consumers with no error anywhere. Never re-add an exclude
+  for these paths.
+
+## Coverage
+
+`lib/components/ui/` and `lib/components/ai-elements/` are **exempt from the
+`apps/web/src/lib` 85%/80% coverage floor** — configure them as coverage excludes.
+Upstream code we do not write is not code we write tests for; the floor exists to
+keep _our_ logic covered, and counting thousands of vendored lines against it either
+fails CI on day one or forces tests that assert upstream behaviour.
+
+Test the app components that _use_ these primitives, not the primitives.
+
+## base-ui only — no radix
+
+Every component here resolves to the `base-nova` style, which is base-ui backed.
+`radix-ui` is not a dependency of this repo and must not become one again.
+
+**The style is resolved from the nearest `components.json`, which lives in
+`apps/web/` — not the repo root.** Always run the CLI from `apps/web`, or pass
+`--cwd apps/web`. The same applies to the shadcn MCP server: `.mcp.json` pins
+`--cwd apps/web` for exactly this reason. Check the `registry/<style>/` prefix in any
+registry output you rely on — if it does not say `base-nova`, you were in the wrong
+directory and are reading radix source.
+
+### Known base-ui differences from radix
+
+Reach for these when a component copied from an older source does not compile:
+
+| radix                                                      | base-ui                                                     |
+| ---------------------------------------------------------- | ----------------------------------------------------------- |
+| `asChild`                                                  | `render={…}` — `asChild` does not exist in base-nova at all |
+| `DropdownMenuCheckboxItem` `onSelect` + `preventDefault()` | `closeOnClick={false}`                                      |
+| `HoverCard` `openDelay`/`closeDelay` on the root           | `delay`/`closeDelay` on the **Trigger**                     |
+| `TooltipProvider` `delayDuration`                          | `delay`                                                     |
+
+## Adding a component
+
+```sh
+cd apps/web && bunx shadcn@latest add <name>
+```
+
+Bun only — never `npx`. Then:
+
+1. Confirm the file landed in `src/lib/components/ui/`. If it did not, the
+   `components.json` aliases are wrong — fix them, do not move the file by hand.
+2. Do not reformat it. Do not rename it. Do not add a `FooProps` interface.
+3. Run `bun run verify:fast`. A new primitive that does not typecheck against its
+   consumers is the failure this whole layout exists to surface.
+
+Adding a component pulls its registry dependencies too — check what arrived before
+committing. Never `add` a block wholesale (`dashboard-01` pulls `@dnd-kit/*`,
+`@tanstack/react-table` and `zod`); read a block for its composition and copy only
+what you need.
+
+## Re-syncing with upstream
+
+```sh
+cd apps/web && bunx shadcn@latest diff <name>
+```
+
+Review the diff, then `add --overwrite` to take it. If a component has local edits,
+they are either a base-ui prop fix from the table above — re-apply it — or they should
+not exist. Local changes to these files are a smell: the customisation belongs in the
+app component that consumes the primitive, or in a theme token, not in the vendored
+source.
+
+## Theme tokens
+
+Colours are `oklch` custom properties in `apps/web/src/styles/app.css`, base-nova with
+the `mist` base colour, **dark-only, in a single `:root` block** — there is no light
+palette and no `.dark` override block. `--faint` is ours, not shadcn's; keep it.
+
+`@custom-variant dark` and `className="dark"` on `<html>` stay even though the app is
+dark-only: base-nova ships `dark:` utilities inside its own class strings, and they
+are inert without the class.
+
+Never rename a shadcn token. The names are the contract with every component in these
+two directories.
