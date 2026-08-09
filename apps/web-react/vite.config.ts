@@ -131,7 +131,12 @@ export default defineConfig(({ mode }) =>
 			alias: {
 				// Lets the vendored catalogue resolve its own imports untouched — the
 				// whole point is that those files stay byte-identical to upstream.
+				// Upstream mixes two style names for the same directory.
 				'@/registry/default/ui': new URL(
+					'./src/lib/components/vendor/ai-elements/ui',
+					import.meta.url
+				).pathname,
+				'@/registry/new-york-v4/ui': new URL(
 					'./src/lib/components/vendor/ai-elements/ui',
 					import.meta.url
 				).pathname,

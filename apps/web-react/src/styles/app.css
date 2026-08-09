@@ -104,6 +104,20 @@
 }
 
 @layer base {
+	/*
+	 * Tailwind v4's bare `border` utility defaults to `currentColor`, not a theme
+	 * color — v3 defaulted it to gray-200. Every vendored component (dialog,
+	 * dropdown-menu, button, command's input divider) uses the bare utility and
+	 * expects the v3-style default, shadcn's own template restores it with exactly
+	 * this reset. Without it, borders render in whatever text color is inherited —
+	 * near-white against this dark theme.
+	 */
+	*,
+	::before,
+	::after {
+		border-color: var(--color-border);
+	}
+
 	html {
 		/* Makes form controls and scrollbars render dark too. */
 		color-scheme: dark;
