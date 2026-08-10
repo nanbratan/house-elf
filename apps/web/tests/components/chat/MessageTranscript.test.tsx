@@ -6,7 +6,7 @@ import { ErrorNotice } from '../../../src/lib/components/chat/ErrorNotice.tsx';
 import { Message } from '../../../src/lib/components/chat/Message.tsx';
 import { MessagePart } from '../../../src/lib/components/chat/MessagePart.tsx';
 import { MessageTranscript } from '../../../src/lib/components/chat/MessageTranscript.tsx';
-import { Shimmer } from '../../../src/lib/components/vendor/ai-elements/shimmer.tsx';
+import { Shimmer } from '../../../src/lib/components/ui/shimmer.tsx';
 
 // Every child is tested at its own boundary; here each is a stub whose call
 // history records what the transcript passed it. A stub that receives children
@@ -36,7 +36,7 @@ vi.mock('../../../src/lib/components/chat/ErrorNotice.tsx', () => ({
 	ErrorNotice: vi.fn(() => <div data-testid="error-notice" />)
 }));
 
-vi.mock('../../../src/lib/components/vendor/ai-elements/shimmer.tsx', () => ({
+vi.mock('../../../src/lib/components/ui/shimmer.tsx', () => ({
 	Shimmer: vi.fn(({ children }: { children?: ReactNode }) => <span>{children}</span>)
 }));
 

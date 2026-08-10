@@ -1,15 +1,24 @@
 # ai-elements — vendored catalogue
 
-**Reference material, not application code. Nothing here is ever imported.**
+**Mostly reference material — but five of these files are imported directly by the app.**
 
-Components are read, then copied _out_ of this directory into `apps/web` and
-edited there. This snapshot exists so `claude-context` and `codebase-memory` can index
-it, and an agent can see what ai-elements already offers before hand-rolling a
-replacement for it.
+Most components here are read, then copied _out_ of this directory and edited as our own
+under `lib/components/`. The snapshot exists so `claude-context` can index it and an agent
+can see what ai-elements already offers before hand-rolling a replacement.
 
-It is therefore excluded from every quality gate — `eslint.config.js`, `.prettierignore`
-— so do not expect `bun run lint` or `bun run format` to report on these files. Leave
-them byte-identical to upstream so the next refresh diffs cleanly.
+Five are imported as they stand, pending graduation under the `house-elf-2la` epic:
+`conversation` (MessageTranscript), `reasoning` and `tool` (MessagePart), `model-selector`
+(ModelPicker, ModelRow, PinnedSection), `prompt-input` (Composer). Those are in the
+typecheck program and ship in the bundle, unlike the rest — `tsconfig.json`'s
+`exclude` only drops this directory from the root file set, it does not shield files
+reachable through an app import.
+
+The directory is excluded from every quality gate — `eslint.config.js`, `.prettierignore`,
+coverage — so `bun run lint` and `bun run format` will not report on it. It is also
+excluded from the `codebase-memory` index, so `search_graph` and `trace_path` silently
+under-report any caller that lives here; use serena to confirm a symbol's real callers
+before acting on a graph result. Keep files byte-identical to upstream so the next refresh
+diffs cleanly; where that proves impossible, record the divergence under Layout.
 
 ## Provenance
 
@@ -31,11 +40,18 @@ writing each `files[].content` to `<name>.tsx`, then walk the `registryDependenc
 are not themselves ai-elements components and pull those from the shadcn endpoint into
 `ui/`.
 
+Skip `shimmer` and `plan` when you do: shadcn's `shimmer` CSS utility covers what they
+need, `reasoning.tsx` imports `Shimmer` from `../../ui/shimmer.tsx` accordingly, and
+taking upstream's versions puts the `motion` dependency back.
+
 ## Layout
 
-- `*.tsx` — the 48 ai-elements components.
+- `*.tsx` — the 46 ai-elements components.
 - `ui/*.tsx` — the 25 shadcn components they depend on, pulled transitively so that no
   file here references a component missing from the snapshot.
+
+The tables below describe upstream, so they still list components and dependencies this
+snapshot does not carry.
 
 Import paths are upstream's and are **not** rewritten: `@/registry/default/ui/button` and
 `@/registry/new-york-v4/ui/textarea` both mean `ui/button.tsx` and `ui/textarea.tsx` here,
