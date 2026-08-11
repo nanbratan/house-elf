@@ -1,17 +1,18 @@
 # ai-elements — vendored catalogue
 
-**Mostly reference material — but five of these files are imported directly by the app.**
+**Every file here is reachable from app code and ships in the bundle.**
 
-Most components here are read, then copied _out_ of this directory and edited as our own
-under `lib/components/`. The snapshot exists so `claude-context` can index it and an agent
-can see what ai-elements already offers before hand-rolling a replacement.
+This was a full snapshot of the registry, kept as reference material. `house-elf-2la.4`
+deleted the 52 files no app import reached, leaving only the closure: five components
+imported directly, pending graduation under the `house-elf-2la` epic — `conversation`
+(MessageTranscript), `reasoning` and `tool` (MessagePart), `model-selector` (ModelPicker,
+ModelRow, PinnedSection), `prompt-input` (Composer) — plus `code-block`, which only `tool`
+imports, and the `ui/` primitives those six pull in.
 
-Five are imported as they stand, pending graduation under the `house-elf-2la` epic:
-`conversation` (MessageTranscript), `reasoning` and `tool` (MessagePart), `model-selector`
-(ModelPicker, ModelRow, PinnedSection), `prompt-input` (Composer). Those are in the
-typecheck program and ship in the bundle, unlike the rest — `tsconfig.json`'s
-`exclude` only drops this directory from the root file set, it does not shield files
-reachable through an app import.
+Nothing here is inert any more: all of it is in the typecheck program and all of it ships.
+`tsconfig.json`'s `exclude` only drops this directory from the root file set, it does not
+shield files reachable through an app import. `house-elf-2la.29` dissolves the directory
+altogether once the last of them has graduated.
 
 The directory is excluded from every quality gate — `eslint.config.js`, `.prettierignore`,
 coverage — so `bun run lint` and `bun run format` will not report on it. It is also
@@ -35,10 +36,11 @@ Fetched straight from the registry, not with the `ai-elements` CLI: that package
 job is to shell out to `shadcn@latest add`, which assumes a Next.js project with shadcn
 already initialised. Neither is true here.
 
-To refresh: re-fetch every `items[]` entry of type `registry:component` from the index,
-writing each `files[].content` to `<name>.tsx`, then walk the `registryDependencies` that
-are not themselves ai-elements components and pull those from the shadcn endpoint into
-`ui/`.
+To refresh: re-fetch the `items[]` entries of type `registry:component` that this
+directory still carries, writing each `files[].content` to `<name>.tsx`, then walk the
+`registryDependencies` that are not themselves ai-elements components and pull those from
+the shadcn endpoint into `ui/`. Do not re-fetch the whole index — that would restore the
+52 files `house-elf-2la.4` deleted.
 
 Skip `shimmer` and `plan` when you do: shadcn's `shimmer` CSS utility covers what they
 need, `reasoning.tsx` imports `Shimmer` from `../../ui/shimmer.tsx` accordingly, and
@@ -47,15 +49,14 @@ taking upstream's versions puts the `motion` dependency back.
 `reasoning.tsx` also imports `useControllableState` from `../../../hooks/`. The table
 below records what upstream declares, which is still
 `@radix-ui/react-use-controllable-state` — a package no `package.json` here asks for,
-resolving only because `radix-ui` hoists it. Six files in this directory import it; the
-five that are not `reasoning` are unreachable from app code and go with
-`house-elf-2la.4`. Repoint any refresh of those at the local hook rather than reinstating
-the phantom dependency.
+resolving only because `radix-ui` hoists it. `reasoning` is now the only file here that
+wants it, the other five importers having gone with `house-elf-2la.4`. Repoint any
+refresh at the local hook rather than reinstating the phantom dependency.
 
 ## Layout
 
-- `*.tsx` — the 46 ai-elements components.
-- `ui/*.tsx` — the 25 shadcn components they depend on, pulled transitively so that no
+- `*.tsx` — the 6 ai-elements components the app reaches.
+- `ui/*.tsx` — the 13 shadcn components they depend on, pulled transitively so that no
   file here references a component missing from the snapshot.
 
 The tables below describe upstream, so they still list components and dependencies this
