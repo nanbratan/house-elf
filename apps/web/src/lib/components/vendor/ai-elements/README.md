@@ -44,6 +44,14 @@ Skip `shimmer` and `plan` when you do: shadcn's `shimmer` CSS utility covers wha
 need, `reasoning.tsx` imports `Shimmer` from `../../ui/shimmer.tsx` accordingly, and
 taking upstream's versions puts the `motion` dependency back.
 
+`reasoning.tsx` also imports `useControllableState` from `../../../hooks/`. The table
+below records what upstream declares, which is still
+`@radix-ui/react-use-controllable-state` — a package no `package.json` here asks for,
+resolving only because `radix-ui` hoists it. Six files in this directory import it; the
+five that are not `reasoning` are unreachable from app code and go with
+`house-elf-2la.4`. Repoint any refresh of those at the local hook rather than reinstating
+the phantom dependency.
+
 ## Layout
 
 - `*.tsx` — the 46 ai-elements components.
