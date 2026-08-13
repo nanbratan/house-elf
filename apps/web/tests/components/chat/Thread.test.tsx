@@ -5,7 +5,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ErrorNotice } from '../../../src/lib/components/chat/ErrorNotice.tsx';
 import { MessageResponse } from '../../../src/lib/components/chat/MessageResponse.tsx';
-import { Reasoning } from '../../../src/lib/components/vendor/ai-elements/reasoning.tsx';
+import {
+	ReasoningRoot,
+	ReasoningTrigger
+} from '../../../src/lib/components/assistant-ui/reasoning.tsx';
 import { Thread } from '../../../src/lib/components/chat/Thread.tsx';
 import { ToolFallback } from '../../../src/lib/components/assistant-ui/tool-fallback.tsx';
 import { ToolGroupTrigger } from '../../../src/lib/components/assistant-ui/tool-group.tsx';
@@ -95,10 +98,11 @@ vi.mock('../../../src/lib/components/chat/MessageResponse.tsx', () => ({
 	MessageResponse: vi.fn(() => <span data-testid="message-response" />)
 }));
 
-vi.mock('../../../src/lib/components/vendor/ai-elements/reasoning.tsx', () => ({
-	Reasoning: vi.fn(({ children }: { children?: ReactNode }) => <div>{children}</div>),
-	ReasoningTrigger: vi.fn(() => null),
-	ReasoningContent: vi.fn(({ children }: { children?: ReactNode }) => <span>{children}</span>)
+vi.mock('../../../src/lib/components/assistant-ui/reasoning.tsx', () => ({
+	ReasoningRoot: vi.fn(({ children }: { children?: ReactNode }) => <div>{children}</div>),
+	ReasoningTrigger: vi.fn(() => <span data-testid="reasoning-trigger" />),
+	ReasoningContent: vi.fn(({ children }: { children?: ReactNode }) => <div>{children}</div>),
+	ReasoningText: vi.fn(({ children }: { children?: ReactNode }) => <div>{children}</div>)
 }));
 
 vi.mock('../../../src/lib/components/chat/ErrorNotice.tsx', () => ({
@@ -106,7 +110,8 @@ vi.mock('../../../src/lib/components/chat/ErrorNotice.tsx', () => ({
 }));
 
 const responseProps = () => vi.mocked(MessageResponse).mock.lastCall?.[0];
-const reasoningProps = () => vi.mocked(Reasoning).mock.lastCall?.[0];
+const reasoningRootProps = () => vi.mocked(ReasoningRoot).mock.lastCall?.[0];
+const reasoningTriggerProps = () => vi.mocked(ReasoningTrigger).mock.lastCall?.[0];
 const toolGroupProps = () => vi.mocked(ToolGroupTrigger).mock.lastCall?.[0];
 const errorNoticeProps = () => vi.mocked(ErrorNotice).mock.lastCall?.[0];
 
@@ -188,14 +193,37 @@ describe('Thread', () => {
 		expect(responseProps()?.isAnimating).toBe(false);
 	});
 
-	it('renders a reasoning part through the reasoning disclosure', () => {
+	it('collapses a run of reasoning parts under one disclosure, marked streaming', () => {
 		threadMessages = [{ role: 'assistant' }];
-		messageParts = [{ type: 'reasoning', text: 'Thinking…', status: { type: 'running' } }];
+		messageParts = [{ type: 'group-reasoning', status: { type: 'running' }, indices: [0, 1] }];
 
 		render(<Thread />);
 
-		expect(reasoningProps()?.isStreaming).toBe(true);
-		expect(screen.getByText('Thinking…')).toBeInTheDocument();
+		expect(reasoningRootProps()?.streaming).toBe(true);
+		expect(reasoningTriggerProps()?.active).toBe(true);
+		expect(screen.getByTestId('group-children')).toBeInTheDocument();
+	});
+
+	it('settles the reasoning disclosure once the group is no longer running', () => {
+		threadMessages = [{ role: 'assistant' }];
+		messageParts = [{ type: 'group-reasoning', status: { type: 'complete' }, indices: [0] }];
+
+		render(<Thread />);
+
+		expect(reasoningRootProps()?.streaming).toBe(false);
+		expect(reasoningTriggerProps()?.active).toBe(false);
+	});
+
+	// Reasoning text is markdown from the same model as the reply, so it goes through the
+	// same renderer; the disclosure around it is the group's job, not the part's.
+	it('renders a reasoning part as an animating response inside the group', () => {
+		threadMessages = [{ role: 'assistant' }];
+		messageParts = [{ type: 'reasoning', text: 'Weighing it up', status: { type: 'running' } }];
+
+		render(<Thread />);
+
+		expect(responseProps()?.children).toBe('Weighing it up');
+		expect(responseProps()?.isAnimating).toBe(true);
 	});
 
 	it('falls back to the generic tool card when a tool ships no UI of its own', () => {

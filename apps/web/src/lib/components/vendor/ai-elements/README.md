@@ -43,19 +43,17 @@ the shadcn endpoint into `ui/`. Do not re-fetch the whole index — that would r
 52 files `house-elf-2la.4` deleted.
 
 Skip `shimmer` and `plan` when you do: shadcn's `shimmer` CSS utility covers what they
-need, `reasoning.tsx` imports `Shimmer` from `../../ui/shimmer.tsx` accordingly, and
-taking upstream's versions puts the `motion` dependency back.
+need, and taking upstream's versions puts the `motion` dependency back.
 
-`reasoning.tsx` also imports `useControllableState` from `../../../hooks/`. The table
-below records what upstream declares, which is still
+The table below records what upstream declares, including
 `@radix-ui/react-use-controllable-state` — a package no `package.json` here asks for,
-resolving only because `radix-ui` hoists it. `reasoning` is now the only file here that
-wants it, the other five importers having gone with `house-elf-2la.4`. Repoint any
-refresh at the local hook rather than reinstating the phantom dependency.
+resolving only because `radix-ui` hoists it. Nothing left in this directory imports it;
+should a refresh pull in a component that wants it, replace it rather than reinstating
+the phantom dependency.
 
 ## Layout
 
-- `*.tsx` — the 6 ai-elements components the app reaches.
+- `*.tsx` — the 3 ai-elements components the app reaches.
 - `ui/*.tsx` — the 13 shadcn components they depend on, pulled transitively so that no
   file here references a component missing from the snapshot.
 

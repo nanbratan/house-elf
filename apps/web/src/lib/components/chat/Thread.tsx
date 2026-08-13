@@ -10,10 +10,15 @@ import {
 import { ToolGroupContent, ToolGroupRoot, ToolGroupTrigger } from '../assistant-ui/tool-group.tsx';
 import { ErrorNotice } from './ErrorNotice.tsx';
 import { MessageResponse } from './MessageResponse.tsx';
-import { Reasoning, ReasoningContent, ReasoningTrigger } from '../vendor/ai-elements/reasoning.tsx';
+import {
+	ReasoningContent,
+	ReasoningRoot,
+	ReasoningText,
+	ReasoningTrigger
+} from '../assistant-ui/reasoning.tsx';
 import { ToolFallback } from '../assistant-ui/tool-fallback.tsx';
 
-const groupToolCalls = groupPartByType({ 'tool-call': ['group-tool'] });
+const groupParts = groupPartByType({ 'tool-call': ['group-tool'], reasoning: ['group-reasoning'] });
 
 function UserMessage() {
 	return (
@@ -43,9 +48,20 @@ function AssistantMessage() {
 			className="group flex w-full max-w-[95%] flex-col gap-2 text-sm text-foreground"
 			data-role="assistant"
 		>
-			<MessagePrimitive.GroupedParts groupBy={groupToolCalls}>
+			<MessagePrimitive.GroupedParts groupBy={groupParts}>
 				{({ part, children }) => {
 					switch (part.type) {
+						case 'group-reasoning': {
+							const isReasoning = part.status.type === 'running';
+							return (
+								<ReasoningRoot streaming={isReasoning} variant="ghost">
+									<ReasoningTrigger active={isReasoning} />
+									<ReasoningContent aria-busy={isReasoning}>
+										<ReasoningText>{children}</ReasoningText>
+									</ReasoningContent>
+								</ReasoningRoot>
+							);
+						}
 						case 'group-tool':
 							return (
 								<ToolGroupRoot variant="ghost">
@@ -64,10 +80,9 @@ function AssistantMessage() {
 							);
 						case 'reasoning':
 							return (
-								<Reasoning isStreaming={part.status.type === 'running'}>
-									<ReasoningTrigger />
-									<ReasoningContent>{part.text}</ReasoningContent>
-								</Reasoning>
+								<MessageResponse isAnimating={part.status.type === 'running'}>
+									{part.text}
+								</MessageResponse>
 							);
 						case 'tool-call':
 							return part.toolUI ?? <ToolFallback {...part} />;
