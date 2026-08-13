@@ -99,7 +99,7 @@ async function ask(page: Page, question: string): Promise<void> {
 	await expect(async () => {
 		await composer.fill(question);
 		await composer.press('Enter');
-		await expect(page.locator('article[data-role="assistant"]')).toHaveCount(1, {
+		await expect(page.locator('[data-role="assistant"]')).toHaveCount(1, {
 			timeout: 1000
 		});
 	}).toPass({ timeout: 15_000 });
@@ -161,7 +161,7 @@ test.describe('a streaming reply', () => {
 
 	test('appears as it arrives, rather than all at the end', async ({ page }) => {
 		await ask(page, 'Say something.');
-		const reply = page.locator('article[data-role="assistant"]');
+		const reply = page.locator('[data-role="assistant"]');
 
 		await page.evaluate(() => {
 			window.__chat.emit('First half. ');
@@ -204,7 +204,7 @@ test.describe('a streaming reply', () => {
 		await ask(page, 'Say a lot.');
 
 		await emitParagraphs(page, 1, 40);
-		await expect(page.locator('article[data-role="assistant"]')).toContainText('Paragraph 40');
+		await expect(page.locator('[data-role="assistant"]')).toContainText('Paragraph 40');
 
 		// The transcript must actually overflow, or "stayed at the bottom" would be
 		// true for the uninteresting reason that there was nowhere else to be.
@@ -226,7 +226,7 @@ test.describe('a streaming reply', () => {
 		await ask(page, 'Say a lot, slowly.');
 
 		await emitParagraphsAsTasks(page, 1, 30);
-		await expect(page.locator('article[data-role="assistant"]')).toContainText('Paragraph 30');
+		await expect(page.locator('[data-role="assistant"]')).toContainText('Paragraph 30');
 
 		// Nothing was touched, so nothing may have let go: the end stays in view and
 		// the jump button, which only appears once following has stopped, does not.
@@ -239,7 +239,7 @@ test.describe('a streaming reply', () => {
 	test('lets a reader scroll back without dragging them down again', async ({ page }) => {
 		await ask(page, 'Say a lot.');
 		await emitParagraphs(page, 1, 40);
-		await expect(page.locator('article[data-role="assistant"]')).toContainText('Paragraph 40');
+		await expect(page.locator('[data-role="assistant"]')).toContainText('Paragraph 40');
 
 		// A real wheel gesture, because that is the path a reader takes. Scripted
 		// `scrollTop` assignment does not always produce the scroll event the view
@@ -260,7 +260,7 @@ test.describe('a streaming reply', () => {
 		// More text arrives while the reader is looking elsewhere. The view must not
 		// move; the distance from the end grows precisely because it stayed put.
 		await emitParagraphs(page, 41, 10);
-		await expect(page.locator('article[data-role="assistant"]')).toContainText('Paragraph 50');
+		await expect(page.locator('[data-role="assistant"]')).toContainText('Paragraph 50');
 		expect(await distanceFromBottom(page)).toBeGreaterThan(readingAt);
 
 		await jump.click();
@@ -272,7 +272,7 @@ test.describe('a streaming reply', () => {
 
 		// And having caught up, it follows again.
 		await emitParagraphs(page, 51, 10);
-		await expect(page.locator('article[data-role="assistant"]')).toContainText('Paragraph 60');
+		await expect(page.locator('[data-role="assistant"]')).toContainText('Paragraph 60');
 		await expect(async () => {
 			expect(await distanceFromBottom(page)).toBeLessThan(20);
 		}).toPass({ timeout: 5000 });

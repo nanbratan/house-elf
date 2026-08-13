@@ -29,10 +29,10 @@
 	},
 	"dependencies": {
 		"@ai-sdk/react": "4.0.61",
-		"@base-ui/react": "^1.7.0",
 		"@assistant-ui/react": "^0.15.13",
 		"@assistant-ui/react-ai-sdk": "^1.4.5",
 		"@assistant-ui/react-streamdown": "^0.3.10",
+		"@base-ui/react": "^1.7.0",
 		"@house-elf/shared": "workspace:*",
 		"@streamdown/cjk": "1.0.3",
 		"@streamdown/code": "1.1.1",
@@ -51,6 +51,7 @@
 		"shadcn": "^4.16.2",
 		"streamdown": "2.5.0",
 		"tailwind-merge": "^3.6.0",
+		"tw-shimmer": "^0.4.12",
 		"use-stick-to-bottom": "1.1.6"
 	}
 }

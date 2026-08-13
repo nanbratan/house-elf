@@ -8,23 +8,21 @@
  */
 @import 'tw-animate-css';
 /*
- * Ships the `shimmer` text utilities that `ui/shimmer.tsx` composes. Dropping this
- * import fails silently — the utilities go undefined and the reasoning header's
- * streaming animation stops.
- *
- * This is also the ONE definition of `shimmer`. assistant-ui's `elements-surfaces`
- * registry item declares the `tw-shimmer` package and emits `@import "tw-shimmer"`,
- * which defines the same `@utility shimmer` — whichever import came last would win.
- * We keep shadcn's and do not install tw-shimmer: this import cannot be dropped (it
- * also supplies `scroll-fade-*`), so shadcn's definition is unavoidable, and the two
- * disagree on `--shimmer-duration` — shadcn reads a CSS time (`2s`), tw-shimmer a
- * unitless ms count, so the `2s` that `ui/shimmer.tsx` sets inline would silently be
- * discarded. elements-surfaces only ever uses the bare `shimmer` class, which shadcn
- * supplies. Strip the `@import "tw-shimmer"` line when the CLI adds that item.
+ * Cannot be dropped: it supplies `scroll-fade-*`. It also defines `@utility shimmer`,
+ * which `tw-shimmer` below defines too.
  */
 @import 'shadcn/tailwind.css';
 @import '@fontsource-variable/jetbrains-mono';
 @import '@fontsource-variable/ibm-plex-sans';
+/*
+ * MUST stay after `shadcn/tailwind.css`: both define `@utility shimmer`, and the last
+ * import wins. We want tw-shimmer's, because assistant-ui's `tool-fallback` and
+ * `tool-group` are built against it and we follow the framework rather than feed it
+ * our own. Reordering these two fails silently — the class still resolves, but
+ * `--shimmer-duration` flips meaning: shadcn reads a CSS time (`2s`), tw-shimmer a
+ * unitless ms count, so `shimmer-duration-2000` would be discarded as invalid.
+ */
+@import 'tw-shimmer';
 
 /*
  * Tailwind v4 excludes gitignored paths from content detection, so node_modules is
@@ -38,49 +36,47 @@
 @source '../../../../node_modules/@assistant-ui/react-streamdown/dist';
 
 /*
- * base-nova's `mist` base colour, dark values, copied from the registry
- * (https://ui.shadcn.com/r/colors/mist.json, cssVars.dark). Do not rename these
- * tokens: their names ARE the contract with the registry components.
+ * shadcn's slate dark palette. Do not rename these tokens: their names ARE the
+ * contract with the registry components.
  *
  * The app is dark-only, so the dark values sit directly in `:root` and there is no
  * light block and no `.dark` block.
  *
- * Two families depart from mist, whose own accent is a near-neutral grey: the two
- * primary pairs are cyan and the charts are blue. `--primary` is a FILL, never text
- * — measured against this background it is 2.72:1 as body text and 2.40:1 on the
- * sidebar, both under WCAG AA, while `--primary-foreground` on `--primary` is
- * 6.97:1 and passes.
+ * `--primary` is a light near-white FILL with a dark `--primary-foreground` sitting
+ * on it, which is the inverse of the cyan-fill scheme this replaced. It is a fill,
+ * never text: on this background it is far too close to `--foreground` to read as
+ * anything but body copy.
  */
 :root {
 	--radius: 0.625rem;
 
-	--background: oklch(0.148 0.004 228.8);
-	--foreground: oklch(0.987 0.002 197.1);
-	--card: oklch(0.218 0.008 223.9);
-	--card-foreground: oklch(0.987 0.002 197.1);
-	--popover: oklch(0.218 0.008 223.9);
-	--popover-foreground: oklch(0.987 0.002 197.1);
-	--primary: oklch(0.45 0.085 224.283);
-	--primary-foreground: oklch(0.984 0.019 200.873);
-	--secondary: oklch(0.275 0.011 216.9);
-	--secondary-foreground: oklch(0.987 0.002 197.1);
-	--muted: oklch(0.275 0.011 216.9);
-	--muted-foreground: oklch(0.723 0.014 214.4);
-	--accent: oklch(0.275 0.011 216.9);
-	--accent-foreground: oklch(0.987 0.002 197.1);
+	--background: oklch(0.129 0.042 264.695);
+	--foreground: oklch(0.984 0.003 247.858);
+	--card: oklch(0.208 0.042 265.755);
+	--card-foreground: oklch(0.984 0.003 247.858);
+	--popover: oklch(0.208 0.042 265.755);
+	--popover-foreground: oklch(0.984 0.003 247.858);
+	--primary: oklch(0.929 0.013 255.508);
+	--primary-foreground: oklch(0.208 0.042 265.755);
+	--secondary: oklch(0.279 0.041 260.031);
+	--secondary-foreground: oklch(0.984 0.003 247.858);
+	--muted: oklch(0.279 0.041 260.031);
+	--muted-foreground: oklch(0.704 0.04 256.788);
+	--accent: oklch(0.279 0.041 260.031);
+	--accent-foreground: oklch(0.984 0.003 247.858);
 	--destructive: oklch(0.704 0.191 22.216);
 	--border: oklch(1 0 0 / 10%);
 	--input: oklch(1 0 0 / 15%);
-	--ring: oklch(0.56 0.021 213.5);
+	--ring: oklch(0.551 0.027 264.364);
 
-	--sidebar: oklch(0.218 0.008 223.9);
-	--sidebar-foreground: oklch(0.987 0.002 197.1);
-	--sidebar-primary: oklch(0.715 0.143 215.221);
-	--sidebar-primary-foreground: oklch(0.302 0.056 229.695);
-	--sidebar-accent: oklch(0.275 0.011 216.9);
-	--sidebar-accent-foreground: oklch(0.987 0.002 197.1);
+	--sidebar: oklch(0.208 0.042 265.755);
+	--sidebar-foreground: oklch(0.984 0.003 247.858);
+	--sidebar-primary: oklch(0.488 0.243 264.376);
+	--sidebar-primary-foreground: oklch(0.984 0.003 247.858);
+	--sidebar-accent: oklch(0.279 0.041 260.031);
+	--sidebar-accent-foreground: oklch(0.984 0.003 247.858);
 	--sidebar-border: oklch(1 0 0 / 10%);
-	--sidebar-ring: oklch(0.56 0.021 213.5);
+	--sidebar-ring: oklch(0.551 0.027 264.364);
 
 	/*
 	 * Ours, not shadcn's. shadcn has two text tiers (foreground, muted-foreground);
@@ -89,11 +85,6 @@
 	 * muted-foreground, which would flatten two tiers into one.
 	 */
 	--faint: oklch(0.551 0.027 264.364);
-	--chart-1: oklch(0.809 0.105 251.813);
-	--chart-2: oklch(0.623 0.214 259.815);
-	--chart-3: oklch(0.546 0.245 262.881);
-	--chart-4: oklch(0.488 0.243 264.376);
-	--chart-5: oklch(0.424 0.199 265.638);
 }
 
 /*
@@ -138,16 +129,26 @@
 	--radius-md: calc(var(--radius) - 2px);
 	--radius-lg: var(--radius);
 	--radius-xl: calc(var(--radius) + 4px);
-	--color-chart-5: var(--chart-5);
-	--color-chart-4: var(--chart-4);
-	--color-chart-3: var(--chart-3);
-	--color-chart-2: var(--chart-2);
-	--color-chart-1: var(--chart-1);
-	--radius-2xl: calc(var(--radius) * 1.8);
-	--radius-3xl: calc(var(--radius) * 2.2);
-	--radius-4xl: calc(var(--radius) * 2.6);
+
 	--font-mono: 'JetBrains Mono Variable', monospace;
 	--font-heading: 'IBM Plex Sans Variable', sans-serif;
+
+	@keyframes collapsible-down {
+		from {
+			height: 0;
+		}
+		to {
+			height: var(--collapsible-panel-height, auto);
+		}
+	}
+	@keyframes collapsible-up {
+		from {
+			height: var(--collapsible-panel-height, auto);
+		}
+		to {
+			height: 0;
+		}
+	}
 }
 
 @layer base {
@@ -251,7 +252,7 @@
 	}
 
 	.markdown a {
-		color: var(--color-foreground);
+		color: var(--color-primary);
 		text-decoration: underline;
 		text-underline-offset: 2px;
 	}
@@ -307,3 +308,11 @@
 		border-radius: 0.5rem;
 	}
 }
+
+/*
+ * base-ui signals collapsible state with `data-open` / `data-closed`; shadcn's own
+ * components still emit `data-state`. Both spellings are matched so one variant
+ * covers either origin.
+ */
+@custom-variant data-open (&:where([data-state='open'], [data-open]:not([data-open='false'])));
+@custom-variant data-closed (&:where([data-state='closed'], [data-closed]:not([data-closed='false'])));

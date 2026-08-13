@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { optionalThinking, selectableModel } from '../../helpers/models.ts';
 import { ChatComposer } from '../../../src/lib/components/chat/ChatComposer.tsx';
-import { ChatTranscript } from '../../../src/lib/components/chat/ChatTranscript.tsx';
+import { Thread } from '../../../src/lib/components/chat/Thread.tsx';
 import { ChatView } from '../../../src/lib/components/chat/ChatView.tsx';
 import { createChatTransport } from '../../../src/lib/chat/transport.ts';
 
@@ -21,8 +21,8 @@ vi.mock('../../../src/lib/chat/transport.ts', () => ({ createChatTransport: vi.f
 
 // Both are tested at their own boundary; here they are stubs whose call history
 // records what ChatView handed them.
-vi.mock('../../../src/lib/components/chat/ChatTranscript.tsx', () => ({
-	ChatTranscript: vi.fn(() => <div data-testid="chat-transcript" />)
+vi.mock('../../../src/lib/components/chat/Thread.tsx', () => ({
+	Thread: vi.fn(() => <div data-testid="thread" />)
 }));
 
 vi.mock('../../../src/lib/components/chat/ChatComposer.tsx', () => ({
@@ -68,7 +68,7 @@ describe('ChatView', () => {
 		render(<ChatView agentId="general" modelCatalog={modelCatalog} />);
 
 		expect(vi.mocked(AssistantRuntimeProvider).mock.lastCall?.[0]?.runtime).toBe(runtime);
-		expect(vi.mocked(ChatTranscript)).toHaveBeenCalled();
+		expect(vi.mocked(Thread)).toHaveBeenCalled();
 		expect(vi.mocked(ChatComposer)).toHaveBeenCalled();
 	});
 

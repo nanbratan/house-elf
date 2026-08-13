@@ -5,7 +5,7 @@ import { useChatRuntime } from '@assistant-ui/react-ai-sdk';
 import { createChatTransport } from '../../chat/transport.ts';
 import { useModelSelection } from '../../hooks/model-selection.ts';
 import { ChatComposer } from './ChatComposer.tsx';
-import { ChatTranscript } from './ChatTranscript.tsx';
+import { Thread } from './Thread.tsx';
 
 export interface ChatViewProps {
 	agentId: string;
@@ -16,7 +16,7 @@ export interface ChatViewProps {
  * A conversation: the model choice, the transport that carries it, and the
  * runtime both feed.
  *
- * The transcript and the composer are separate components because a component
+ * The thread and the composer are separate components because a component
  * cannot consume a context it provides, and both read this runtime.
  */
 export function ChatView({ agentId, modelCatalog }: ChatViewProps) {
@@ -32,7 +32,7 @@ export function ChatView({ agentId, modelCatalog }: ChatViewProps) {
 	return (
 		<AssistantRuntimeProvider runtime={runtime}>
 			<div className="flex h-full min-h-0 flex-col">
-				<ChatTranscript />
+				<Thread />
 
 				<ChatComposer models={modelCatalog.models} modelSelection={modelSelection} />
 			</div>
