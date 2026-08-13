@@ -1,6 +1,6 @@
 ---
-description: 'Use when adding, changing, or re-syncing a shadcn component in apps/web. Covers the ownership policy for lib/components/ui and lib/components/ai-elements, the base-ui-only rule, and how to add a component.'
-applyTo: 'apps/web/src/lib/components/ui/**, apps/web/src/lib/components/ai-elements/**'
+description: 'Use when adding, changing, or re-syncing a registry component in apps/web. Covers the ownership policy for lib/components/ui, lib/components/assistant-ui and lib/components/elements, the base-ui-only rule, and how to add a component.'
+applyTo: 'apps/web/src/lib/components/ui/**, apps/web/src/lib/components/assistant-ui/**, apps/web/src/lib/components/elements/**'
 ---
 
 # shadcn components
@@ -10,11 +10,18 @@ Why shadcn at all, and why base-ui: `bd list --all --type decision`.
 ## These directories are ours
 
 - `lib/components/ui/` — shadcn registry primitives.
-- `lib/components/ai-elements/` — ai-elements components.
+- `lib/components/assistant-ui/` — `@assistant-ui/*` registry components built on the
+  primitives (`reasoning`, `tool-group`, `tool-fallback`).
+- `lib/components/elements/` — `@assistant-ui/elements-*` registry components, the
+  presentational layer that carries no primitive of its own (`composer`, `surfaces`).
 
-**Both hold ordinary app code.** Full house style, `strictTypeChecked`, the
+`lib/components/vendor/ai-elements/` is **not** one of these: it is a byte-identical
+upstream snapshot, excluded from every gate, and it is being dissolved (`house-elf-r9z.14`).
+Nothing new goes there.
+
+**All three hold ordinary app code.** Full house style, `strictTypeChecked`, the
 react-compiler rules, Prettier, tsconfig, tests. There is no carve-out, no
-`.prettierignore` entry, no ESLint exemption and no coverage exclude for either path.
+`.prettierignore` entry, no ESLint exemption and no coverage exclude for any of them.
 
 This is shadcn's own model, not a local deviation. Its Open Code principle puts
 behaviour, accessibility and keyboard handling in `@base-ui-components/react` — an
@@ -32,10 +39,11 @@ test, not pass quietly.
 A file keeps only what the app imports, plus the internals those parts need. Delete the
 rest in the same commit that brings the file in.
 
-This matters more than it sounds: of ~91 symbols exported by the seven reachable
-ai-elements, the app imports 26. `prompt-input.tsx` exports about 46 and `Composer.tsx`
-uses six. Keeping the other forty means owning, restyling and reasoning about code that
-never renders.
+This matters more than it sounds: `@assistant-ui/elements-composer` exports 20 symbols
+and `chat/Composer.tsx` renders four of them (`house-elf-r9z.10`). The other sixteen are
+a slash menu, @mentions, attachment chips, a voice recorder and a usage meter — none of
+which has an adapter behind it, so none of which can render. Keeping them means owning,
+restyling and reasoning about code the app cannot reach.
 
 Re-derive reachability at graduation time — grep the importers, do not trust a
 stale list. The registry is the backup: anything deleted is one `add` away.
@@ -86,8 +94,14 @@ bunx shadcn@latest add <name> --cwd apps/web
 Bun only — never `npx`. Inspect first with `--dry-run`, `--view` or `--diff` if you want
 to see what lands before it lands. Then, in the same commit:
 
-1. Confirm the file landed in `src/lib/components/ui/`. If it did not, the
-   `components.json` aliases are wrong — fix them, do not move the file by hand.
+1. Confirm where the file landed. The registry namespace decides the directory:
+   shadcn's own components go to `src/lib/components/ui/`, `@assistant-ui/*` to
+   `assistant-ui/`, `@assistant-ui/elements-*` to `elements/`. If a _component_ lands
+   somewhere else, the `components.json`
+   aliases are wrong — fix them, do not move the file by hand. A registry dependency that
+   is not a component is another matter: `elements-composer` writes its shared
+   `surfaces.tsx`/`range.ts` to the `lib` alias, i.e. `src/lib/` itself. Move those next
+   to the component that imports them; nothing else will ever use them.
 2. Prune to what the app uses.
 3. Bring it to house style: tabs, single quotes, named exports at the declaration,
    `interface FooProps`, no type assertions, no hand-written `memo`/`useMemo`. Strip
@@ -97,7 +111,11 @@ to see what lands before it lands. Then, in the same commit:
 5. `bun run verify:fast`.
 
 Adding a component pulls its registry dependencies too — check what arrived before
-committing. Never `add` a block wholesale (`dashboard-01` pulls `@dnd-kit/*`,
+committing. It also rewrites `src/styles/app.css`: `elements-composer` re-appended an
+`@import 'tw-shimmer'` we already had and dropped the file's trailing newline. Read the
+diff on that file every time and revert what you did not ask for.
+
+Never `add` a block wholesale (`dashboard-01` pulls `@dnd-kit/*`,
 `@tanstack/react-table` and `zod`); read a block for its composition and copy only what
 you need.
 
@@ -128,4 +146,4 @@ dark-only: base-nova ships `dark:` utilities inside its own class strings, and t
 inert without the class.
 
 Never rename a shadcn token. The names are the contract with every component in these
-two directories.
+three directories.
