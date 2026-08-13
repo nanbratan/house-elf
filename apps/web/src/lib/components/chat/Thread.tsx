@@ -76,14 +76,12 @@ function AssistantMessage() {
 						// through the same component; the disclosure around it is the group's job.
 						case 'text':
 						case 'reasoning':
-							return <MarkdownText />;
+							return <MarkdownText isStreaming={part.status.type === 'running'} />;
 						case 'tool-call':
 							return part.toolUI ?? <ToolFallback {...part} />;
 						case 'indicator':
 							return (
-								<p className="inline-block shimmer text-muted-foreground shimmer-color-background shimmer-angle-0 shimmer-duration-2000 shimmer-spread-40">
-									Waiting for a reply…
-								</p>
+								<p className="inline-block shimmer text-muted-foreground">Waiting for a reply…</p>
 							);
 						default:
 							return null;

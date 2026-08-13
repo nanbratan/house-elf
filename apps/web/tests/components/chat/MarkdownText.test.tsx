@@ -9,7 +9,7 @@ import { MarkdownText } from '../../../src/lib/components/chat/MarkdownText.tsx'
 function renderPart(text: string, isRunning = false) {
 	return render(
 		<TextMessagePartProvider text={text} isRunning={isRunning}>
-			<MarkdownText />
+			<MarkdownText isStreaming={isRunning} />
 		</TextMessagePartProvider>
 	);
 }
