@@ -1,6 +1,5 @@
 "use client";
 
-import { useControllableState } from "@radix-ui/react-use-controllable-state";
 import {
   Collapsible,
   CollapsibleContent,
@@ -25,7 +24,8 @@ import {
 } from "react";
 import { Streamdown } from "streamdown";
 
-import { Shimmer } from "./shimmer";
+import { useControllableState } from "../../../hooks/use-controllable-state.ts";
+import { Shimmer } from "../../ui/shimmer.tsx";
 
 interface ReasoningContextValue {
   isStreaming: boolean;
@@ -71,13 +71,13 @@ export const Reasoning = memo(
     const isExplicitlyClosed = defaultOpen === false;
 
     const [isOpen, setIsOpen] = useControllableState<boolean>({
-      defaultProp: resolvedDefaultOpen,
+      defaultValue: resolvedDefaultOpen,
       onChange: onOpenChange,
-      prop: open,
+      value: open,
     });
     const [duration, setDuration] = useControllableState<number | undefined>({
-      defaultProp: undefined,
-      prop: durationProp,
+      defaultValue: undefined,
+      value: durationProp,
     });
 
     const hasEverStreamedRef = useRef(isStreaming);

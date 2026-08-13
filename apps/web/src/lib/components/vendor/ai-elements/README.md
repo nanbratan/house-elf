@@ -1,15 +1,25 @@
 # ai-elements — vendored catalogue
 
-**Reference material, not application code. Nothing here is ever imported.**
+**Every file here is reachable from app code and ships in the bundle.**
 
-Components are read, then copied _out_ of this directory into `apps/web` and
-edited there. This snapshot exists so `claude-context` and `codebase-memory` can index
-it, and an agent can see what ai-elements already offers before hand-rolling a
-replacement for it.
+This was a full snapshot of the registry, kept as reference material. `house-elf-2la.4`
+deleted the 52 files no app import reached, leaving only the closure: five components
+imported directly, pending graduation under the `house-elf-2la` epic — `conversation`
+(MessageTranscript), `reasoning` and `tool` (MessagePart), `model-selector` (ModelPicker,
+ModelRow, PinnedSection), `prompt-input` (Composer) — plus `code-block`, which only `tool`
+imports, and the `ui/` primitives those six pull in.
 
-It is therefore excluded from every quality gate — `eslint.config.js`, `.prettierignore`
-— so do not expect `bun run lint` or `bun run format` to report on these files. Leave
-them byte-identical to upstream so the next refresh diffs cleanly.
+Nothing here is inert any more: all of it is in the typecheck program and all of it ships.
+`tsconfig.json`'s `exclude` only drops this directory from the root file set, it does not
+shield files reachable through an app import. `house-elf-2la.29` dissolves the directory
+altogether once the last of them has graduated.
+
+The directory is excluded from every quality gate — `eslint.config.js`, `.prettierignore`,
+coverage — so `bun run lint` and `bun run format` will not report on it. It is also
+excluded from the `codebase-memory` index, so `search_graph` and `trace_path` silently
+under-report any caller that lives here; use serena to confirm a symbol's real callers
+before acting on a graph result. Keep files byte-identical to upstream so the next refresh
+diffs cleanly; where that proves impossible, record the divergence under Layout.
 
 ## Provenance
 
@@ -26,16 +36,31 @@ Fetched straight from the registry, not with the `ai-elements` CLI: that package
 job is to shell out to `shadcn@latest add`, which assumes a Next.js project with shadcn
 already initialised. Neither is true here.
 
-To refresh: re-fetch every `items[]` entry of type `registry:component` from the index,
-writing each `files[].content` to `<name>.tsx`, then walk the `registryDependencies` that
-are not themselves ai-elements components and pull those from the shadcn endpoint into
-`ui/`.
+To refresh: re-fetch the `items[]` entries of type `registry:component` that this
+directory still carries, writing each `files[].content` to `<name>.tsx`, then walk the
+`registryDependencies` that are not themselves ai-elements components and pull those from
+the shadcn endpoint into `ui/`. Do not re-fetch the whole index — that would restore the
+52 files `house-elf-2la.4` deleted.
+
+Skip `shimmer` and `plan` when you do: shadcn's `shimmer` CSS utility covers what they
+need, `reasoning.tsx` imports `Shimmer` from `../../ui/shimmer.tsx` accordingly, and
+taking upstream's versions puts the `motion` dependency back.
+
+`reasoning.tsx` also imports `useControllableState` from `../../../hooks/`. The table
+below records what upstream declares, which is still
+`@radix-ui/react-use-controllable-state` — a package no `package.json` here asks for,
+resolving only because `radix-ui` hoists it. `reasoning` is now the only file here that
+wants it, the other five importers having gone with `house-elf-2la.4`. Repoint any
+refresh at the local hook rather than reinstating the phantom dependency.
 
 ## Layout
 
-- `*.tsx` — the 48 ai-elements components.
-- `ui/*.tsx` — the 25 shadcn components they depend on, pulled transitively so that no
+- `*.tsx` — the 6 ai-elements components the app reaches.
+- `ui/*.tsx` — the 13 shadcn components they depend on, pulled transitively so that no
   file here references a component missing from the snapshot.
+
+The tables below describe upstream, so they still list components and dependencies this
+snapshot does not carry.
 
 Import paths are upstream's and are **not** rewritten: `@/registry/default/ui/button` and
 `@/registry/new-york-v4/ui/textarea` both mean `ui/button.tsx` and `ui/textarea.tsx` here,

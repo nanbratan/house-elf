@@ -70,8 +70,8 @@ describe('PinnedSection', () => {
 		// per row rather than dropping it.
 		const opusRow = screen.getByRole('option', { name: 'Opus 5' });
 		const sonnetRow = screen.getByRole('option', { name: 'Sonnet 4.5' });
-		expect(opusRow.querySelector('svg.text-primary')).not.toBeNull();
-		expect(sonnetRow.querySelector('svg.text-primary')).toBeNull();
+		expect(opusRow.querySelector('svg.text-foreground')).not.toBeNull();
+		expect(sonnetRow.querySelector('svg.text-foreground')).toBeNull();
 	});
 
 	it('renders a pinned (pressed) star on each row', () => {

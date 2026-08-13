@@ -59,6 +59,8 @@ design.
 apps/web/src/
   routes/            TanStack Start routes (routes/c = conversation pages, routes/api = proxy)
   lib/components/<area>/   components, one concern per component, nothing else lives here
+  lib/components/ui/       shadcn registry primitives — ours, not vendored (ui.instructions.md)
+  lib/components/ai-elements/  ai-elements components — same rules
   lib/hooks/          use-prefixed shared hooks
   lib/constants/, lib/utils/
 apps/server/src/mastra/
@@ -68,7 +70,7 @@ apps/server/src/mastra/
   middleware/         one middleware per file
   models.ts           the only place model ids are written down
 packages/shared/       Zod schemas + types shared by web and server
-.agents/skills/        mastra, beads
+.agents/skills/        vendored agent skills: ai-elements, beads, mastra
 .github/instructions/  how code here is written and tested (below)
 ```
 
@@ -148,6 +150,17 @@ prime` for full workflow context.
   literally); keys are stable data ids, never array index.
 - Tailwind utility classes inline using `layout.css` tokens; CSS modules only for
   what Tailwind can't express.
+
+### shadcn components (`ui.instructions.md`)
+
+- `lib/components/ui/` and `lib/components/ai-elements/` are **ours** — full house
+  style, lint, types and tests. No carve-out, no prettierignore entry, no coverage
+  exclude. `shadcn add` output is a starting point, restyled in the same commit.
+- Bring in only what the app imports and delete the rest; the registry is the backup.
+- base-ui only, never radix. The style resolves from `apps/web/components.json`, so
+  every CLI call needs `--cwd apps/web` or it silently serves radix.
+- A component earns its own test when it has behaviour that can fail independently of
+  how it looks; a props-to-class-names wrapper is covered by its consumers' tests.
 
 ### Testing (`testing.instructions.md`)
 

@@ -49,7 +49,9 @@ export function AppSidebar({ open }: AppSidebarProps) {
 								to="/c/$id"
 								params={{ id: conversation.id }}
 								className="block truncate rounded-md px-3 py-2 text-sm whitespace-nowrap transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-								activeProps={{ className: 'bg-primary/10 text-primary' }}
+								activeProps={{
+									className: 'bg-sidebar-accent text-sidebar-accent-foreground'
+								}}
 								inactiveProps={{ className: 'text-muted-foreground' }}
 							>
 								{conversation.title}

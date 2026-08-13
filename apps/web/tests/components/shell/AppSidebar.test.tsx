@@ -54,11 +54,11 @@ describe('AppSidebar', () => {
 		const active = screen.getByRole('link', { name: 'Another placeholder' });
 		const inactive = screen.getByRole('link', { name: 'Placeholder conversation' });
 
-		expect(active).toHaveClass('bg-primary/10', 'text-primary');
+		expect(active).toHaveClass('bg-sidebar-accent', 'text-sidebar-accent-foreground');
 		expect(active).not.toHaveClass('text-muted-foreground');
 
 		expect(inactive).toHaveClass('text-muted-foreground');
-		expect(inactive).not.toHaveClass('bg-primary/10', 'text-primary');
+		expect(inactive).not.toHaveClass('bg-sidebar-accent', 'text-sidebar-accent-foreground');
 	});
 
 	describe('when closed', () => {

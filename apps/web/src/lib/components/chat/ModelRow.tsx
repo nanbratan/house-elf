@@ -46,7 +46,7 @@ export function ModelRow({
 				<ModelSelectorLogo provider={providerName(model)} />
 				<span className="min-w-0 flex-1 truncate">{model.label}</span>
 				{selected ? (
-					<CheckIcon className="size-4 shrink-0 text-primary" aria-hidden="true" />
+					<CheckIcon className="size-4 shrink-0 text-foreground" aria-hidden="true" />
 				) : null}
 				{/* The star is always visible, not revealed on hover — a hover target
 				    does not exist for a keyboard user. */}

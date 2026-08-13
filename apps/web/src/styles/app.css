@@ -7,52 +7,59 @@
  * utilities are undefined, so components render with no transition.
  */
 @import 'tw-animate-css';
-@import 'tw-animate-css';
+/*
+ * Ships the `shimmer` text utilities that `ui/shimmer.tsx` composes. Dropping this
+ * import fails silently — the utilities go undefined and the reasoning header's
+ * streaming animation stops.
+ */
 @import 'shadcn/tailwind.css';
 @import '@fontsource-variable/jetbrains-mono';
 @import '@fontsource-variable/ibm-plex-sans';
 
 /*
- * shadcn's stock `new-york-v4` slate palette, dark values, copied verbatim from the
- * registry (https://ui.shadcn.com/r/colors/slate.json, cssVarsV4.dark) so that files
- * copied out of `vendor/ai-elements/` drop in unedited. Do not rename these tokens:
- * their names ARE the contract with the vendored components, which carry 219
- * references to them.
+ * base-nova's `mist` base colour, dark values, copied from the registry
+ * (https://ui.shadcn.com/r/colors/mist.json, cssVars.dark). Do not rename these
+ * tokens: their names ARE the contract with the registry components.
  *
  * The app is dark-only, so the dark values sit directly in `:root` and there is no
- * light block. Re-tinting to a house palette is a change to the values below and
- * nothing else — house-elf-shi.7 records the previous slate/periwinkle oklch numbers.
+ * light block and no `.dark` block.
+ *
+ * Two families depart from mist, whose own accent is a near-neutral grey: the two
+ * primary pairs are cyan and the charts are blue. `--primary` is a FILL, never text
+ * — measured against this background it is 2.72:1 as body text and 2.40:1 on the
+ * sidebar, both under WCAG AA, while `--primary-foreground` on `--primary` is
+ * 6.97:1 and passes.
  */
 :root {
 	--radius: 0.625rem;
 
-	--background: oklch(1 0 0);
-	--foreground: oklch(0.148 0.004 228.8);
-	--card: oklch(1 0 0);
-	--card-foreground: oklch(0.148 0.004 228.8);
-	--popover: oklch(1 0 0);
-	--popover-foreground: oklch(0.148 0.004 228.8);
-	--primary: oklch(0.52 0.105 223.128);
+	--background: oklch(0.148 0.004 228.8);
+	--foreground: oklch(0.987 0.002 197.1);
+	--card: oklch(0.218 0.008 223.9);
+	--card-foreground: oklch(0.987 0.002 197.1);
+	--popover: oklch(0.218 0.008 223.9);
+	--popover-foreground: oklch(0.987 0.002 197.1);
+	--primary: oklch(0.45 0.085 224.283);
 	--primary-foreground: oklch(0.984 0.019 200.873);
-	--secondary: oklch(0.967 0.001 286.375);
-	--secondary-foreground: oklch(0.21 0.006 285.885);
-	--muted: oklch(0.963 0.002 197.1);
-	--muted-foreground: oklch(0.56 0.021 213.5);
-	--accent: oklch(0.963 0.002 197.1);
-	--accent-foreground: oklch(0.218 0.008 223.9);
-	--destructive: oklch(0.577 0.245 27.325);
-	--border: oklch(0.925 0.005 214.3);
-	--input: oklch(0.925 0.005 214.3);
-	--ring: oklch(0.723 0.014 214.4);
+	--secondary: oklch(0.275 0.011 216.9);
+	--secondary-foreground: oklch(0.987 0.002 197.1);
+	--muted: oklch(0.275 0.011 216.9);
+	--muted-foreground: oklch(0.723 0.014 214.4);
+	--accent: oklch(0.275 0.011 216.9);
+	--accent-foreground: oklch(0.987 0.002 197.1);
+	--destructive: oklch(0.704 0.191 22.216);
+	--border: oklch(1 0 0 / 10%);
+	--input: oklch(1 0 0 / 15%);
+	--ring: oklch(0.56 0.021 213.5);
 
-	--sidebar: oklch(0.987 0.002 197.1);
-	--sidebar-foreground: oklch(0.148 0.004 228.8);
-	--sidebar-primary: oklch(0.609 0.126 221.723);
-	--sidebar-primary-foreground: oklch(0.984 0.019 200.873);
-	--sidebar-accent: oklch(0.963 0.002 197.1);
-	--sidebar-accent-foreground: oklch(0.218 0.008 223.9);
-	--sidebar-border: oklch(0.925 0.005 214.3);
-	--sidebar-ring: oklch(0.723 0.014 214.4);
+	--sidebar: oklch(0.218 0.008 223.9);
+	--sidebar-foreground: oklch(0.987 0.002 197.1);
+	--sidebar-primary: oklch(0.715 0.143 215.221);
+	--sidebar-primary-foreground: oklch(0.302 0.056 229.695);
+	--sidebar-accent: oklch(0.275 0.011 216.9);
+	--sidebar-accent-foreground: oklch(0.987 0.002 197.1);
+	--sidebar-border: oklch(1 0 0 / 10%);
+	--sidebar-ring: oklch(0.56 0.021 213.5);
 
 	/*
 	 * Ours, not shadcn's. shadcn has two text tiers (foreground, muted-foreground);
@@ -110,8 +117,6 @@
 	--radius-md: calc(var(--radius) - 2px);
 	--radius-lg: var(--radius);
 	--radius-xl: calc(var(--radius) + 4px);
-	/* --font-heading: var(--font-mono);
-	--font-mono: 'JetBrains Mono Variable', monospace; */
 	--color-chart-5: var(--chart-5);
 	--color-chart-4: var(--chart-4);
 	--color-chart-3: var(--chart-3);
@@ -142,22 +147,17 @@
 	html {
 		/* Makes form controls and scrollbars render dark too. */
 		color-scheme: dark;
-		/* @apply font-mono; */
 		@apply font-mono;
 	}
 
 	body {
 		background-color: var(--color-background);
 		color: var(--color-foreground);
-		@apply bg-background text-foreground;
 	}
 
 	:focus-visible {
 		outline: 2px solid var(--color-ring);
 		outline-offset: 2px;
-	}
-	* {
-		@apply border-border outline-ring/50;
 	}
 }
 
@@ -230,7 +230,7 @@
 	}
 
 	.markdown a {
-		color: var(--color-primary);
+		color: var(--color-foreground);
 		text-decoration: underline;
 		text-underline-offset: 2px;
 	}
@@ -285,40 +285,4 @@
 		max-width: 100%;
 		border-radius: 0.5rem;
 	}
-}
-/*
- ---break---
- */
-.dark {
-	--background: oklch(0.148 0.004 228.8);
-	--foreground: oklch(0.987 0.002 197.1);
-	--card: oklch(0.218 0.008 223.9);
-	--card-foreground: oklch(0.987 0.002 197.1);
-	--popover: oklch(0.218 0.008 223.9);
-	--popover-foreground: oklch(0.987 0.002 197.1);
-	--primary: oklch(0.45 0.085 224.283);
-	--primary-foreground: oklch(0.984 0.019 200.873);
-	--secondary: oklch(0.274 0.006 286.033);
-	--secondary-foreground: oklch(0.985 0 0);
-	--muted: oklch(0.275 0.011 216.9);
-	--muted-foreground: oklch(0.723 0.014 214.4);
-	--accent: oklch(0.275 0.011 216.9);
-	--accent-foreground: oklch(0.987 0.002 197.1);
-	--destructive: oklch(0.704 0.191 22.216);
-	--border: oklch(1 0 0 / 10%);
-	--input: oklch(1 0 0 / 15%);
-	--ring: oklch(0.56 0.021 213.5);
-	--chart-1: oklch(0.809 0.105 251.813);
-	--chart-2: oklch(0.623 0.214 259.815);
-	--chart-3: oklch(0.546 0.245 262.881);
-	--chart-4: oklch(0.488 0.243 264.376);
-	--chart-5: oklch(0.424 0.199 265.638);
-	--sidebar: oklch(0.218 0.008 223.9);
-	--sidebar-foreground: oklch(0.987 0.002 197.1);
-	--sidebar-primary: oklch(0.715 0.143 215.221);
-	--sidebar-primary-foreground: oklch(0.302 0.056 229.695);
-	--sidebar-accent: oklch(0.275 0.011 216.9);
-	--sidebar-accent-foreground: oklch(0.987 0.002 197.1);
-	--sidebar-border: oklch(1 0 0 / 10%);
-	--sidebar-ring: oklch(0.56 0.021 213.5);
 }
