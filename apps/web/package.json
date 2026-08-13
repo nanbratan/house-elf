@@ -30,8 +30,8 @@
 	"dependencies": {
 		"@ai-sdk/react": "4.0.61",
 		"@base-ui/react": "^1.7.0",
-		"@fontsource-variable/ibm-plex-sans": "^5.3.0",
-		"@fontsource-variable/jetbrains-mono": "^5.3.0",
+		"@assistant-ui/react": "^0.15.13",
+		"@assistant-ui/react-ai-sdk": "^1.4.5",
 		"@house-elf/shared": "workspace:*",
 		"@streamdown/cjk": "1.0.3",
 		"@streamdown/code": "1.1.1",

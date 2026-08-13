@@ -20,6 +20,8 @@ import { expect, test, type Page } from '@playwright/test';
 interface ChatStub {
 	emit(delta: string): void;
 	finish(): void;
+	/** The bodies the app actually sent, in order. */
+	sent: Record<string, unknown>[];
 }
 
 declare global {
@@ -39,6 +41,7 @@ async function stubChat(page: Page): Promise<void> {
 		}
 
 		window.__chat = {
+			sent: [],
 			emit(delta) {
 				send({ type: 'text-delta', id: String(replyId), delta });
 			},
@@ -57,6 +60,10 @@ async function stubChat(page: Page): Promise<void> {
 		window.fetch = (input, init) => {
 			const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
 			if (!url.includes('/api/chat/')) return passThrough(input, init);
+
+			if (typeof init?.body === 'string') {
+				window.__chat.sent.push(JSON.parse(init.body) as Record<string, unknown>);
+			}
 
 			const body = new ReadableStream<Uint8Array>({
 				start(open) {
@@ -171,6 +178,26 @@ test.describe('a streaming reply', () => {
 		});
 		await expect(reply).toContainText('First half. Second half.');
 		await expect(page.getByRole('button', { name: 'Stop' })).toHaveCount(0);
+	});
+
+	test('sends the fields the server accepts, and only those', async ({ page }) => {
+		// The unit tests replace `AssistantChatTransport` with a stub, so they can
+		// only show what our own `prepareSendMessagesRequest` returns. That a
+		// returned body REPLACES assistant-ui's own — rather than being merged into
+		// it, which would put `callSettings`, `config` and `tools` on the wire and
+		// earn a 400 from the server's allowlist — is a fact about the installed
+		// package, and this is the only place the real one runs.
+		await ask(page, 'Say something.');
+
+		const sent = await page.evaluate(() => window.__chat.sent);
+
+		expect(sent).toHaveLength(1);
+		expect(sent[0]).toEqual({
+			id: expect.any(String),
+			messages: expect.any(Array),
+			trigger: 'submit-message',
+			settings: { model: 'openrouter/auto', thinking: false }
+		});
 	});
 
 	test('keeps the end in view while it grows', async ({ page }) => {

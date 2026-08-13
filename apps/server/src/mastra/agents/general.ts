@@ -15,15 +15,11 @@ export const generalAgent = new Agent({
 	// the code — not here, where it would drift. Instructions are for behaviour
 	// that spans the whole agent.
 	instructions: 'You are a helpful personal assistant. Answer concisely.',
-	// Every request through /chat/* names its own model, and Mastra applies that
-	// as a per-request override without mutating the agent — so this value is not
-	// what the app runs on. It is what Studio reads to describe the agent, and
-	// what Studio falls back to if its own picker sends nothing. A throwing
-	// callback here makes the agent undescribable and Studio reports "Agent not
-	// found", which is too high a price for a rule aimed at our own route.
+	// What the agent runs on when a caller does not name a model: what Studio
+	// reads to describe it, and what Studio's own picker overrides per request.
 	//
-	// It cannot become an invisible default for the app: the chat middleware
-	// rejects an unnamed model at the door, before the agent is consulted.
+	// Not an invisible default for the app: every request through /chat/* names
+	// its own model, and the chat route rejects an unnamed one at the door.
 	//
 	// It tracks the picker's first-visit choice so the two never drift.
 	model: routerModelId({ id: INITIAL_MODEL_ID }),

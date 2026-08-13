@@ -75,3 +75,26 @@ export type ModelCatalog = Readonly<{
 	initialModelId: string;
 	models: readonly SelectableModel[];
 }>;
+
+/**
+ * What the browser is allowed to decide about a single request.
+ *
+ * The client names intent, never provider parameters: `thinking` is a boolean
+ * because what thinking costs — an effort level, a token budget, a provider's
+ * spelling of either — is the server's to say. When the user should choose an
+ * effort level, that becomes its own validated field with its own server-side
+ * mapping, not a raw provider blob.
+ *
+ * One nested object rather than top-level fields, so there is one thing to
+ * validate as it grows.
+ *
+ * Strict, so a setting this server does not understand is a 400 rather than a
+ * silent no-op: the user can see the control they moved.
+ */
+export const chatSettingsSchema = z.strictObject({
+	/** A catalog id, not a provider id — the server maps it to the router. */
+	model: z.string().min(1),
+	thinking: z.boolean()
+});
+
+export type ChatSettings = Readonly<z.infer<typeof chatSettingsSchema>>;

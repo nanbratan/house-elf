@@ -8,12 +8,18 @@ export const Route = createFileRoute('/c/new')({
 	component: NewConversationPage
 });
 
+// Until there is a route that names one, every new conversation is with the
+// general agent.
+const agentId = 'general';
+
 function NewConversationPage() {
 	const { modelCatalog } = Route.useLoaderData();
 
 	return (
 		<div className="h-full min-h-0">
-			<ChatView agentId="general" modelCatalog={modelCatalog} />
+			{/* Keyed so a different agent is a different conversation: the runtime
+			    below holds the thread, and it must not survive the switch. */}
+			<ChatView key={agentId} agentId={agentId} modelCatalog={modelCatalog} />
 		</div>
 	);
 }
