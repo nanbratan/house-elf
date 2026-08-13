@@ -1,19 +1,77 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import type { ChatStatus } from 'ai';
-import { describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import type { ReactElement, ReactNode } from 'react';
+import { cloneElement } from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Composer } from '../../../src/lib/components/chat/Composer.tsx';
 import type { ModelPickerProps } from '../../../src/lib/components/chat/ModelPicker.tsx';
 import { selectableModel } from '../../helpers/models.ts';
 
 /*
- * Tested at its own boundary: ModelPicker is replaced by a stub that records
- * its props and renders a bare marker. ModelPicker's own behaviour has its
- * own test; here only the contract between Composer and ModelPicker is
- * asserted — the props it's handed, and that its callbacks reach Composer's
- * own props. To drive a callback, the recorded props are read back and
- * invoked directly.
+ * The draft itself belongs to assistant-ui: Enter, Shift+Enter, IME composition,
+ * autosize and the empty-draft guard are `ComposerPrimitive`'s behaviour against
+ * the runtime, and asserting them here would test the framework. So the
+ * primitives are stubbed, and what is asserted is what Composer still decides —
+ * which control the thread's running state puts in front of the reader, and the
+ * contract with ModelPicker.
+ */
+let threadIsRunning = false;
+let composerIsEmpty = true;
+
+/*
+ * The two things Composer settles that have no rendered consequence a query can
+ * reach: what it configures the input with, and what it tells the send button
+ * about emptiness. Recorded here and read back, the way ModelPicker's props are.
+ */
+interface ComposerInputProps {
+	'aria-label'?: string;
+	placeholder?: string;
+	rows?: number;
+	cancelOnEscape?: boolean;
+}
+let inputProps: ComposerInputProps | undefined;
+let sendIdle: boolean | undefined;
+
+vi.mock('@assistant-ui/react', () => ({
+	useAuiState: vi.fn((select: (state: { composer: { isEmpty: boolean } }) => unknown) =>
+		select({ composer: { isEmpty: composerIsEmpty } })
+	),
+	AuiIf: vi.fn(
+		({
+			condition,
+			children
+		}: {
+			condition: (state: { thread: { isRunning: boolean } }) => boolean;
+			children?: ReactNode;
+		}) => (condition({ thread: { isRunning: threadIsRunning } }) ? <div>{children}</div> : null)
+	),
+	ComposerPrimitive: {
+		Root: vi.fn(({ children, ...props }: { children?: ReactNode }) => (
+			<div {...props}>{children}</div>
+		)),
+		// Only the accessible name and the placeholder are carried over to the DOM:
+		// the rest of what the real Input takes is its own behaviour, not a textarea
+		// attribute, so it is recorded instead of rendered.
+		Input: vi.fn((props: ComposerInputProps) => {
+			inputProps = props;
+			return <textarea aria-label={props['aria-label']} placeholder={props.placeholder} />;
+		}),
+		// Both render their button through `render`, the way the real primitive
+		// hands its own props to that element via Radix's Slot.
+		Send: vi.fn(({ render: element, ...props }: { render: ReactElement<{ idle: boolean }> }) => {
+			sendIdle = element.props.idle;
+			return cloneElement(element, props);
+		}),
+		Cancel: vi.fn(({ render: element, ...props }: { render: ReactElement }) =>
+			cloneElement(element, props)
+		)
+	}
+}));
+
+/*
+ * ModelPicker has its own test; here it is a stub that records its props and
+ * renders a bare marker, so only the contract between the two is asserted. To
+ * drive a callback, the recorded props are read back and invoked directly.
  */
 let modelPickerProps: ModelPickerProps | undefined;
 vi.mock('../../../src/lib/components/chat/ModelPicker.tsx', () => ({
@@ -25,9 +83,7 @@ vi.mock('../../../src/lib/components/chat/ModelPicker.tsx', () => ({
 
 const models = [selectableModel({ id: 'test/model', label: 'Test Model' })];
 
-function renderComposer(status: ChatStatus = 'ready') {
-	const onSend = vi.fn();
-	const onStop = vi.fn();
+function renderComposer() {
 	const onModelSelect = vi.fn();
 	const onThinkingChange = vi.fn();
 
@@ -36,152 +92,78 @@ function renderComposer(status: ChatStatus = 'ready') {
 			canChooseThinking
 			models={models}
 			onModelSelect={onModelSelect}
-			onSend={onSend}
-			onStop={onStop}
 			onThinkingChange={onThinkingChange}
 			selectedModelId="test/model"
-			status={status}
 			thinking={false}
 		/>
 	);
 
-	return {
-		onModelSelect,
-		onSend,
-		onStop,
-		onThinkingChange,
-		textarea: screen.getByRole('textbox', { name: 'Message' })
-	};
+	return { onModelSelect, onThinkingChange };
 }
 
 describe('Composer', () => {
-	describe('key handling', () => {
-		it('sends on Enter and clears the box, ready for the next message', async () => {
-			const user = userEvent.setup();
-			const { onSend, textarea } = renderComposer();
+	beforeEach(() => {
+		threadIsRunning = false;
+		composerIsEmpty = true;
+		modelPickerProps = undefined;
+		inputProps = undefined;
+		sendIdle = undefined;
+	});
 
-			await user.type(textarea, 'hello{Enter}');
+	it('offers a message box the reader can find by name', () => {
+		renderComposer();
 
-			expect(onSend).toHaveBeenCalledExactlyOnceWith('hello');
-			expect(textarea).toHaveValue('');
+		expect(screen.getByRole('textbox', { name: 'Message' })).toBeInTheDocument();
+	});
+
+	describe('how the input is configured', () => {
+		// A textarea defaults to two rows, so the server sends a box twice the height
+		// autosize settles on, and the whole composer jumps on hydration.
+		it('opens at the one row it will settle at, so nothing jumps on hydration', () => {
+			renderComposer();
+
+			expect(inputProps?.rows).toBe(1);
 		});
 
-		it('inserts a newline on Shift+Enter instead of sending', async () => {
-			const user = userEvent.setup();
-			const { onSend, textarea } = renderComposer();
+		// `canCancel` is permanently true for this runtime, so the primitive's default
+		// would let Escape abort a reply that is still arriving.
+		it('leaves Escape alone, so it cannot abort a running turn', () => {
+			renderComposer();
 
-			await user.type(textarea, 'first{Shift>}{Enter}{/Shift}second');
-
-			expect(onSend).not.toHaveBeenCalled();
-			expect(textarea).toHaveValue('first\nsecond');
+			expect(inputProps?.cancelOnEscape).toBe(false);
 		});
+	});
 
-		it('ignores Enter on whitespace, so a stray keypress sends nothing', async () => {
-			const user = userEvent.setup();
-			const { onSend, textarea } = renderComposer();
+	describe('the send button’s resting state', () => {
+		it.each([
+			{ isEmpty: true, idle: true, when: 'there is nothing to send' },
+			{ isEmpty: false, idle: false, when: 'a draft is waiting' }
+		])('is idle=$idle when $when', ({ isEmpty, idle }) => {
+			composerIsEmpty = isEmpty;
 
-			await user.type(textarea, '   {Enter}');
+			renderComposer();
 
-			expect(onSend).not.toHaveBeenCalled();
+			expect(sendIdle).toBe(idle);
 		});
+	});
 
-		describe('typing a language that needs an input method editor', () => {
-			// Japanese, Chinese and Korean are typed phonetically, and the IME offers
-			// a list of candidate characters. Enter picks the highlighted candidate —
-			// it means "yes, that word", not "send". Treating it as send fires the
-			// message on the first word of every sentence.
-			it('does not send the Enter that accepts a candidate', async () => {
-				const user = userEvent.setup();
-				const { onSend, textarea } = renderComposer();
+	describe('while the thread is idle', () => {
+		it('offers Send, and no way to stop what is not running', () => {
+			renderComposer();
 
-				await user.type(textarea, 'にほんご');
-				fireEvent.compositionStart(textarea);
-				// Deliberately the unhelpful case: the browser omits `isComposing`.
-				fireEvent.keyDown(textarea, { key: 'Enter' });
-
-				expect(onSend).not.toHaveBeenCalled();
-			});
-
-			it('sends once composition has ended', async () => {
-				const user = userEvent.setup();
-				const { onSend, textarea } = renderComposer();
-
-				await user.type(textarea, 'にほんご');
-				fireEvent.compositionStart(textarea);
-				fireEvent.compositionEnd(textarea);
-				fireEvent.keyDown(textarea, { key: 'Enter' });
-				// jsdom dispatches the "submit" triggered by requestSubmit() on a
-				// microtask, after this Enter keydown returns — give it a turn.
-				await Promise.resolve();
-
-				expect(onSend).toHaveBeenCalledExactlyOnceWith('にほんご');
-			});
+			expect(screen.getByRole('button', { name: 'Send message' })).toBeInTheDocument();
+			expect(screen.queryByRole('button', { name: 'Stop generating' })).not.toBeInTheDocument();
 		});
 	});
 
 	describe('while a reply is arriving', () => {
-		it.each(['submitted', 'streaming'] as const)(
-			'offers Stop rather than Submit when status is %s',
-			(status) => {
-				renderComposer(status);
+		it('swaps Send for Stop', () => {
+			threadIsRunning = true;
 
-				expect(screen.getByRole('button', { name: 'Stop' })).toBeInTheDocument();
-				expect(screen.queryByRole('button', { name: 'Submit' })).not.toBeInTheDocument();
-			}
-		);
+			renderComposer();
 
-		it('aborts when Stop is clicked', async () => {
-			const user = userEvent.setup();
-			const { onStop } = renderComposer('streaming');
-
-			await user.click(screen.getByRole('button', { name: 'Stop' }));
-
-			expect(onStop).toHaveBeenCalledOnce();
-		});
-
-		it.each(['submitted', 'streaming'] as const)(
-			'refuses to send a second message on Enter while status is %s, without clearing the box',
-			async (status) => {
-				const user = userEvent.setup();
-				const { onSend, textarea } = renderComposer(status);
-
-				await user.type(textarea, 'impatient{Enter}');
-
-				expect(onSend).not.toHaveBeenCalled();
-				expect(textarea).toHaveValue('impatient');
-			}
-		);
-	});
-
-	describe('submit button', () => {
-		it('is disabled until there is something to send', async () => {
-			const user = userEvent.setup();
-			const { textarea } = renderComposer();
-
-			expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
-
-			await user.type(textarea, 'hi');
-
-			expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled();
-		});
-
-		it('sends on click, for anyone not using the keyboard', async () => {
-			const user = userEvent.setup();
-			const { onSend, textarea } = renderComposer();
-
-			await user.type(textarea, 'hello');
-			await user.click(screen.getByRole('button', { name: 'Submit' }));
-
-			expect(onSend).toHaveBeenCalledExactlyOnceWith('hello');
-		});
-
-		it('can send a new message after the previous request failed', async () => {
-			const user = userEvent.setup();
-			const { onSend, textarea } = renderComposer('error');
-
-			await user.type(textarea, 'Never mind{Enter}');
-
-			expect(onSend).toHaveBeenCalledExactlyOnceWith('Never mind');
+			expect(screen.getByRole('button', { name: 'Stop generating' })).toBeInTheDocument();
+			expect(screen.queryByRole('button', { name: 'Send message' })).not.toBeInTheDocument();
 		});
 	});
 

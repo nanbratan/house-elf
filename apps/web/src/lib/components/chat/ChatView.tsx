@@ -4,7 +4,7 @@ import { useChatRuntime } from '@assistant-ui/react-ai-sdk';
 
 import { createChatTransport } from '../../chat/transport.ts';
 import { useModelSelection } from '../../hooks/model-selection.ts';
-import { ChatComposer } from './ChatComposer.tsx';
+import { Composer } from './Composer.tsx';
 import { Thread } from './Thread.tsx';
 
 export interface ChatViewProps {
@@ -29,12 +29,27 @@ export function ChatView({ agentId, modelCatalog }: ChatViewProps) {
 
 	const runtime = useChatRuntime({ transport });
 
+	function selectModel(modelId: string) {
+		modelSelection.select(modelId);
+	}
+
+	function setThinking(thinking: boolean) {
+		modelSelection.setThinking(thinking);
+	}
+
 	return (
 		<AssistantRuntimeProvider runtime={runtime}>
 			<div className="flex h-full min-h-0 flex-col">
 				<Thread />
 
-				<ChatComposer models={modelCatalog.models} modelSelection={modelSelection} />
+				<Composer
+					canChooseThinking={modelSelection.canChooseThinking}
+					models={modelCatalog.models}
+					onModelSelect={selectModel}
+					onThinkingChange={setThinking}
+					selectedModelId={modelSelection.selectedModelId}
+					thinking={modelSelection.thinking}
+				/>
 			</div>
 		</AssistantRuntimeProvider>
 	);

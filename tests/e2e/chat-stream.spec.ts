@@ -170,14 +170,14 @@ test.describe('a streaming reply', () => {
 
 		// Still streaming: the composer offers to stop, which it only does before the
 		// reply is finished.
-		await expect(page.getByRole('button', { name: 'Stop' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Stop generating' })).toBeVisible();
 
 		await page.evaluate(() => {
 			window.__chat.emit('Second half.');
 			window.__chat.finish();
 		});
 		await expect(reply).toContainText('First half. Second half.');
-		await expect(page.getByRole('button', { name: 'Stop' })).toHaveCount(0);
+		await expect(page.getByRole('button', { name: 'Stop generating' })).toHaveCount(0);
 	});
 
 	test('sends the fields the server accepts, and only those', async ({ page }) => {

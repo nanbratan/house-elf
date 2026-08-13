@@ -4,7 +4,7 @@ import { useChatRuntime } from '@assistant-ui/react-ai-sdk';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { optionalThinking, selectableModel } from '../../helpers/models.ts';
-import { ChatComposer } from '../../../src/lib/components/chat/ChatComposer.tsx';
+import { Composer } from '../../../src/lib/components/chat/Composer.tsx';
 import { Thread } from '../../../src/lib/components/chat/Thread.tsx';
 import { ChatView } from '../../../src/lib/components/chat/ChatView.tsx';
 import { createChatTransport } from '../../../src/lib/chat/transport.ts';
@@ -25,8 +25,8 @@ vi.mock('../../../src/lib/components/chat/Thread.tsx', () => ({
 	Thread: vi.fn(() => <div data-testid="thread" />)
 }));
 
-vi.mock('../../../src/lib/components/chat/ChatComposer.tsx', () => ({
-	ChatComposer: vi.fn(() => <div data-testid="chat-composer" />)
+vi.mock('../../../src/lib/components/chat/Composer.tsx', () => ({
+	Composer: vi.fn(() => <div data-testid="composer" />)
 }));
 
 const modelCatalog = {
@@ -42,7 +42,7 @@ const modelCatalog = {
 const transport = { api: '/api/chat/general' };
 const runtime = { thread: 'stub-runtime' };
 
-const composerProps = () => vi.mocked(ChatComposer).mock.lastCall?.[0];
+const composerProps = () => vi.mocked(Composer).mock.lastCall?.[0];
 const transportOptions = () => vi.mocked(createChatTransport).mock.lastCall?.[0];
 
 describe('ChatView', () => {
@@ -69,7 +69,7 @@ describe('ChatView', () => {
 
 		expect(vi.mocked(AssistantRuntimeProvider).mock.lastCall?.[0]?.runtime).toBe(runtime);
 		expect(vi.mocked(Thread)).toHaveBeenCalled();
-		expect(vi.mocked(ChatComposer)).toHaveBeenCalled();
+		expect(vi.mocked(Composer)).toHaveBeenCalled();
 	});
 
 	it('gives the transport the agent and the current choice', () => {
@@ -85,28 +85,34 @@ describe('ChatView', () => {
 		render(<ChatView agentId="general" modelCatalog={modelCatalog} />);
 
 		act(() => {
-			composerProps()?.modelSelection.select('anthropic/claude-sonnet-4-6');
+			composerProps()?.onModelSelect('anthropic/claude-sonnet-4-6');
 		});
 
 		expect(transportOptions()?.settings).toEqual({
 			model: 'anthropic/claude-sonnet-4-6',
 			thinking: false
 		});
+		// The transport carrying the new id is not enough: the composer has to be
+		// told as well, or the picker keeps presenting the model it replaced.
+		expect(composerProps()?.selectedModelId).toBe('anthropic/claude-sonnet-4-6');
 	});
 
 	it('passes on a thinking choice made through the composer', () => {
 		render(<ChatView agentId="general" modelCatalog={modelCatalog} />);
 
 		act(() => {
-			composerProps()?.modelSelection.setThinking(true);
+			composerProps()?.onThinkingChange(true);
 		});
 
 		expect(transportOptions()?.settings).toEqual({ model: 'openrouter/auto', thinking: true });
 	});
 
-	it('hands the catalog’s models to the composer', () => {
+	it('hands the catalog’s models and the current selection to the composer', () => {
 		render(<ChatView agentId="general" modelCatalog={modelCatalog} />);
 
 		expect(composerProps()?.models).toBe(modelCatalog.models);
+		expect(composerProps()?.selectedModelId).toBe('openrouter/auto');
+		expect(composerProps()?.thinking).toBe(false);
+		expect(composerProps()?.canChooseThinking).toBe(true);
 	});
 });

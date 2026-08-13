@@ -9,6 +9,11 @@ imported directly, pending graduation under the `house-elf-2la` epic — `conver
 ModelRow, PinnedSection), `prompt-input` (Composer) — plus `code-block`, which only `tool`
 imports, and the `ui/` primitives those six pull in.
 
+`house-elf-r9z.10` took `prompt-input` and the `ui/` files only it reached
+(`input-group`, `input`, `textarea`, `select`, `spinner`, `tooltip`, `hover-card`) with
+it, along with `badge` and `collapsible`, which nothing imported. `dropdown-menu` stays:
+`chat/FilterSelect.tsx` imports it directly.
+
 Nothing here is inert any more: all of it is in the typecheck program and all of it ships.
 `tsconfig.json`'s `exclude` only drops this directory from the root file set, it does not
 shield files reachable through an app import. `house-elf-2la.29` dissolves the directory
@@ -53,15 +58,15 @@ the phantom dependency.
 
 ## Layout
 
-- `*.tsx` — the 3 ai-elements components the app reaches.
-- `ui/*.tsx` — the 13 shadcn components they depend on, pulled transitively so that no
-  file here references a component missing from the snapshot.
+- `*.tsx` — the 2 ai-elements components the app reaches.
+- `ui/*.tsx` — the 4 shadcn components they and the app depend on, pulled transitively so
+  that no file here references a component missing from the snapshot.
 
 The tables below describe upstream, so they still list components and dependencies this
 snapshot does not carry.
 
 Import paths are upstream's and are **not** rewritten: `@/registry/default/ui/button` and
-`@/registry/new-york-v4/ui/textarea` both mean `ui/button.tsx` and `ui/textarea.tsx` here,
+`@/registry/new-york-v4/ui/dialog` both mean `ui/button.tsx` and `ui/dialog.tsx` here,
 and `@/lib/utils` means shadcn's `cn` helper. Fix them up when you copy a file out.
 
 The tables below are what later chunks need in order to know what a component drags in —

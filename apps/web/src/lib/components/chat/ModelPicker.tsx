@@ -95,7 +95,9 @@ export function ModelPicker({
 				aria-label={`Choose model. Current model: ${selectedModel?.label ?? 'none'}${
 					thinking ? ', thinking on' : ''
 				}`}
-				className="flex h-8 min-w-0 items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+				// `px-3` matches the composer textarea's own padding, so the model's name
+				// starts on the same vertical line as the placeholder above it.
+				className="flex h-8 min-w-0 items-center gap-1.5 rounded-md px-3 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
 			>
 				<span className="max-w-32 truncate">{selectedModel?.label ?? 'Choose model'}</span>
 				{thinking ? (

@@ -1,24 +1,15 @@
 import type { SelectableModel } from '@house-elf/shared';
-import type { ChatStatus } from 'ai';
-import type { ChangeEvent } from 'react';
-import { useState } from 'react';
+import { AuiIf, ComposerPrimitive, useAuiState } from '@assistant-ui/react';
 
-import { chatStatus } from '../../constants/chat-status.ts';
 import {
-	PromptInput,
-	PromptInputBody,
-	PromptInputFooter,
-	PromptInputSubmit,
-	PromptInputTextarea,
-	PromptInputTools,
-	type PromptInputMessage
-} from '../vendor/ai-elements/prompt-input.tsx';
+	ComposerActions,
+	ComposerBar,
+	ComposerSend,
+	ComposerToolbar
+} from '../elements/composer.tsx';
 import { ModelPicker } from './ModelPicker.tsx';
 
 export interface ComposerProps {
-	status: ChatStatus;
-	onSend: (text: string) => void;
-	onStop: () => void;
 	models: readonly SelectableModel[];
 	selectedModelId: string;
 	onModelSelect: (modelId: string) => void;
@@ -27,10 +18,17 @@ export interface ComposerProps {
 	onThinkingChange: (thinking: boolean) => void;
 }
 
+/**
+ * The draft and the controls that shape it, wired to the runtime `ChatView`
+ * provides.
+ *
+ * The draft itself, Enter/Shift+Enter, IME composition, autosize and the
+ * empty-draft guard all belong to `ComposerPrimitive`; only the model choice is
+ * ours. Nothing is attached to the message here: what a request carries is
+ * settled by the transport at send time, so a regenerate sends the same settings
+ * as a first ask.
+ */
 export function Composer({
-	status,
-	onSend,
-	onStop,
 	models,
 	selectedModelId,
 	onModelSelect,
@@ -38,51 +36,35 @@ export function Composer({
 	canChooseThinking,
 	onThinkingChange
 }: ComposerProps) {
-	const [draft, setDraft] = useState('');
-
-	// `submitted` covers the gap between sending and the first chunk, when there is
-	// nothing on screen yet but the request is already in flight.
-	const busy = status === chatStatus.submitted || status === chatStatus.streaming;
-	const canSend = draft.trim().length > 0 && !busy;
-
-	function handleSubmit(message: PromptInputMessage) {
-		// PromptInputTextarea's own Enter handler falls back to
-		// `form.requestSubmit()` whenever it can't find a `button[type="submit"]`
-		// to check for `disabled` — which is exactly the case while busy, since
-		// PromptInputSubmit swaps to `type="button"` for Stop. This is the one
-		// path the vendor's own empty-text disabled-check on the submit button
-		// doesn't cover, so it's guarded here instead. Everything else — the IME
-		// double-check, the Shift+Enter split, and the empty-text guard on both
-		// Enter and click — is the vendored behaviour, unmodified.
-		if (!canSend) {
-			return;
-		}
-
-		onSend(message.text);
-		setDraft('');
-	}
-
-	function handleChange(event: ChangeEvent<HTMLTextAreaElement>) {
-		setDraft(event.target.value);
-	}
+	// Drives the send button's resting colour only — whether it can be pressed is
+	// the primitive's own `disabled`, from the same emptiness.
+	const isEmpty = useAuiState((state) => state.composer.isEmpty);
 
 	return (
-		// The border spans the full width of this bar; only the input itself is
-		// centered and width-capped, matching the original Svelte layout. Both
-		// classes on one element would clip the border to the capped width instead.
-		<div className="border-t border-border px-4 py-3">
-			<PromptInput className="mx-auto max-w-3xl" onSubmit={handleSubmit}>
-				<PromptInputBody>
-					<PromptInputTextarea
+		// The card floats: no rule above it, and the transcript scrolls past
+		// underneath. Only the card is centred and width-capped.
+		<div className="px-4 pb-4">
+			<ComposerPrimitive.Root className="mx-auto max-w-3xl">
+				<ComposerBar>
+					{/*
+					 * No `render`/`asChild`: passing either swaps out the primitive's own
+					 * TextareaAutosize, and with it the autosize this cap bounds. The
+					 * classes are the registry input's, plus what a textarea needs.
+					 */}
+					<ComposerPrimitive.Input
 						aria-label="Message"
-						onChange={handleChange}
+						// Escape would otherwise abort a running turn: `canCancel` is
+						// permanently true for the AI-SDK runtime, which has an `onCancel`.
+						cancelOnEscape={false}
+						className="max-h-48 min-h-11 w-full resize-none bg-transparent px-3 py-2.5 text-[15px] caret-blue-500 outline-none placeholder:text-foreground/35 dark:caret-blue-400"
 						placeholder="Send a message…"
-						value={draft}
+						// A textarea defaults to two rows, which is what the server sends;
+						// autosize then collapses it to one on hydration and the whole bar
+						// jumps. One row is what it settles at, so it is what ships.
+						rows={1}
 					/>
-				</PromptInputBody>
 
-				<PromptInputFooter>
-					<PromptInputTools>
+					<ComposerToolbar>
 						<ModelPicker
 							canChooseThinking={canChooseThinking}
 							models={models}
@@ -91,11 +73,26 @@ export function Composer({
 							selectedModelId={selectedModelId}
 							thinking={thinking}
 						/>
-					</PromptInputTools>
 
-					<PromptInputSubmit disabled={!busy && !canSend} onStop={onStop} status={status} />
-				</PromptInputFooter>
-			</PromptInput>
+						<ComposerActions>
+							{/*
+							 * Send and Stop are mutually exclusive on the thread's state, not
+							 * on their own: `ComposerPrimitive.Cancel` is enabled whenever the
+							 * runtime can cancel at all, which for this one is always.
+							 */}
+							<AuiIf condition={(state) => !state.thread.isRunning}>
+								<ComposerPrimitive.Send
+									render={<ComposerSend idle={isEmpty} streaming={false} />}
+								/>
+							</AuiIf>
+
+							<AuiIf condition={(state) => state.thread.isRunning}>
+								<ComposerPrimitive.Cancel render={<ComposerSend idle={false} streaming />} />
+							</AuiIf>
+						</ComposerActions>
+					</ComposerToolbar>
+				</ComposerBar>
+			</ComposerPrimitive.Root>
 		</div>
 	);
 }
