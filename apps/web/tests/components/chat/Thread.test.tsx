@@ -4,7 +4,6 @@ import { Fragment } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ErrorNotice } from '../../../src/lib/components/chat/ErrorNotice.tsx';
-import { MessageResponse } from '../../../src/lib/components/chat/MessageResponse.tsx';
 import {
 	ReasoningRoot,
 	ReasoningTrigger
@@ -94,8 +93,8 @@ vi.mock('../../../src/lib/components/assistant-ui/tool-fallback.tsx', () => ({
 	ToolFallback: vi.fn(() => <span data-testid="tool-fallback" />)
 }));
 
-vi.mock('../../../src/lib/components/chat/MessageResponse.tsx', () => ({
-	MessageResponse: vi.fn(() => <span data-testid="message-response" />)
+vi.mock('../../../src/lib/components/chat/MarkdownText.tsx', () => ({
+	MarkdownText: vi.fn(() => <span data-testid="markdown-text" />)
 }));
 
 vi.mock('../../../src/lib/components/assistant-ui/reasoning.tsx', () => ({
@@ -109,7 +108,6 @@ vi.mock('../../../src/lib/components/chat/ErrorNotice.tsx', () => ({
 	ErrorNotice: vi.fn(() => <div data-testid="error-notice" />)
 }));
 
-const responseProps = () => vi.mocked(MessageResponse).mock.lastCall?.[0];
 const reasoningRootProps = () => vi.mocked(ReasoningRoot).mock.lastCall?.[0];
 const reasoningTriggerProps = () => vi.mocked(ReasoningTrigger).mock.lastCall?.[0];
 const toolGroupProps = () => vi.mocked(ToolGroupTrigger).mock.lastCall?.[0];
@@ -174,23 +172,15 @@ describe('Thread', () => {
 		expect(screen.getByTestId('group-children')).toBeInTheDocument();
 	});
 
-	it('renders a streaming text part as an animating response', () => {
+	// The renderer takes the text and its streaming status from the runtime's part
+	// context, not from Thread — so all Thread decides is that a text part is markdown.
+	it('renders a text part as markdown', () => {
 		threadMessages = [{ role: 'assistant' }];
 		messageParts = [{ type: 'text', text: 'A reply', status: { type: 'running' } }];
 
 		render(<Thread />);
 
-		expect(responseProps()?.children).toBe('A reply');
-		expect(responseProps()?.isAnimating).toBe(true);
-	});
-
-	it('stops animating a text part once it is complete', () => {
-		threadMessages = [{ role: 'assistant' }];
-		messageParts = [{ type: 'text', text: 'A reply', status: { type: 'complete' } }];
-
-		render(<Thread />);
-
-		expect(responseProps()?.isAnimating).toBe(false);
+		expect(screen.getByTestId('markdown-text')).toBeInTheDocument();
 	});
 
 	it('collapses a run of reasoning parts under one disclosure, marked streaming', () => {
@@ -216,14 +206,13 @@ describe('Thread', () => {
 
 	// Reasoning text is markdown from the same model as the reply, so it goes through the
 	// same renderer; the disclosure around it is the group's job, not the part's.
-	it('renders a reasoning part as an animating response inside the group', () => {
+	it('renders a reasoning part as markdown inside the group', () => {
 		threadMessages = [{ role: 'assistant' }];
 		messageParts = [{ type: 'reasoning', text: 'Weighing it up', status: { type: 'running' } }];
 
 		render(<Thread />);
 
-		expect(responseProps()?.children).toBe('Weighing it up');
-		expect(responseProps()?.isAnimating).toBe(true);
+		expect(screen.getByTestId('markdown-text')).toBeInTheDocument();
 	});
 
 	it('falls back to the generic tool card when a tool ships no UI of its own', () => {

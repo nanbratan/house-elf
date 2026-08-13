@@ -335,9 +335,9 @@ function ReasoningText({ className, children, ...props }: React.ComponentProps<'
 }
 
 // The registry also ships a `Reasoning` part component that renders assistant-ui's own
-// `MarkdownText`, plus a deprecated `ReasoningGroup` composite targeting the legacy
+// markdown text, plus a deprecated `ReasoningGroup` composite targeting the legacy
 // `components.ReasoningGroup` prop on `<MessagePrimitive.Parts>`. Both are dropped:
 // `chat/Thread.tsx` composes these four under `<MessagePrimitive.GroupedParts>` and
-// renders the reasoning text through `MessageResponse`, so vendoring `MarkdownText`
-// would only duplicate Streamdown.
+// renders the reasoning text through `chat/MarkdownText.tsx`, so vendoring a second
+// markdown component would only duplicate Streamdown.
 export { ReasoningRoot, ReasoningTrigger, ReasoningContent, ReasoningText, reasoningVariants };

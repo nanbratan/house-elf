@@ -9,7 +9,7 @@ import {
 } from '../vendor/ai-elements/conversation';
 import { ToolGroupContent, ToolGroupRoot, ToolGroupTrigger } from '../assistant-ui/tool-group.tsx';
 import { ErrorNotice } from './ErrorNotice.tsx';
-import { MessageResponse } from './MessageResponse.tsx';
+import { MarkdownText } from './MarkdownText.tsx';
 import {
 	ReasoningContent,
 	ReasoningRoot,
@@ -72,18 +72,11 @@ function AssistantMessage() {
 									<ToolGroupContent>{children}</ToolGroupContent>
 								</ToolGroupRoot>
 							);
+						// Reasoning is markdown from the same model as the reply, so it renders
+						// through the same component; the disclosure around it is the group's job.
 						case 'text':
-							return (
-								<MessageResponse isAnimating={part.status.type === 'running'}>
-									{part.text}
-								</MessageResponse>
-							);
 						case 'reasoning':
-							return (
-								<MessageResponse isAnimating={part.status.type === 'running'}>
-									{part.text}
-								</MessageResponse>
-							);
+							return <MarkdownText />;
 						case 'tool-call':
 							return part.toolUI ?? <ToolFallback {...part} />;
 						case 'indicator':
