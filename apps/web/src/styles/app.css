@@ -11,10 +11,31 @@
  * Ships the `shimmer` text utilities that `ui/shimmer.tsx` composes. Dropping this
  * import fails silently — the utilities go undefined and the reasoning header's
  * streaming animation stops.
+ *
+ * This is also the ONE definition of `shimmer`. assistant-ui's `elements-surfaces`
+ * registry item declares the `tw-shimmer` package and emits `@import "tw-shimmer"`,
+ * which defines the same `@utility shimmer` — whichever import came last would win.
+ * We keep shadcn's and do not install tw-shimmer: this import cannot be dropped (it
+ * also supplies `scroll-fade-*`), so shadcn's definition is unavoidable, and the two
+ * disagree on `--shimmer-duration` — shadcn reads a CSS time (`2s`), tw-shimmer a
+ * unitless ms count, so the `2s` that `ui/shimmer.tsx` sets inline would silently be
+ * discarded. elements-surfaces only ever uses the bare `shimmer` class, which shadcn
+ * supplies. Strip the `@import "tw-shimmer"` line when the CLI adds that item.
  */
 @import 'shadcn/tailwind.css';
 @import '@fontsource-variable/jetbrains-mono';
 @import '@fontsource-variable/ibm-plex-sans';
+
+/*
+ * Tailwind v4 excludes gitignored paths from content detection, so node_modules is
+ * never scanned. Streamdown colours highlighted tokens with `text-[var(--sdm-c,inherit)]`,
+ * an arbitrary utility written only inside its own bundle — unscanned, Tailwind never
+ * generates it and every fenced code block renders unhighlighted (house-elf-z5n.5).
+ * The four `@streamdown/*` plugins are AST transforms carrying no class names, so they
+ * need no directive; add one here if a plugin ever ships markup.
+ */
+@source '../../../../node_modules/streamdown/dist';
+@source '../../../../node_modules/@assistant-ui/react-streamdown/dist';
 
 /*
  * base-nova's `mist` base colour, dark values, copied from the registry
