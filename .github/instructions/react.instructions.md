@@ -38,8 +38,38 @@ might re-render" is not a measurement.
 
 **A compiler bail-out is a defect in the component, not a reason to memoise by hand.**
 The compiler silently skips components that break the Rules of React, and that
-component quietly loses its memoisation. `eslint-plugin-react-hooks` reports bail-outs
-as errors — fix the component so the compiler can take it.
+component quietly loses its memoisation. `eslint-plugin-react-hooks` reports the
+Rules-of-React bail-outs as errors — fix the component so the compiler can take it.
+
+### Every component change is checked against the compiler
+
+A new component, or a change to an existing one, is not finished until the compiler is
+known to have taken it. The check is the web build — about two seconds:
+
+```sh
+cd apps/web && bun run build 2>&1 | grep '\[react-compiler\]'
+```
+
+A line naming a file you touched means that component silently lost its memoisation.
+Fix it before committing.
+
+`react-compiler-healthcheck` is **not** the check. It reported "41 out of 41
+components" compiled for a file this build bails out of ten times, and counted a
+component using `??=` as "0 out of 0 components".
+
+**Not every bail-out is a lint error.** The compiler also gives up on syntax it cannot
+lower yet, which nothing in lint reports. Two known forms, each costing the _whole_
+component its memoisation:
+
+```tsx
+ref.current ??= Date.now(); // Todo: Handle ??= operators in AssignmentExpression
+function C({ open = false }) {} // Todo: Expected object property value to be an LVal
+```
+
+Write them as an `if`, and as a default resolved in the component body. `??=` also
+trips `@typescript-eslint/prefer-nullish-coalescing`, which wants exactly the form the
+compiler rejects — disable that rule on the line and say why. The compiler outranks the
+idiom.
 
 ## Components
 
