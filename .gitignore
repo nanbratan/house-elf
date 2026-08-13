@@ -38,3 +38,5 @@ infra/data/
 .beads-credential-key
 .beads/proxieddb/
 .beads/hooks/
+
+.claude/worktrees/*
