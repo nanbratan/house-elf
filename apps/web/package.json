@@ -51,7 +51,6 @@
 		"shadcn": "^4.16.2",
 		"streamdown": "2.5.0",
 		"tailwind-merge": "^3.6.0",
-		"tw-shimmer": "^0.4.12",
-		"use-stick-to-bottom": "1.1.6"
+		"tw-shimmer": "^0.4.12"
 	}
 }

@@ -1,4 +1,6 @@
+import type { ReactElement } from 'react';
 import { act, render } from '@testing-library/react';
+import { isValidElement } from 'react';
 import { AssistantRuntimeProvider } from '@assistant-ui/react';
 import { useChatRuntime } from '@assistant-ui/react-ai-sdk';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -20,9 +22,13 @@ vi.mock('@assistant-ui/react-ai-sdk', () => ({ useChatRuntime: vi.fn() }));
 vi.mock('../../../src/lib/chat/transport.ts', () => ({ createChatTransport: vi.fn() }));
 
 // Both are tested at their own boundary; here they are stubs whose call history
-// records what ChatView handed them.
+// records what ChatView handed them. The Thread stub renders its `composer` slot
+// because that is the whole of what Thread does with it, and the composer's own
+// props are only observable once it has been rendered.
 vi.mock('../../../src/lib/components/chat/Thread.tsx', () => ({
-	Thread: vi.fn(() => <div data-testid="thread" />)
+	Thread: vi.fn(({ composer }: { composer: React.ReactNode }) => (
+		<div data-testid="thread">{composer}</div>
+	))
 }));
 
 vi.mock('../../../src/lib/components/chat/Composer.tsx', () => ({
@@ -70,6 +76,18 @@ describe('ChatView', () => {
 		expect(vi.mocked(AssistantRuntimeProvider).mock.lastCall?.[0]?.runtime).toBe(runtime);
 		expect(vi.mocked(Thread)).toHaveBeenCalled();
 		expect(vi.mocked(Composer)).toHaveBeenCalled();
+	});
+
+	// The composer belongs inside the thread's viewport, which only Thread can place
+	// it in — but its props come from the model selection ChatView owns. So ChatView
+	// builds the element and Thread is handed it, rather than the six props.
+	it('hands the composer to the thread as an element rather than rendering it alongside', () => {
+		render(<ChatView agentId="general" modelCatalog={modelCatalog} />);
+
+		const slot = vi.mocked(Thread).mock.lastCall?.[0]?.composer;
+
+		expect(isValidElement(slot)).toBe(true);
+		expect((slot as ReactElement).type).toBe(Composer);
 	});
 
 	it('gives the transport the agent and the current choice', () => {

@@ -19,7 +19,17 @@ export function AppShell({ children }: AppShellProps) {
 			<AppSidebar open={sidebarOpen} />
 
 			<div className="flex min-w-0 flex-1 flex-col">
-				<header className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-3">
+				{/*
+				 * In the flow, above the scrolling region rather than over it, so the
+				 * transcript's scrollbar starts below the header instead of running behind
+				 * it. `h-header` is the token the thread subtracts when centring its
+				 * composer — see `--spacing-header`.
+				 *
+				 * Deliberately unbordered: the separation is the opaque background plus the
+				 * transcript's own top padding, not a rule. The background is not optional
+				 * for that — without it the transcript shows through as it scrolls past.
+				 */}
+				<header className="flex h-header shrink-0 items-center gap-3 bg-background px-3">
 					<button
 						type="button"
 						onClick={toggleSidebar}

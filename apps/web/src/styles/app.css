@@ -133,6 +133,14 @@
 	--font-mono: 'JetBrains Mono Variable', monospace;
 	--font-heading: 'IBM Plex Sans Variable', sans-serif;
 
+	/*
+	 * The app header's height, as `h-header` / `pb-header`. A token because two
+	 * components have to agree on it from different files: the shell sizes the header
+	 * with it, and the thread subtracts it when centring the composer of an empty
+	 * conversation on the middle of the screen rather than the middle of the scroller.
+	 */
+	--spacing-header: 3rem;
+
 	@keyframes collapsible-down {
 		from {
 			height: 0;

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { Fragment } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -12,23 +12,17 @@ import { Thread } from '../../../src/lib/components/chat/Thread.tsx';
 import { ToolFallback } from '../../../src/lib/components/assistant-ui/tool-fallback.tsx';
 import { ToolGroupTrigger } from '../../../src/lib/components/assistant-ui/tool-group.tsx';
 
-// Thread takes no props — it reads the thread from the runtime. These two arrays are
-// what the stubbed primitives replay, so a test states the runtime's contents by
-// assigning to them.
+// Thread's only prop is the composer element; the conversation itself comes from the
+// runtime. These are what the stubbed primitives and hooks replay, so a test states
+// the runtime's contents by assigning to them.
 let threadMessages: { role: string }[] = [];
 let messageParts: Record<string, unknown>[] = [];
-let threadIsEmpty = false;
+let isAtBottom = true;
 const userPartText = 'What the user typed';
 
 vi.mock('@assistant-ui/react', () => ({
-	AuiIf: vi.fn(
-		({
-			condition,
-			children
-		}: {
-			condition: (state: { thread: { isEmpty: boolean } }) => boolean;
-			children?: ReactNode;
-		}) => (condition({ thread: { isEmpty: threadIsEmpty } }) ? <div>{children}</div> : null)
+	useThreadViewport: vi.fn((select: (viewport: { isAtBottom: boolean }) => unknown) =>
+		select({ isAtBottom })
 	),
 	groupPartByType: vi.fn(() => vi.fn()),
 	MessagePrimitive: {
@@ -59,7 +53,22 @@ vi.mock('@assistant-ui/react', () => ({
 			threadMessages.map((message, index) => (
 				<Fragment key={index}>{children({ message })}</Fragment>
 			))
-		)
+		),
+		// The real ones render a single div each and carry the props through; the
+		// scrolling and height-measuring they add is the package's own business.
+		Viewport: vi.fn(({ children, ...props }: { children?: ReactNode }) => (
+			<div {...props}>{children}</div>
+		)),
+		ViewportFooter: vi.fn(({ children, ...props }: { children?: ReactNode }) => (
+			<div data-testid="viewport-footer" {...props}>
+				{children}
+			</div>
+		)),
+		ScrollToBottom: vi.fn(({ children, ...props }: { children?: ReactNode }) => (
+			<button type="button" {...props}>
+				{children}
+			</button>
+		))
 	}
 }));
 
@@ -74,15 +83,6 @@ vi.mock('@assistant-ui/react-ai-sdk', () => ({
 // Every child is tested at its own boundary; here each is a stub whose call history
 // records what Thread passed it. A stub receiving children must render them, or
 // Thread's own markup disappears from the test.
-vi.mock('../../../src/lib/components/vendor/ai-elements/conversation.tsx', () => ({
-	Conversation: vi.fn(({ children }: { children?: ReactNode }) => <div>{children}</div>),
-	ConversationContent: vi.fn(({ children }: { children?: ReactNode }) => <div>{children}</div>),
-	ConversationEmptyState: vi.fn(({ children }: { children?: ReactNode }) => (
-		<div data-testid="empty-state">{children}</div>
-	)),
-	ConversationScrollButton: vi.fn(() => null)
-}));
-
 vi.mock('../../../src/lib/components/assistant-ui/tool-group.tsx', () => ({
 	ToolGroupRoot: vi.fn(({ children }: { children?: ReactNode }) => <div>{children}</div>),
 	ToolGroupTrigger: vi.fn(() => <span data-testid="tool-group-trigger" />),
@@ -113,29 +113,52 @@ const reasoningTriggerProps = () => vi.mocked(ReasoningTrigger).mock.lastCall?.[
 const toolGroupProps = () => vi.mocked(ToolGroupTrigger).mock.lastCall?.[0];
 const errorNoticeProps = () => vi.mocked(ErrorNotice).mock.lastCall?.[0];
 
+const composer = <div data-testid="composer" />;
+
 describe('Thread', () => {
 	beforeEach(() => {
 		threadMessages = [];
 		messageParts = [];
-		threadIsEmpty = false;
+		isAtBottom = true;
 		error.mockReturnValue(undefined);
 	});
 
-	it('offers an empty state when the thread has nothing in it', () => {
-		threadIsEmpty = true;
+	// The composer has to be a descendant of the viewport: `ViewportFooter` throws
+	// outside one, and the footer's measured height is what keeps autoscroll from
+	// hiding the last message behind the composer.
+	it('renders the composer it was given inside the viewport footer', () => {
+		render(<Thread composer={composer} />);
 
-		render(<Thread />);
-
-		expect(screen.getByTestId('empty-state')).toBeInTheDocument();
+		expect(
+			within(screen.getByTestId('viewport-footer')).getByTestId('composer')
+		).toBeInTheDocument();
 	});
 
-	it('withholds the empty state once the thread has a message', () => {
-		threadIsEmpty = false;
-		threadMessages = [{ role: 'user' }];
+	// The e2e suite reads the scroll position off this class, and assistant-ui puts
+	// the scroll listener on the viewport div itself — so the class has to be there
+	// and not on some wrapper.
+	it('announces the transcript as a log and marks it with the class e2e scrolls by', () => {
+		render(<Thread composer={composer} />);
 
-		render(<Thread />);
+		expect(screen.getByRole('log')).toHaveClass('transcript-scroll');
+	});
 
-		expect(screen.queryByTestId('empty-state')).not.toBeInTheDocument();
+	// `ThreadPrimitive.ScrollToBottom` only disables itself at the bottom; the e2e
+	// suite asserts the button is absent, so Thread has to unmount it.
+	it('withholds the jump button while the transcript is already at its end', () => {
+		isAtBottom = true;
+
+		render(<Thread composer={composer} />);
+
+		expect(screen.queryByRole('button', { name: 'Jump to latest' })).not.toBeInTheDocument();
+	});
+
+	it('offers a jump button once the reader has scrolled away from the end', () => {
+		isAtBottom = false;
+
+		render(<Thread composer={composer} />);
+
+		expect(screen.getByRole('button', { name: 'Jump to latest' })).toBeInTheDocument();
 	});
 
 	// Presence alone would not pin this down: both components hardcode their own
@@ -144,7 +167,7 @@ describe('Thread', () => {
 	it('marks each turn with its role, which the e2e suite locates turns by', () => {
 		threadMessages = [{ role: 'user' }, { role: 'assistant' }];
 
-		const { container } = render(<Thread />);
+		const { container } = render(<Thread composer={composer} />);
 
 		const roles = [...container.querySelectorAll('[data-role]')].map((turn) =>
 			turn.getAttribute('data-role')
@@ -156,7 +179,7 @@ describe('Thread', () => {
 	it('renders the user’s own text in the user turn', () => {
 		threadMessages = [{ role: 'user' }];
 
-		render(<Thread />);
+		render(<Thread composer={composer} />);
 
 		expect(screen.getByText(userPartText)).toBeInTheDocument();
 	});
@@ -165,7 +188,7 @@ describe('Thread', () => {
 		threadMessages = [{ role: 'assistant' }];
 		messageParts = [{ type: 'group-tool', status: { type: 'running' }, indices: [0, 1, 2] }];
 
-		render(<Thread />);
+		render(<Thread composer={composer} />);
 
 		expect(toolGroupProps()?.count).toBe(3);
 		expect(toolGroupProps()?.active).toBe(true);
@@ -178,7 +201,7 @@ describe('Thread', () => {
 		threadMessages = [{ role: 'assistant' }];
 		messageParts = [{ type: 'text', text: 'A reply', status: { type: 'running' } }];
 
-		render(<Thread />);
+		render(<Thread composer={composer} />);
 
 		expect(screen.getByTestId('markdown-text')).toBeInTheDocument();
 	});
@@ -187,7 +210,7 @@ describe('Thread', () => {
 		threadMessages = [{ role: 'assistant' }];
 		messageParts = [{ type: 'group-reasoning', status: { type: 'running' }, indices: [0, 1] }];
 
-		render(<Thread />);
+		render(<Thread composer={composer} />);
 
 		expect(reasoningRootProps()?.streaming).toBe(true);
 		expect(reasoningTriggerProps()?.active).toBe(true);
@@ -198,7 +221,7 @@ describe('Thread', () => {
 		threadMessages = [{ role: 'assistant' }];
 		messageParts = [{ type: 'group-reasoning', status: { type: 'complete' }, indices: [0] }];
 
-		render(<Thread />);
+		render(<Thread composer={composer} />);
 
 		expect(reasoningRootProps()?.streaming).toBe(false);
 		expect(reasoningTriggerProps()?.active).toBe(false);
@@ -210,7 +233,7 @@ describe('Thread', () => {
 		threadMessages = [{ role: 'assistant' }];
 		messageParts = [{ type: 'reasoning', text: 'Weighing it up', status: { type: 'running' } }];
 
-		render(<Thread />);
+		render(<Thread composer={composer} />);
 
 		expect(screen.getByTestId('markdown-text')).toBeInTheDocument();
 	});
@@ -219,7 +242,7 @@ describe('Thread', () => {
 		threadMessages = [{ role: 'assistant' }];
 		messageParts = [{ type: 'tool-call', toolUI: undefined }];
 
-		render(<Thread />);
+		render(<Thread composer={composer} />);
 
 		expect(screen.getByTestId('tool-fallback')).toBeInTheDocument();
 	});
@@ -228,7 +251,7 @@ describe('Thread', () => {
 		threadMessages = [{ role: 'assistant' }];
 		messageParts = [{ type: 'tool-call', toolUI: <span data-testid="tool-ui" /> }];
 
-		render(<Thread />);
+		render(<Thread composer={composer} />);
 
 		expect(screen.getByTestId('tool-ui')).toBeInTheDocument();
 		expect(screen.queryByTestId('tool-fallback')).not.toBeInTheDocument();
@@ -241,7 +264,7 @@ describe('Thread', () => {
 		threadMessages = [{ role: 'assistant' }];
 		messageParts = [{ type: 'indicator' }];
 
-		render(<Thread />);
+		render(<Thread composer={composer} />);
 
 		expect(screen.getByText('Waiting for a reply…')).toBeInTheDocument();
 	});
@@ -249,7 +272,7 @@ describe('Thread', () => {
 	it('passes a failed turn to the error notice with a retry that regenerates it', () => {
 		error.mockReturnValue(new Error('Broken stream'));
 
-		render(<Thread />);
+		render(<Thread composer={composer} />);
 
 		expect(errorNoticeProps()?.error.message).toBe('Broken stream');
 

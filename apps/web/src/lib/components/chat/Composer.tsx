@@ -41,8 +41,9 @@ export function Composer({
 	const isEmpty = useAuiState((state) => state.composer.isEmpty);
 
 	return (
-		// The card floats: no rule above it, and the transcript scrolls past
-		// underneath. Only the card is centred and width-capped.
+		// No rule above the card — the viewport footer holding it is opaque, which is
+		// what separates it from the transcript. Only the card is centred and
+		// width-capped.
 		<div className="px-4 pb-4">
 			<ComposerPrimitive.Root className="mx-auto max-w-3xl">
 				<ComposerBar>
