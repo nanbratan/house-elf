@@ -1,7 +1,7 @@
 import type { SelectableModel } from '@house-elf/shared';
 import { ChevronDownIcon } from 'lucide-react';
 
-import { CommandGroup } from '@/registry/default/ui/command';
+import { CommandGroup } from '../ui/command.tsx';
 import { ModelRow } from './ModelRow.tsx';
 
 export interface PinnedSectionProps {

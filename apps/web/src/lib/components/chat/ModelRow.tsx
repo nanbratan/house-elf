@@ -2,8 +2,8 @@ import type { SelectableModel } from '@house-elf/shared';
 import { CheckIcon, StarIcon } from 'lucide-react';
 import type { KeyboardEvent, MouseEvent } from 'react';
 
-import { CommandItem } from '@/registry/default/ui/command';
 import { providerName } from '../../utils/model-list.ts';
+import { CommandItem } from '../ui/command.tsx';
 import { ModelDetails } from './ModelDetails.tsx';
 
 export interface ModelRowProps {

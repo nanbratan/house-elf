@@ -153,16 +153,16 @@ afterEach(async () => {
 	// The picker owns its pinned state, which persists to `localStorage`. Without
 	// clearing it, a pin from one test bleeds into the next.
 	localStorage.clear();
-	// Radix's Dialog marks the document `data-scroll-locked` while open and
-	// clears it on close; a test that left the dialog open would leave that
-	// mark for the rest of the file. Close it as a reader would, with Escape,
-	// rather than resetting the attribute ourselves — that reset is the
-	// behaviour under test.
+	// The Dialog locks page scrolling while open by writing `overflow: hidden`
+	// inline on <body>, and restores it on close; a test that left the dialog
+	// open would leave that lock in place for the rest of the file. Close it as
+	// a reader would, with Escape, rather than clearing the style ourselves —
+	// that restore is the behaviour under test.
 	const dialog = screen.queryByRole('dialog');
 	if (dialog) await userEvent.setup().keyboard('{Escape}');
 	await waitFor(() => {
 		expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-		expect(document.body).not.toHaveAttribute('data-scroll-locked');
+		expect(document.body.style.overflowY).toBe('');
 	});
 });
 
@@ -250,10 +250,10 @@ describe('ModelPicker', () => {
 	it('names thinking on the trigger, so an expensive setting is not a hidden one', async () => {
 		await openPicker(opus5.id, 'Opus 5', { thinking: true });
 
-		// Radix marks background content `aria-hidden` while the dialog is open —
-		// a real accessibility improvement over the bits-ui original, but it
-		// means the trigger is no longer reachable by role without opting back
-		// in for this one query.
+		// The Dialog marks background content `aria-hidden` while it is open — a
+		// real accessibility improvement over the bits-ui original, but it means
+		// the trigger is no longer reachable by role without opting back in for
+		// this one query.
 		expect(
 			screen.getByRole('button', { name: /Current model: Opus 5, thinking on/, hidden: true })
 		).toHaveTextContent('Thinking');
@@ -262,12 +262,17 @@ describe('ModelPicker', () => {
 	it('locks page scrolling only while the modal is open', async () => {
 		const { user } = await openPicker();
 
-		expect(document.body).toHaveAttribute('data-scroll-locked');
+		// The lock is an inline `overflow: hidden` on the viewport's scroll
+		// container — <body>, since <html> is not one here. It is applied a tick
+		// after the dialog opens, hence the wait.
+		await waitFor(() => {
+			expect(document.body.style.overflowY).toBe('hidden');
+		});
 
 		await user.keyboard('{Escape}');
 		await waitFor(() => {
 			expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-			expect(document.body).not.toHaveAttribute('data-scroll-locked');
+			expect(document.body.style.overflowY).toBe('');
 		});
 	});
 

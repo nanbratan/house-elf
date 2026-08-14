@@ -52,8 +52,8 @@ describe('FilterSelect', () => {
 	});
 
 	it('adds a choice, staying open so more than one can be made', async () => {
-		// The custom part is onSelect preventDefault: without it Radix closes the
-		// menu on each pick, and the second assertion fails.
+		// The custom part is `closeOnClick={false}`: without it the menu closes on
+		// each pick, and the second assertion fails.
 		const { user, onValueChange } = renderSelect(['anthropic']);
 
 		await openMenu(user);

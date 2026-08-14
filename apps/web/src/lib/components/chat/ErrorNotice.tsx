@@ -1,4 +1,4 @@
-import { Button } from '@/registry/default/ui/button';
+import { Button } from '../ui/button.tsx';
 
 export interface ErrorNoticeProps {
 	error: Error;

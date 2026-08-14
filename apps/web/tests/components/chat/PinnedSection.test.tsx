@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { PinnedSection } from '../../../src/lib/components/chat/PinnedSection.tsx';
-import { Command, CommandList } from '@/registry/default/ui/command';
+import { Command, CommandList } from '../../../src/lib/components/ui/command.tsx';
 import { optionalThinking, selectableModel } from '../../helpers/models.ts';
 
 const opus = selectableModel({

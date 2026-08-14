@@ -8,8 +8,8 @@ import {
 	type ModelFilters as Filters
 } from '../../utils/model-filters.ts';
 import { pinnedModels, releaseSections, searchSections } from '../../utils/model-list.ts';
-import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/registry/default/ui/dialog';
-import { Command, CommandEmpty, CommandGroup, CommandList } from '@/registry/default/ui/command';
+import { Command, CommandEmpty, CommandGroup, CommandList } from '../ui/command.tsx';
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '../ui/dialog.tsx';
 import { ModelPickerHeader } from './ModelPickerHeader.tsx';
 import { ModelRow } from './ModelRow.tsx';
 import { PinnedSection } from './PinnedSection.tsx';
