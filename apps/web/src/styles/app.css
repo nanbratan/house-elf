@@ -177,6 +177,13 @@
 	html {
 		/* Makes form controls and scrollbars render dark too. */
 		color-scheme: dark;
+		/*
+		 * No elastic overscroll: the document is not the app's scroller — the
+		 * transcript and the sidebar do their own scrolling inside a fixed
+		 * viewport — so dragging the whole page at the end of a gesture shows
+		 * nothing but the background behind it.
+		 */
+		overscroll-behavior: none;
 		@apply font-mono;
 	}
 

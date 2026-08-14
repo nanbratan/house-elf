@@ -160,7 +160,7 @@ export function Thread({ composer }: ThreadProps) {
 			// While empty, `pb-header` shortens the box being centred within by exactly the
 			// header above it, which puts the composer on the middle of the screen rather
 			// than the middle of the scroller — the two differ by half the header.
-			className="transcript-scroll flex h-full min-h-0 flex-col overflow-y-auto not-has-[[data-role]]:justify-center not-has-[[data-role]]:pb-header"
+			className="transcript-scroll flex h-full min-h-0 flex-col overflow-y-auto overscroll-none not-has-[[data-role]]:justify-center not-has-[[data-role]]:pb-header"
 			role="log"
 			// `autoScroll` is explicit because `turnAnchor="top"` defaults it off. With
 			// both, the reserve element assistant-ui sizes below the reply supplies the
