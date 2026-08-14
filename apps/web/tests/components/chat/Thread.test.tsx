@@ -10,6 +10,7 @@ import {
 } from '../../../src/lib/components/assistant-ui/reasoning.tsx';
 import { Thread } from '../../../src/lib/components/chat/Thread.tsx';
 import { ToolFallback } from '../../../src/lib/components/assistant-ui/tool-fallback.tsx';
+import { ThinkingIndicator } from '../../../src/lib/components/elements/thinking-indicator.tsx';
 import { ToolGroupTrigger } from '../../../src/lib/components/assistant-ui/tool-group.tsx';
 
 // Thread's only prop is the composer element; the conversation itself comes from the
@@ -108,10 +109,15 @@ vi.mock('../../../src/lib/components/chat/ErrorNotice.tsx', () => ({
 	ErrorNotice: vi.fn(() => <div data-testid="error-notice" />)
 }));
 
+vi.mock('../../../src/lib/components/elements/thinking-indicator.tsx', () => ({
+	ThinkingIndicator: vi.fn(() => <span data-testid="thinking-indicator" />)
+}));
+
 const reasoningRootProps = () => vi.mocked(ReasoningRoot).mock.lastCall?.[0];
 const reasoningTriggerProps = () => vi.mocked(ReasoningTrigger).mock.lastCall?.[0];
 const toolGroupProps = () => vi.mocked(ToolGroupTrigger).mock.lastCall?.[0];
 const errorNoticeProps = () => vi.mocked(ErrorNotice).mock.lastCall?.[0];
+const thinkingIndicatorProps = () => vi.mocked(ThinkingIndicator).mock.lastCall?.[0];
 
 const composer = <div data-testid="composer" />;
 
@@ -266,7 +272,7 @@ describe('Thread', () => {
 
 		render(<Thread composer={composer} />);
 
-		expect(screen.getByText('Waiting for a reply…')).toBeInTheDocument();
+		expect(thinkingIndicatorProps()?.label).toBe('Waiting for a reply…');
 	});
 
 	it('passes a failed turn to the error notice with a retry that regenerates it', () => {

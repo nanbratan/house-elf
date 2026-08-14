@@ -19,6 +19,7 @@ import {
 	ReasoningText,
 	ReasoningTrigger
 } from '../assistant-ui/reasoning.tsx';
+import { ThinkingIndicator } from '../elements/thinking-indicator.tsx';
 import { ToolFallback } from '../assistant-ui/tool-fallback.tsx';
 
 const groupParts = groupPartByType({ 'tool-call': ['group-tool'], reasoning: ['group-reasoning'] });
@@ -90,9 +91,7 @@ function AssistantMessage() {
 						case 'tool-call':
 							return part.toolUI ?? <ToolFallback {...part} />;
 						case 'indicator':
-							return (
-								<p className="inline-block shimmer text-muted-foreground">Waiting for a reply…</p>
-							);
+							return <ThinkingIndicator label="Waiting for a reply…" />;
 						default:
 							return null;
 					}
