@@ -223,18 +223,22 @@ const DOT_MATRIX_CSS =
  * state-specific patterns: twinkle, waves, ripples, sweeps, equaliser columns, and
  * check/cross/bang glyphs. State changes cross-fade per dot.
  */
-export function DotMatrix({ className, state = 'loading', ...props }: DotMatrixProps) {
-	const config: StateConfig = STATES[state];
+export function DotMatrix({ className, state, ...props }: DotMatrixProps) {
+	// Resolved in the body rather than as a parameter default: a default inside an
+	// object pattern that also has a rest element bails the React Compiler out of the
+	// whole component (`Expected object property value to be an LVal`).
+	const resolvedState = state ?? 'loading';
+	const config: StateConfig = STATES[resolvedState];
 
 	return (
 		<span
 			data-slot="dot-matrix"
-			data-state={state}
+			data-state={resolvedState}
 			role="status"
 			className={cn('inline-block size-4 shrink-0', config.color, className)}
 			{...props}
 		>
-			<span className="sr-only">{state}</span>
+			<span className="sr-only">{resolvedState}</span>
 			{/*
 			 * Hoisted and deduplicated across instances by React; must live in HTML scope —
 			 * inside the SVG it would be an SVG-namespace element React does not hoist.
