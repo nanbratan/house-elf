@@ -2,8 +2,8 @@ import type { SelectableModel } from '@house-elf/shared';
 import { CheckIcon, StarIcon } from 'lucide-react';
 import type { KeyboardEvent, MouseEvent } from 'react';
 
-import { ModelSelectorItem, ModelSelectorLogo } from '../vendor/ai-elements/model-selector.tsx';
 import { providerName } from '../../utils/model-list.ts';
+import { CommandItem } from '../ui/command.tsx';
 import { ModelDetails } from './ModelDetails.tsx';
 
 export interface ModelRowProps {
@@ -34,16 +34,25 @@ export function ModelRow({
 	onSelect
 }: ModelRowProps) {
 	return (
-		<ModelSelectorItem
+		<CommandItem
 			value={model.id}
 			onSelect={() => {
 				onSelect(model.id);
 			}}
 			aria-label={model.label}
-			className="flex flex-col items-stretch gap-1 rounded-lg px-2 py-2 text-sm"
+			// `gap-0` is load-bearing: it overrides CommandItem's own `gap-2`, which
+			// would otherwise space the label row away from the details wrapper below
+			// it — a wrapper that is present even when the details are closed.
+			className="flex flex-col items-stretch gap-0 rounded-lg px-2 py-2 text-sm"
 		>
 			<div className="flex items-center gap-2">
-				<ModelSelectorLogo provider={providerName(model)} />
+				<img
+					alt={`${providerName(model)} logo`}
+					className="size-3 dark:invert"
+					height={12}
+					width={12}
+					src={`https://models.dev/logos/${providerName(model)}.svg`}
+				/>
 				<span className="min-w-0 flex-1 truncate">{model.label}</span>
 				{selected ? (
 					<CheckIcon className="size-4 shrink-0 text-foreground" aria-hidden="true" />
@@ -70,7 +79,12 @@ export function ModelRow({
 				{/* "More" sits at the far right edge so a thumb finds it in the same
 				    place on every row. The label is flex-1, so it absorbs the space
 				    the checkmark takes on the selected row — "More" never shifts.
-				    The literal space keeps the row's text content two words. */}{' '}
+				    The literal space keeps the row's text content two words.
+
+				    The button is `flex`, not the default `inline-block`: an
+				    inline-level button is baseline-aligned inside its wrapper span's
+				    line box, which sat it a pixel below everything else in the row.
+				    The star reads as centred because it is already `flex`. */}{' '}
 				<span onClick={stopRowSelect} onKeyDown={stopRowSelect}>
 					<button
 						type="button"
@@ -78,7 +92,7 @@ export function ModelRow({
 							onToggleDetails(model.id);
 						}}
 						aria-expanded={detailsOpen}
-						className="shrink-0 text-xs text-muted-foreground transition-colors hover:text-foreground"
+						className="flex shrink-0 items-center text-xs text-muted-foreground transition-colors hover:text-foreground"
 					>
 						{detailsOpen ? 'Less' : 'More'}
 					</button>
@@ -88,6 +102,6 @@ export function ModelRow({
 			<div onClick={stopRowSelect} onKeyDown={stopRowSelect}>
 				<ModelDetails model={model} open={detailsOpen} />
 			</div>
-		</ModelSelectorItem>
+		</CommandItem>
 	);
 }

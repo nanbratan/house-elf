@@ -1,5 +1,5 @@
 ---
-description: 'Use when writing or changing React, TSX, or TanStack Start code in this repo. Covers composition and render posture, memoisation, component and hook structure, effects, JSX, styling, and vendored code.'
+description: 'Use when writing or changing React, TSX, or TanStack Start code in this repo. Covers composition and render posture, memoisation, component and hook structure, effects, JSX, styling, and registry code.'
 applyTo: '**/*.tsx, apps/web/**/*.ts'
 ---
 
@@ -139,8 +139,8 @@ preference; reach for it only when the utility form does not exist.
 
 ## Code from the shadcn registry
 
-`lib/components/ui/` and `lib/components/ai-elements/` hold registry code that is
-**ours**, not a reference copy: it meets every rule in this file in full, including the
+`lib/components/ui/`, `lib/components/assistant-ui/` and `lib/components/elements/`
+hold registry code that is **ours**, not a reference copy: it meets every rule in this file in full, including the
 `use client` directive being stripped. TanStack Start does not use React Server
 Components, so the directive is inert noise that misleads the next reader into thinking
 a boundary exists.

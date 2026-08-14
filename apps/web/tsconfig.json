@@ -6,12 +6,8 @@
 		"types": ["vite/client"],
 		"rewriteRelativeImportExtensions": true,
 		"paths": {
-			"~/*": ["./src/*"],
-			"@/registry/default/ui/*": ["./src/lib/components/vendor/ai-elements/ui/*"],
-			"@/registry/new-york-v4/ui/*": ["./src/lib/components/vendor/ai-elements/ui/*"],
-			"@/lib/utils": ["./src/lib/utils/cn.ts"]
+			"~/*": ["./src/*"]
 		}
 	},
-	"include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "tests/**/*.tsx", "vite.config.ts"],
-	"exclude": ["src/lib/components/vendor"]
+	"include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "tests/**/*.tsx", "vite.config.ts"]
 }

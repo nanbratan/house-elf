@@ -3,13 +3,14 @@ import type { ReactNode } from 'react';
 import { Fragment } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ErrorNotice } from '../../../src/lib/components/chat/ErrorNotice.tsx';
+import { ErrorState } from '../../../src/lib/components/elements/error-state.tsx';
 import {
 	ReasoningRoot,
 	ReasoningTrigger
 } from '../../../src/lib/components/assistant-ui/reasoning.tsx';
 import { Thread } from '../../../src/lib/components/chat/Thread.tsx';
 import { ToolFallback } from '../../../src/lib/components/assistant-ui/tool-fallback.tsx';
+import { ThinkingIndicator } from '../../../src/lib/components/elements/thinking-indicator.tsx';
 import { ToolGroupTrigger } from '../../../src/lib/components/assistant-ui/tool-group.tsx';
 
 // Thread's only prop is the composer element; the conversation itself comes from the
@@ -104,14 +105,19 @@ vi.mock('../../../src/lib/components/assistant-ui/reasoning.tsx', () => ({
 	ReasoningText: vi.fn(({ children }: { children?: ReactNode }) => <div>{children}</div>)
 }));
 
-vi.mock('../../../src/lib/components/chat/ErrorNotice.tsx', () => ({
-	ErrorNotice: vi.fn(() => <div data-testid="error-notice" />)
+vi.mock('../../../src/lib/components/elements/error-state.tsx', () => ({
+	ErrorState: vi.fn(() => <div data-testid="error-state" />)
+}));
+
+vi.mock('../../../src/lib/components/elements/thinking-indicator.tsx', () => ({
+	ThinkingIndicator: vi.fn(() => <span data-testid="thinking-indicator" />)
 }));
 
 const reasoningRootProps = () => vi.mocked(ReasoningRoot).mock.lastCall?.[0];
 const reasoningTriggerProps = () => vi.mocked(ReasoningTrigger).mock.lastCall?.[0];
 const toolGroupProps = () => vi.mocked(ToolGroupTrigger).mock.lastCall?.[0];
-const errorNoticeProps = () => vi.mocked(ErrorNotice).mock.lastCall?.[0];
+const errorStateProps = () => vi.mocked(ErrorState).mock.lastCall?.[0];
+const thinkingIndicatorProps = () => vi.mocked(ThinkingIndicator).mock.lastCall?.[0];
 
 const composer = <div data-testid="composer" />;
 
@@ -266,17 +272,18 @@ describe('Thread', () => {
 
 		render(<Thread composer={composer} />);
 
-		expect(screen.getByText('Waiting for a reply…')).toBeInTheDocument();
+		expect(thinkingIndicatorProps()?.label).toBe('Waiting for a reply…');
 	});
 
-	it('passes a failed turn to the error notice with a retry that regenerates it', () => {
+	it('passes a failed turn to the error state with a retry that regenerates it', () => {
 		error.mockReturnValue(new Error('Broken stream'));
 
 		render(<Thread composer={composer} />);
 
-		expect(errorNoticeProps()?.error.message).toBe('Broken stream');
+		expect(errorStateProps()?.title).toBe('That reply did not arrive.');
+		expect(errorStateProps()?.detail).toBe('Broken stream');
 
-		errorNoticeProps()?.onRetry();
+		errorStateProps()?.onRetry();
 
 		expect(regenerate).toHaveBeenCalledOnce();
 	});

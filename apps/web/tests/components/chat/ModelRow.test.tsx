@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ModelRow } from '../../../src/lib/components/chat/ModelRow.tsx';
-import { Command, CommandList } from '@/registry/default/ui/command';
+import { Command, CommandList } from '../../../src/lib/components/ui/command.tsx';
 import { optionalThinking, selectableModel } from '../../helpers/models.ts';
 
 const opus = selectableModel({
@@ -43,6 +43,17 @@ describe('ModelRow', () => {
 		renderRow();
 
 		expect(screen.getByRole('option', { name: 'Opus 5' })).toBeInTheDocument();
+	});
+
+	/**
+	 * The row's own `aria-label` pins the option's accessible name to the model
+	 * label, so nothing else here notices whether the logo rendered at all. The
+	 * name, not the URL: the source of the image is due to move to a local path.
+	 */
+	it('names the provider logo for assistive tech', () => {
+		renderRow();
+
+		expect(screen.getByRole('img', { name: 'anthropic logo' })).toBeInTheDocument();
 	});
 
 	it('shows the star as not pressed for an unpinned model', () => {

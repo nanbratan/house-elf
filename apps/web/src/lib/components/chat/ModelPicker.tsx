@@ -8,15 +8,8 @@ import {
 	type ModelFilters as Filters
 } from '../../utils/model-filters.ts';
 import { pinnedModels, releaseSections, searchSections } from '../../utils/model-list.ts';
-import {
-	ModelSelector,
-	ModelSelectorEmpty,
-	ModelSelectorGroup,
-	ModelSelectorList,
-	ModelSelectorTrigger
-} from '../vendor/ai-elements/model-selector.tsx';
-import { DialogContent, DialogTitle } from '@/registry/default/ui/dialog';
-import { Command } from '@/registry/default/ui/command';
+import { Command, CommandEmpty, CommandGroup, CommandList } from '../ui/command.tsx';
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '../ui/dialog.tsx';
 import { ModelPickerHeader } from './ModelPickerHeader.tsx';
 import { ModelRow } from './ModelRow.tsx';
 import { PinnedSection } from './PinnedSection.tsx';
@@ -90,8 +83,8 @@ export function ModelPicker({
 	}
 
 	return (
-		<ModelSelector open={open} onOpenChange={setOpen}>
-			<ModelSelectorTrigger
+		<Dialog open={open} onOpenChange={setOpen}>
+			<DialogTrigger
 				aria-label={`Choose model. Current model: ${selectedModel?.label ?? 'none'}${
 					thinking ? ', thinking on' : ''
 				}`}
@@ -114,13 +107,8 @@ export function ModelPicker({
 				>
 					<path d="m3 4.5 3 3 3-3" />
 				</svg>
-			</ModelSelectorTrigger>
+			</DialogTrigger>
 
-			{/*
-			 * ModelSelectorContent is not used: it hardcodes its own `<Command>` with no
-			 * prop forwarding, so it cannot carry `defaultValue`/`shouldFilter={false}`/
-			 * `loop`. The shell's list primitives below ARE used.
-			 */}
 			<DialogContent
 				showCloseButton={false}
 				className="w-[min(26rem,calc(100vw-2rem))] gap-0 overflow-hidden p-0"
@@ -143,11 +131,9 @@ export function ModelPicker({
 						onFiltersChange={setFilters}
 					/>
 
-					<ModelSelectorList id={modelListId} className="max-h-none flex-1 overflow-y-auto p-1.5">
+					<CommandList id={modelListId} className="max-h-none flex-1 overflow-y-auto p-1.5">
 						{sections.length === 0 && !showPinned ? (
-							<ModelSelectorEmpty className="px-3 py-8 text-faint">
-								No models found.
-							</ModelSelectorEmpty>
+							<CommandEmpty className="px-3 py-8 text-faint">No models found.</CommandEmpty>
 						) : null}
 
 						{showPinned ? (
@@ -166,7 +152,7 @@ export function ModelPicker({
 						) : null}
 
 						{sections.map((section) => (
-							<ModelSelectorGroup key={section.id} heading={section.title}>
+							<CommandGroup key={section.id} heading={section.title}>
 								{section.models.map((model) => (
 									<ModelRow
 										key={model.id}
@@ -179,15 +165,15 @@ export function ModelPicker({
 										onSelect={select}
 									/>
 								))}
-							</ModelSelectorGroup>
+							</CommandGroup>
 						))}
-					</ModelSelectorList>
+					</CommandList>
 				</Command>
 
 				{canChooseThinking ? (
 					<ThinkingRow thinking={thinking} onThinkingChange={onThinkingChange} />
 				) : null}
 			</DialogContent>
-		</ModelSelector>
+		</Dialog>
 	);
 }

@@ -1,5 +1,5 @@
 import type { SelectableModel } from '@house-elf/shared';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -38,15 +38,34 @@ async function openFilters(catalog?: readonly SelectableModel[]) {
 }
 
 /**
- * Opens a filter, picks one option, and closes it again — a Radix menu hides
+ * Opens a filter, picks one option, and closes it again — an open menu hides
  * the rest of the page from the accessibility tree while it is open, so the
  * next filter cannot be reached until this one is dismissed, just as a real
  * reader would dismiss it before moving on.
  */
 async function choose(user: ReturnType<typeof userEvent.setup>, label: string, optionName: string) {
-	await user.click(screen.getByRole('button', { name: label }));
+	await openMenu(user, label);
 	await user.click(screen.getByRole('menuitemcheckbox', { name: new RegExp(optionName) }));
+	await closeMenu(user);
+}
+
+/**
+ * Opens one filter's menu. The popup mounts a tick after the trigger is
+ * clicked, so its items cannot be queried in the same breath.
+ */
+async function openMenu(user: ReturnType<typeof userEvent.setup>, label: string) {
+	await user.click(screen.getByRole('button', { name: label }));
+	await waitFor(() => {
+		expect(screen.getAllByRole('menuitemcheckbox').length).toBeGreaterThan(0);
+	});
+}
+
+/** Dismisses the open menu and waits for it to leave the tree. */
+async function closeMenu(user: ReturnType<typeof userEvent.setup>) {
 	await user.keyboard('{Escape}');
+	await waitFor(() => {
+		expect(screen.queryByRole('menuitemcheckbox')).not.toBeInTheDocument();
+	});
 }
 
 describe('ModelFilters', () => {
@@ -75,7 +94,7 @@ describe('ModelFilters', () => {
 	it('offers each provider with the weight it carries', async () => {
 		const { user } = await openFilters();
 
-		await user.click(screen.getByRole('button', { name: 'Provider' }));
+		await openMenu(user, 'Provider');
 
 		expect(screen.getByRole('menuitemcheckbox', { name: /anthropic/ })).toHaveTextContent(
 			/anthropic\s*3/
@@ -88,7 +107,7 @@ describe('ModelFilters', () => {
 	it('offers every input the catalog accepts', async () => {
 		const { user } = await openFilters();
 
-		await user.click(screen.getByRole('button', { name: 'Accepts' }));
+		await openMenu(user, 'Accepts');
 
 		expect(screen.getByRole('menuitemcheckbox', { name: 'image' })).toBeVisible();
 		expect(screen.getByRole('menuitemcheckbox', { name: 'text' })).toBeVisible();
@@ -97,12 +116,12 @@ describe('ModelFilters', () => {
 	it('asks about price on its own, not among the capabilities', async () => {
 		const { user } = await openFilters();
 
-		await user.click(screen.getByRole('button', { name: 'Can do' }));
+		await openMenu(user, 'Can do');
 
 		expect(screen.getByRole('menuitemcheckbox', { name: 'Thinking' })).toBeVisible();
 		expect(screen.queryByRole('menuitemcheckbox', { name: 'Free' })).not.toBeInTheDocument();
 
-		await user.keyboard('{Escape}');
+		await closeMenu(user);
 
 		expect(screen.getByRole('button', { name: 'Free', pressed: false })).toBeVisible();
 	});

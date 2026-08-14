@@ -1,7 +1,7 @@
 import type { SelectableModel } from '@house-elf/shared';
 import { ChevronDownIcon } from 'lucide-react';
 
-import { ModelSelectorGroup } from '../vendor/ai-elements/model-selector.tsx';
+import { CommandGroup } from '../ui/command.tsx';
 import { ModelRow } from './ModelRow.tsx';
 
 export interface PinnedSectionProps {
@@ -62,7 +62,7 @@ export function PinnedSection({
 			</div>
 
 			{!collapsed ? (
-				<ModelSelectorGroup value="pinned">
+				<CommandGroup value="pinned">
 					{models.map((model) => (
 						<ModelRow
 							key={model.id}
@@ -75,7 +75,7 @@ export function PinnedSection({
 							onSelect={onSelect}
 						/>
 					))}
-				</ModelSelectorGroup>
+				</CommandGroup>
 			) : null}
 		</div>
 	);

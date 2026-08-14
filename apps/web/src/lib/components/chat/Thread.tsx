@@ -11,7 +11,7 @@ import { ArrowDownIcon } from 'lucide-react';
 import { buttonVariants } from '../ui/button.tsx';
 import { cn } from '../../utils/cn.ts';
 import { ToolGroupContent, ToolGroupRoot, ToolGroupTrigger } from '../assistant-ui/tool-group.tsx';
-import { ErrorNotice } from './ErrorNotice.tsx';
+import { ErrorState } from '../elements/error-state.tsx';
 import { MarkdownText } from './MarkdownText.tsx';
 import {
 	ReasoningContent,
@@ -19,6 +19,7 @@ import {
 	ReasoningText,
 	ReasoningTrigger
 } from '../assistant-ui/reasoning.tsx';
+import { ThinkingIndicator } from '../elements/thinking-indicator.tsx';
 import { ToolFallback } from '../assistant-ui/tool-fallback.tsx';
 
 const groupParts = groupPartByType({ 'tool-call': ['group-tool'], reasoning: ['group-reasoning'] });
@@ -90,9 +91,7 @@ function AssistantMessage() {
 						case 'tool-call':
 							return part.toolUI ?? <ToolFallback {...part} />;
 						case 'indicator':
-							return (
-								<p className="inline-block shimmer text-muted-foreground">Waiting for a reply…</p>
-							);
+							return <ThinkingIndicator label="Waiting for a reply…" />;
 						default:
 							return null;
 					}
@@ -160,7 +159,7 @@ export function Thread({ composer }: ThreadProps) {
 			// While empty, `pb-header` shortens the box being centred within by exactly the
 			// header above it, which puts the composer on the middle of the screen rather
 			// than the middle of the scroller — the two differ by half the header.
-			className="transcript-scroll flex h-full min-h-0 flex-col overflow-y-auto not-has-[[data-role]]:justify-center not-has-[[data-role]]:pb-header"
+			className="transcript-scroll flex h-full min-h-0 flex-col overflow-y-auto overscroll-none not-has-[[data-role]]:justify-center not-has-[[data-role]]:pb-header"
 			role="log"
 			// `autoScroll` is explicit because `turnAnchor="top"` defaults it off. With
 			// both, the reserve element assistant-ui sizes below the reply supplies the
@@ -180,7 +179,9 @@ export function Thread({ composer }: ThreadProps) {
 					{({ message }) => (message.role === 'user' ? <UserMessage /> : <AssistantMessage />)}
 				</ThreadPrimitive.Messages>
 
-				{error ? <ErrorNotice error={error} onRetry={retry} /> : null}
+				{error ? (
+					<ErrorState detail={error.message} onRetry={retry} title="That reply did not arrive." />
+				) : null}
 			</div>
 
 			{/*
