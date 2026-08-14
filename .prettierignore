@@ -9,13 +9,6 @@ bun.lock
 .agents
 skills-lock.json
 
-# The ai-elements catalogue, snapshotted from its registry as reference material.
-# Gitignore syntax, so this matches both the old root location and
-# apps/web/src/lib/components/vendor/. It stays byte-identical to upstream
-# so the next refresh diffs cleanly; a customised component is our own file under
-# src/lib/components/ and is formatted normally.
-vendor
-
 # Same rule, other vendors: the Beads plugin manifest ships from upstream, and
 # Serena rewrites its own config. Neither is ours to reformat.
 .copilot-plugin
