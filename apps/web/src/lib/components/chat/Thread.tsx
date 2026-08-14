@@ -11,7 +11,7 @@ import { ArrowDownIcon } from 'lucide-react';
 import { buttonVariants } from '../ui/button.tsx';
 import { cn } from '../../utils/cn.ts';
 import { ToolGroupContent, ToolGroupRoot, ToolGroupTrigger } from '../assistant-ui/tool-group.tsx';
-import { ErrorNotice } from './ErrorNotice.tsx';
+import { ErrorState } from '../elements/error-state.tsx';
 import { MarkdownText } from './MarkdownText.tsx';
 import {
 	ReasoningContent,
@@ -179,7 +179,9 @@ export function Thread({ composer }: ThreadProps) {
 					{({ message }) => (message.role === 'user' ? <UserMessage /> : <AssistantMessage />)}
 				</ThreadPrimitive.Messages>
 
-				{error ? <ErrorNotice error={error} onRetry={retry} /> : null}
+				{error ? (
+					<ErrorState detail={error.message} onRetry={retry} title="That reply did not arrive." />
+				) : null}
 			</div>
 
 			{/*
