@@ -44,6 +44,19 @@ restyling and reasoning about code the app cannot reach.
 Re-derive reachability at graduation time — grep the importers, do not trust a
 stale list. The registry is the backup: anything deleted is one `add` away.
 
+### A lookup table is not dead code
+
+The test is reachability, not current usage. `elements-composer`'s sixteen unused
+exports each need an adapter that does not exist, so no prop change can make them
+render — they go. `@assistant-ui/dot-matrix` ships twenty states, of which
+`thinking-indicator` uses one; but they are rows in a table, each reachable by a
+one-word change to an existing call site's `state` prop, with no dependency or
+subsystem behind them (`house-elf-r9z.12`). Those stay.
+
+The gate is empirical, not rhetorical: unused table rows are uncovered lines, so run
+`bun run test` after the file lands. If keeping them drops the workspace under its
+coverage floor, prune to what is used after all.
+
 ## Testing
 
 The normal rule applies, with no exemption. A component earns its own test when it has
