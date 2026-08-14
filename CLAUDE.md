@@ -60,7 +60,8 @@ apps/web/src/
   routes/            TanStack Start routes (routes/c = conversation pages, routes/api = proxy)
   lib/components/<area>/   components, one concern per component, nothing else lives here
   lib/components/ui/       shadcn registry primitives — ours, not vendored (ui.instructions.md)
-  lib/components/ai-elements/  ai-elements components — same rules
+  lib/components/assistant-ui/  @assistant-ui registry components — same rules
+  lib/components/elements/      @assistant-ui/elements-* components — same rules
   lib/hooks/          use-prefixed shared hooks
   lib/constants/, lib/utils/
 apps/server/src/mastra/
@@ -153,8 +154,8 @@ prime` for full workflow context.
 
 ### shadcn components (`ui.instructions.md`)
 
-- `lib/components/ui/` and `lib/components/ai-elements/` are **ours** — full house
-  style, lint, types and tests. No carve-out, no prettierignore entry, no coverage
+- `lib/components/ui/`, `lib/components/assistant-ui/` and `lib/components/elements/`
+  are **ours** — full house style, lint, types and tests. No carve-out, no prettierignore entry, no coverage
   exclude. `shadcn add` output is a starting point, restyled in the same commit.
 - Bring in only what the app imports and delete the rest; the registry is the backup.
 - base-ui only, never radix. The style resolves from `apps/web/components.json`, so
