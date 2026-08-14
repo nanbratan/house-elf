@@ -45,6 +45,17 @@ describe('ModelRow', () => {
 		expect(screen.getByRole('option', { name: 'Opus 5' })).toBeInTheDocument();
 	});
 
+	/**
+	 * The row's own `aria-label` pins the option's accessible name to the model
+	 * label, so nothing else here notices whether the logo rendered at all. The
+	 * name, not the URL: the source of the image is due to move to a local path.
+	 */
+	it('names the provider logo for assistive tech', () => {
+		renderRow();
+
+		expect(screen.getByRole('img', { name: 'anthropic logo' })).toBeInTheDocument();
+	});
+
 	it('shows the star as not pressed for an unpinned model', () => {
 		renderRow();
 

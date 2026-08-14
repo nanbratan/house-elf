@@ -14,6 +14,10 @@ imports, and the `ui/` primitives those six pull in.
 it, along with `badge` and `collapsible`, which nothing imported. `dropdown-menu` stays:
 `chat/FilterSelect.tsx` imports it directly.
 
+`house-elf-r9z.13` took `model-selector`: every export the app used was a pass-through to
+`ui/command` or `ui/dialog`, so the picker imports those directly now. No ai-elements
+component is left here — only the `ui/` primitives the app still reaches.
+
 Nothing here is inert any more: all of it is in the typecheck program and all of it ships.
 `tsconfig.json`'s `exclude` only drops this directory from the root file set, it does not
 shield files reachable through an app import. `house-elf-2la.29` dissolves the directory
@@ -58,9 +62,8 @@ the phantom dependency.
 
 ## Layout
 
-- `*.tsx` — the 2 ai-elements components the app reaches.
-- `ui/*.tsx` — the 4 shadcn components they and the app depend on, pulled transitively so
-  that no file here references a component missing from the snapshot.
+- `ui/*.tsx` — the 4 shadcn components the app still depends on. No ai-elements component
+  remains.
 
 The tables below describe upstream, so they still list components and dependencies this
 snapshot does not carry.

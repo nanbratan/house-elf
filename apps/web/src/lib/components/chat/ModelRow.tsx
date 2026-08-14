@@ -2,7 +2,7 @@ import type { SelectableModel } from '@house-elf/shared';
 import { CheckIcon, StarIcon } from 'lucide-react';
 import type { KeyboardEvent, MouseEvent } from 'react';
 
-import { ModelSelectorItem, ModelSelectorLogo } from '../vendor/ai-elements/model-selector.tsx';
+import { CommandItem } from '@/registry/default/ui/command';
 import { providerName } from '../../utils/model-list.ts';
 import { ModelDetails } from './ModelDetails.tsx';
 
@@ -34,7 +34,7 @@ export function ModelRow({
 	onSelect
 }: ModelRowProps) {
 	return (
-		<ModelSelectorItem
+		<CommandItem
 			value={model.id}
 			onSelect={() => {
 				onSelect(model.id);
@@ -43,7 +43,13 @@ export function ModelRow({
 			className="flex flex-col items-stretch gap-1 rounded-lg px-2 py-2 text-sm"
 		>
 			<div className="flex items-center gap-2">
-				<ModelSelectorLogo provider={providerName(model)} />
+				<img
+					alt={`${providerName(model)} logo`}
+					className="size-3 dark:invert"
+					height={12}
+					width={12}
+					src={`https://models.dev/logos/${providerName(model)}.svg`}
+				/>
 				<span className="min-w-0 flex-1 truncate">{model.label}</span>
 				{selected ? (
 					<CheckIcon className="size-4 shrink-0 text-foreground" aria-hidden="true" />
@@ -88,6 +94,6 @@ export function ModelRow({
 			<div onClick={stopRowSelect} onKeyDown={stopRowSelect}>
 				<ModelDetails model={model} open={detailsOpen} />
 			</div>
-		</ModelSelectorItem>
+		</CommandItem>
 	);
 }
