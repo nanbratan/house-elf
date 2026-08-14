@@ -15,10 +15,6 @@ Why shadcn at all, and why base-ui: `bd list --all --type decision`.
 - `lib/components/elements/` — `@assistant-ui/elements-*` registry components, the
   presentational layer that carries no primitive of its own (`composer`, `surfaces`).
 
-`lib/components/vendor/ai-elements/` is **not** one of these: it is a byte-identical
-upstream snapshot, excluded from every gate, and it is being dissolved (`house-elf-r9z.14`).
-Nothing new goes there.
-
 **All three hold ordinary app code.** Full house style, `strictTypeChecked`, the
 react-compiler rules, Prettier, tsconfig, tests. There is no carve-out, no
 `.prettierignore` entry, no ESLint exemption and no coverage exclude for any of them.
