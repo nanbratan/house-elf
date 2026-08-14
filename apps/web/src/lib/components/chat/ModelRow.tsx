@@ -76,7 +76,12 @@ export function ModelRow({
 				{/* "More" sits at the far right edge so a thumb finds it in the same
 				    place on every row. The label is flex-1, so it absorbs the space
 				    the checkmark takes on the selected row — "More" never shifts.
-				    The literal space keeps the row's text content two words. */}{' '}
+				    The literal space keeps the row's text content two words.
+
+				    The button is `flex`, not the default `inline-block`: an
+				    inline-level button is baseline-aligned inside its wrapper span's
+				    line box, which sat it a pixel below everything else in the row.
+				    The star reads as centred because it is already `flex`. */}{' '}
 				<span onClick={stopRowSelect} onKeyDown={stopRowSelect}>
 					<button
 						type="button"
@@ -84,7 +89,7 @@ export function ModelRow({
 							onToggleDetails(model.id);
 						}}
 						aria-expanded={detailsOpen}
-						className="shrink-0 text-xs text-muted-foreground transition-colors hover:text-foreground"
+						className="flex shrink-0 items-center text-xs text-muted-foreground transition-colors hover:text-foreground"
 					>
 						{detailsOpen ? 'Less' : 'More'}
 					</button>
