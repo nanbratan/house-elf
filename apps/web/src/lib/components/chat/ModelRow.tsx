@@ -40,7 +40,10 @@ export function ModelRow({
 				onSelect(model.id);
 			}}
 			aria-label={model.label}
-			className="flex flex-col items-stretch gap-1 rounded-lg px-2 py-2 text-sm"
+			// `gap-0` is load-bearing: it overrides CommandItem's own `gap-2`, which
+			// would otherwise space the label row away from the details wrapper below
+			// it — a wrapper that is present even when the details are closed.
+			className="flex flex-col items-stretch gap-0 rounded-lg px-2 py-2 text-sm"
 		>
 			<div className="flex items-center gap-2">
 				<img
