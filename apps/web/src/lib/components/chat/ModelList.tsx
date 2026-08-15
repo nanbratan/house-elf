@@ -86,64 +86,64 @@ export function ModelList({
 	const totalSize = virtualizer.getTotalSize();
 
 	return (
-		<ComboboxList aria-label="Models" className="max-h-none min-h-0 flex-1 overflow-hidden p-0">
+		// The list is the scroller: one element rather than a scroller nested in it,
+		// so the box can shrink to its rows and the dialog closes up around a short
+		// result set. `scroll-py-1.5` is `HIGHLIGHT_MARGIN`, not the sum above —
+		// CSS insets from the scrollport, which is the padding box, so the
+		// scroller's own padding is already inside it.
+		<ComboboxList
+			ref={setScroller}
+			aria-label="Models"
+			className="max-h-none min-h-0 shrink scroll-py-1.5 overflow-y-auto overscroll-contain p-1.5"
+		>
 			{rows.length === 0 ? (
 				// Not `Combobox.Empty`, which keys off the popup this composition
 				// never renders.
-				<p className="px-3 py-8 text-faint">No models found.</p>
+				<p className="py-8 text-center text-faint">No models found.</p>
 			) : (
-				<div
-					role="presentation"
-					ref={setScroller}
-					// `scroll-py-1.5` is `HIGHLIGHT_MARGIN`, not the sum above: CSS insets
-					// from the scrollport, which is the padding box, so the scroller's own
-					// padding is already inside it.
-					className="h-full scroll-py-1.5 overflow-y-auto overscroll-contain p-1.5"
-				>
-					<div role="presentation" className="relative w-full" style={{ height: totalSize }}>
-						{virtualizer.getVirtualItems().map((virtualRow) => {
-							const row = rows[virtualRow.index];
-							if (!row) return null;
+				<div role="presentation" className="relative w-full" style={{ height: totalSize }}>
+					{virtualizer.getVirtualItems().map((virtualRow) => {
+						const row = rows[virtualRow.index];
+						if (!row) return null;
 
-							return (
-								<div
-									key={virtualRow.key}
-									role="presentation"
-									data-index={virtualRow.index}
-									ref={virtualizer.measureElement}
-									// No height of its own — the wrapper is what gets measured, so
-									// fixing it here would freeze every row at the estimate.
-									style={{
-										position: 'absolute',
-										top: 0,
-										left: 0,
-										width: '100%',
-										transform: `translateY(${String(virtualRow.start)}px)`
-									}}
-								>
-									{row.kind === 'heading' ? (
-										<ModelListHeading
-											title={row.title}
-											collapsible={row.collapsible}
-											collapsed={pinnedCollapsed}
-											onToggleCollapsed={onToggleCollapsed}
-										/>
-									) : (
-										<ModelRow
-											model={row.model}
-											selected={row.model.id === selectedModelId}
-											pinned={row.pinned}
-											detailsOpen={detailsOpenId === row.model.id}
-											index={row.itemIndex}
-											listedCount={itemCount}
-											onTogglePin={onTogglePin}
-											onToggleDetails={onToggleDetails}
-										/>
-									)}
-								</div>
-							);
-						})}
-					</div>
+						return (
+							<div
+								key={virtualRow.key}
+								role="presentation"
+								data-index={virtualRow.index}
+								ref={virtualizer.measureElement}
+								// No height of its own — the wrapper is what gets measured, so
+								// fixing it here would freeze every row at the estimate.
+								style={{
+									position: 'absolute',
+									top: 0,
+									left: 0,
+									width: '100%',
+									transform: `translateY(${String(virtualRow.start)}px)`
+								}}
+							>
+								{row.kind === 'heading' ? (
+									<ModelListHeading
+										title={row.title}
+										collapsible={row.collapsible}
+										collapsed={pinnedCollapsed}
+										onToggleCollapsed={onToggleCollapsed}
+									/>
+								) : (
+									<ModelRow
+										model={row.model}
+										selected={row.model.id === selectedModelId}
+										pinned={row.pinned}
+										detailsOpen={detailsOpenId === row.model.id}
+										index={row.itemIndex}
+										listedCount={itemCount}
+										onTogglePin={onTogglePin}
+										onToggleDetails={onToggleDetails}
+									/>
+								)}
+							</div>
+						);
+					})}
 				</div>
 			)}
 		</ComboboxList>

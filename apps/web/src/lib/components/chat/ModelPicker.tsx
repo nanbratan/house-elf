@@ -162,7 +162,9 @@ export function ModelPicker({
 
 				<DialogContent
 					showCloseButton={false}
-					className="flex h-[min(30rem,80vh)] w-model-picker max-w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden p-0"
+					// `max-h`, not `h`: a search that matches two models should leave a
+					// dialog the height of two models, not a tall box mostly empty.
+					className="flex max-h-[min(30rem,80vh)] w-model-picker max-w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden p-0"
 				>
 					<DialogTitle className="sr-only">Choose a model</DialogTitle>
 
