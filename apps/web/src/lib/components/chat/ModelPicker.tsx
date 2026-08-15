@@ -54,7 +54,11 @@ export function ModelPicker({
 	// A pinned model renders in the pinned section, not the browse list: two
 	// cmdk items sharing one `value` would share one highlight state. Search
 	// still sees pinned ids — a pin is a model the reader can look up by name.
-	const pinned = pinnedModels(models, pins.pinnedIds);
+	//
+	// Drawn from the filtered list, not the catalog: a pin is a shortcut to a
+	// model, not an exemption from the question the reader just asked, and a pin
+	// sitting above the results reads as having answered it.
+	const pinned = pinnedModels(listed, pins.pinnedIds);
 	const showPinned = pinned.length > 0 && search.trim() === '';
 	const pinnedIdSet = new Set(pinned.map((model) => model.id));
 	const browseList = listed.filter((model) => !pinnedIdSet.has(model.id));

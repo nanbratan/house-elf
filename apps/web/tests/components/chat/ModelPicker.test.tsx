@@ -578,6 +578,47 @@ describe('ModelPicker', () => {
 			});
 		});
 
+		it('drops a pin the filters exclude, so the section cannot claim it answered them', async () => {
+			await openPicker();
+
+			rowProps(opus5.id).onTogglePin(opus5.id);
+			await waitFor(() => {
+				expect(pinnedSectionRendered()).toBe(true);
+			});
+
+			latestHeader().onFiltersChange({
+				providers: new Set(['openai']),
+				modalities: new Set(),
+				capabilities: new Set()
+			});
+
+			await waitFor(() => {
+				expect(pinnedSectionRendered()).toBe(false);
+			});
+			// The count spoke for it too, so the header disagreed with the list.
+			expect(countLabel()).toBe('1 model');
+		});
+
+		it('keeps a pin the filters let through', async () => {
+			await openPicker();
+
+			rowProps(gpt.id).onTogglePin(gpt.id);
+			await waitFor(() => {
+				expect(pinnedSectionRendered()).toBe(true);
+			});
+
+			latestHeader().onFiltersChange({
+				providers: new Set(['openai']),
+				modalities: new Set(),
+				capabilities: new Set()
+			});
+
+			await waitFor(() => {
+				expect(countLabel()).toBe('1 model');
+			});
+			expect(latestPinned()?.models.map((model) => model.id)).toEqual([gpt.id]);
+		});
+
 		it('hides the pinned section while searching, so results stay a flat list', async () => {
 			await openPicker();
 
