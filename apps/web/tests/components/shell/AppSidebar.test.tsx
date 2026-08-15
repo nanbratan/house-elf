@@ -1,11 +1,34 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { AppSidebar } from '../../../src/lib/components/shell/AppSidebar.tsx';
+import { SidebarProvider, SidebarTrigger } from '../../../src/lib/components/ui/sidebar.tsx';
 import { withRouter } from '../../helpers/router.tsx';
 
-function renderSidebar(pathname: string, open = true) {
-	return render(withRouter(<AppSidebar open={open} />, pathname));
+// `useIsMobile` is an in-repo module, so it is a legitimate seam for choosing which
+// tree the sidebar renders. The media query itself is stubbed globally and never
+// fires (tests/setup/testing-library.ts).
+const { useIsMobile } = vi.hoisted(() => ({ useIsMobile: vi.fn(() => false) }));
+
+vi.mock('../../../src/lib/hooks/use-mobile.ts', () => ({ useIsMobile }));
+
+afterEach(() => {
+	useIsMobile.mockReturnValue(false);
+});
+
+function renderSidebar(pathname: string) {
+	return render(
+		withRouter(
+			// The trigger is what opens the mobile drawer, which does not render until it
+			// is open. On desktop it changes nothing the assertions below look at.
+			<SidebarProvider>
+				<SidebarTrigger />
+				<AppSidebar />
+			</SidebarProvider>,
+			pathname
+		)
+	);
 }
 
 describe('AppSidebar', () => {
@@ -43,38 +66,27 @@ describe('AppSidebar', () => {
 	it('marks nothing as current outside a conversation route', () => {
 		renderSidebar('/');
 
-		for (const link of screen.getAllByRole('link')) {
-			expect(link).not.toHaveAttribute('aria-current');
-		}
+		expect(screen.getByRole('link', { name: 'Placeholder conversation' })).not.toHaveAttribute(
+			'aria-current'
+		);
+		expect(screen.getByRole('link', { name: 'Another placeholder' })).not.toHaveAttribute(
+			'aria-current'
+		);
+		expect(screen.getByRole('link', { name: 'New chat' })).not.toHaveAttribute('aria-current');
 	});
 
-	it('gives the current conversation the active styling and the others the muted styling', () => {
-		renderSidebar('/c/2');
+	it('closes the mobile drawer when a conversation is opened', async () => {
+		const user = userEvent.setup();
+		useIsMobile.mockReturnValue(true);
+		renderSidebar('/');
 
-		const active = screen.getByRole('link', { name: 'Another placeholder' });
-		const inactive = screen.getByRole('link', { name: 'Placeholder conversation' });
+		await user.click(screen.getByRole('button', { name: 'Toggle Sidebar' }));
+		expect(screen.getByRole('link', { name: 'Another placeholder' })).toBeInTheDocument();
 
-		expect(active).toHaveClass('bg-sidebar-accent', 'text-sidebar-accent-foreground');
-		expect(active).not.toHaveClass('text-muted-foreground');
+		await user.click(screen.getByRole('link', { name: 'Another placeholder' }));
 
-		expect(inactive).toHaveClass('text-muted-foreground');
-		expect(inactive).not.toHaveClass('bg-sidebar-accent', 'text-sidebar-accent-foreground');
-	});
-
-	describe('when closed', () => {
-		// jsdom parses `inert` but implements none of its behaviour, so this asserts
-		// only that the attribute is set. That it actually removes the links from the
-		// tab order and the accessibility tree needs a real browser (house-elf-shi.15).
-		it('is inert, so its links leave the tab order', () => {
-			renderSidebar('/', false);
-
-			expect(screen.getByRole('complementary', { hidden: true })).toHaveAttribute('inert');
-		});
-
-		it('is not inert while open', () => {
-			renderSidebar('/', true);
-
-			expect(screen.getByRole('complementary')).not.toHaveAttribute('inert');
-		});
+		// The drawer is a dialog that unmounts when closed, so its disappearance is the
+		// observable outcome — upstream leaves it covering the page just navigated to.
+		expect(screen.queryByRole('link', { name: 'Another placeholder' })).not.toBeInTheDocument();
 	});
 });

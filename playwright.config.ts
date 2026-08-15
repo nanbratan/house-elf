@@ -17,7 +17,20 @@ export default defineConfig({
 		trace: 'on-first-retry'
 	},
 
-	projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+	// The app is mobile-first, and the sidebar's drawer path only exists below the
+	// 768px breakpoint, so it needs a viewport a desktop project can never produce.
+	projects: [
+		{
+			name: 'chromium',
+			use: { ...devices['Desktop Chrome'] },
+			testIgnore: /.*\.mobile\.spec\.ts/
+		},
+		{
+			name: 'mobile-chrome',
+			use: { ...devices['Pixel 7'] },
+			testMatch: /.*\.mobile\.spec\.ts/
+		}
+	],
 
 	webServer: {
 		command: 'bun run dev',

@@ -21,14 +21,6 @@ async function toggleSidebar(page: Page, action: 'Collapse' | 'Expand'): Promise
 }
 
 test.describe('app shell', () => {
-	test('renders the sidebar, header and conversation list', async ({ page }) => {
-		await page.goto('/');
-
-		await expect(page.getByRole('heading', { name: 'Conversations' })).toBeVisible();
-		await expect(page.getByRole('link', { name: 'Placeholder conversation' })).toBeVisible();
-		await expect(page.getByRole('button', { name: 'Collapse sidebar' })).toBeVisible();
-	});
-
 	test('the sidebar toggle removes the conversation list from reach', async ({ page }) => {
 		await page.goto('/');
 
@@ -51,16 +43,20 @@ test.describe('app shell', () => {
 		await expect(sidebar).not.toHaveAttribute('inert', '');
 	});
 
-	test('navigating to a conversation marks it as current', async ({ page }) => {
-		await page.goto('/c/2');
+	test('remembers a collapsed sidebar across a reload, without a flash', async ({ page }) => {
+		await page.goto('/');
+		await toggleSidebar(page, 'Collapse');
 
-		await expect(page.getByRole('link', { name: 'Another placeholder' })).toHaveAttribute(
-			'aria-current',
-			'page'
-		);
-		await expect(page.getByRole('link', { name: 'Placeholder conversation' })).not.toHaveAttribute(
-			'aria-current',
-			'page'
-		);
+		// The server render is the assertion that matters. A purely client-side cookie
+		// read would also survive the reload below, but only after painting the sidebar
+		// open first — so this asks the server directly what it sent. The request context
+		// shares the browser's cookie jar.
+		const html = await (await page.request.get('/')).text();
+		expect(html).toContain('data-state="collapsed"');
+
+		await page.reload();
+
+		await expect(page.getByRole('button', { name: 'Expand sidebar' })).toBeVisible();
+		await expect(page.getByRole('link', { name: 'Placeholder conversation' })).not.toBeInViewport();
 	});
 });
