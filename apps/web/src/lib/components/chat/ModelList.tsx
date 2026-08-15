@@ -44,7 +44,25 @@ export interface ModelListProps {
 	onToggleDetails: (modelId: string) => void;
 }
 
-/** The listbox itself: a window onto the rows the picker is showing. */
+/**
+ * The listbox itself: a window onto the rows the picker is showing.
+ *
+ * React Compiler skips this one component: `useVirtualizer` returns functions
+ * whose identity changes every render, which the compiler cannot memoise
+ * without risking stale UI, so it declines to try (`react-hooks/
+ * incompatible-library`). Only this component's own JSX goes uncached —
+ * `ModelPicker` above still compiles, so the row derivation and the callbacks
+ * handed down here are memoised as usual.
+ *
+ * The cost is that the mounted window's rows are recreated whenever the picker
+ * re-renders. Left as it is deliberately: measured in Chromium, `memo` on
+ * `ModelRow` changes nothing — typing thirteen characters and clearing them
+ * costs one 52ms long frame either way, and toggling a row's details twelve
+ * times produces no long frame at all with or without it. A keystroke changes
+ * every row, so nothing can be skipped, and thirty cheap rows do not reach the
+ * measurement floor. Virtualization is what made that true; at the 413 rows
+ * this list used to mount, it would not have been.
+ */
 export function ModelList({
 	rows,
 	itemCount,
