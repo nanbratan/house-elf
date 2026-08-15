@@ -23,4 +23,17 @@ describe('ThinkingRow', () => {
 
 		expect(onThinkingChange).toHaveBeenCalledExactlyOnceWith(true);
 	});
+
+	it('toggles from the keyboard when the switch has focus', async () => {
+		const user = userEvent.setup();
+		const onThinkingChange = vi.fn();
+		render(<ThinkingRow thinking={false} onThinkingChange={onThinkingChange} />);
+
+		await user.tab();
+		expect(screen.getByRole('switch', { name: 'Thinking' })).toHaveFocus();
+
+		await user.keyboard(' ');
+
+		expect(onThinkingChange).toHaveBeenCalledExactlyOnceWith(true);
+	});
 });
