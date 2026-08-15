@@ -12,6 +12,8 @@ export interface ModelPickerHeaderProps {
 	countLabel: string;
 	/** The whole catalog for the filter row — not the narrowed list, so a filter never vanishes the moment it is used. */
 	models: readonly SelectableModel[];
+	/** What the list is narrowed to. Owned by the picker, which outlives this row. */
+	filters: Filters;
 	onFiltersChange: (filters: Filters) => void;
 }
 
@@ -22,6 +24,7 @@ export function ModelPickerHeader({
 	listId,
 	countLabel,
 	models,
+	filters,
 	onFiltersChange
 }: ModelPickerHeaderProps) {
 	return (
@@ -55,7 +58,7 @@ export function ModelPickerHeader({
 			<span aria-live="polite" className="shrink-0 text-xs text-faint">
 				{countLabel}
 			</span>
-			<ModelFilters models={models} onChange={onFiltersChange} />
+			<ModelFilters models={models} filters={filters} onChange={onFiltersChange} />
 		</div>
 	);
 }

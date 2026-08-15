@@ -15,6 +15,11 @@ vi.mock('../../../src/lib/components/chat/ModelFilters.tsx', () => ({
 }));
 
 const models = [selectableModel()];
+const filters = {
+	providers: new Set(['anthropic']),
+	modalities: new Set<string>(),
+	capabilities: new Set<string>()
+};
 
 function renderHeader(overrides: { search?: string; countLabel?: string } = {}) {
 	const user = userEvent.setup();
@@ -28,6 +33,7 @@ function renderHeader(overrides: { search?: string; countLabel?: string } = {}) 
 			listId="test-list"
 			countLabel={overrides.countLabel ?? '6 models'}
 			models={models}
+			filters={filters}
 			onFiltersChange={onFiltersChange}
 		/>
 	);
@@ -63,6 +69,7 @@ describe('ModelPickerHeader', () => {
 		const { onFiltersChange } = renderHeader();
 
 		expect(filtersProps?.models).toBe(models);
+		expect(filtersProps?.filters).toBe(filters);
 
 		const next = {
 			providers: new Set(['openai']),

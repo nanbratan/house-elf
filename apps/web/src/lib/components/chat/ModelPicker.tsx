@@ -128,6 +128,7 @@ export function ModelPicker({
 						listId={modelListId}
 						countLabel={countLabel}
 						models={models}
+						filters={filters}
 						onFiltersChange={setFilters}
 					/>
 
