@@ -151,7 +151,7 @@ export default defineConfig(({ mode }) =>
 				'tests/**/*.test.tsx',
 				'tests/**/*.test.ts'
 			],
-			setupFiles: ['./tests/setup/testing-library.ts'],
+			setupFiles: ['./tests/setup/testing-library.ts', './tests/setup/dom-layout.ts'],
 
 			// Stubs are `vi.fn`, and assertions read their call history. Without this
 			// a stub's props leak into the next test in the file.

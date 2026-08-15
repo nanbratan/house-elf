@@ -1,5 +1,5 @@
 import type { SelectableModel } from '@house-elf/shared';
-import { useDeferredValue, useState } from 'react';
+import { useDeferredValue, useRef, useState } from 'react';
 
 import { usePinnedModels } from '../../hooks/pinned-models.ts';
 import {
@@ -11,7 +11,7 @@ import { pinnedModels, releaseSections, searchSections } from '../../utils/model
 import { modelRows } from '../../utils/model-rows.ts';
 import { Combobox } from '../ui/combobox.tsx';
 import { Dialog, DialogContent, DialogTitle } from '../ui/dialog.tsx';
-import { ModelList } from './ModelList.tsx';
+import { ModelList, type ModelListVirtualizer } from './ModelList.tsx';
 import { ModelPickerHeader } from './ModelPickerHeader.tsx';
 import { ModelPickerTrigger } from './ModelPickerTrigger.tsx';
 import { ThinkingRow } from './ThinkingRow.tsx';
@@ -46,6 +46,7 @@ export function ModelPicker({
 	// One details panel open at a time — an accordion, so the list does not
 	// grow a second scroll inside itself.
 	const [detailsOpenId, setDetailsOpenId] = useState<string | null>(null);
+	const virtualizerRef = useRef<ModelListVirtualizer | null>(null);
 
 	// The list is the expensive half. Deferring it keeps the keystroke — and the
 	// clear button — responsive while that render lands.
@@ -106,6 +107,37 @@ export function ModelPicker({
 		pins.toggleCollapsed();
 	}
 
+	/**
+	 * Scrolls a highlight base-ui cannot reach itself.
+	 *
+	 * base-ui scrolls by moving the highlighted element, which exists only while
+	 * that row is inside the mounted window. That covers stepping through the
+	 * list, but not the two jumps: `none` is the programmatic highlight the
+	 * picker seeds on open, and a keyboard highlight at either end is the wrap
+	 * from one end of the list to the other. Both can land far outside the
+	 * window, so both are ours to scroll to.
+	 */
+	function scrollHighlightIntoView(
+		model: SelectableModel | undefined,
+		{ reason, index }: { reason: string; index: number }
+	) {
+		const virtualizer = virtualizerRef.current;
+		if (!model || !virtualizer) return;
+
+		const isEnd = index === view.items.length - 1;
+		const jumped = reason === 'none' || (reason === 'keyboard' && (index === 0 || isEnd));
+		if (!jumped) return;
+
+		// The highlight counts models; the virtualizer counts rows, headings and
+		// all, so the index has to be translated before it means anything here.
+		const rowIndex = view.rowIndexByItem[index];
+		if (rowIndex === undefined) return;
+
+		queueMicrotask(() => {
+			virtualizer.scrollToIndex(rowIndex, { align: isEnd ? 'start' : 'end' });
+		});
+	}
+
 	function toggleDetails(modelId: string) {
 		setDetailsOpenId((current) => (current === modelId ? null : modelId));
 	}
@@ -113,6 +145,8 @@ export function ModelPicker({
 	return (
 		<Combobox
 			inline
+			virtualized
+			onItemHighlighted={scrollHighlightIntoView}
 			open={open}
 			// Bound to the dialog's own state, as the `inline` composition requires:
 			// that is what resets the query and the highlight when the dialog closes.
@@ -150,6 +184,7 @@ export function ModelPicker({
 						selectedModelId={selectedModelId}
 						detailsOpenId={detailsOpenId}
 						pinnedCollapsed={pins.collapsed}
+						virtualizerRef={virtualizerRef}
 						onToggleCollapsed={toggleCollapsed}
 						onTogglePin={togglePin}
 						onToggleDetails={toggleDetails}

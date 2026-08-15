@@ -1,8 +1,12 @@
 import { render, screen } from '@testing-library/react';
+import { createRef } from 'react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ModelList } from '../../../src/lib/components/chat/ModelList.tsx';
+import {
+	ModelList,
+	type ModelListVirtualizer
+} from '../../../src/lib/components/chat/ModelList.tsx';
 import type { ModelRowProps } from '../../../src/lib/components/chat/ModelRow.tsx';
 import { Combobox } from '../../../src/lib/components/ui/combobox.tsx';
 import { modelRows, type ModelListRow } from '../../../src/lib/utils/model-rows.ts';
@@ -37,6 +41,7 @@ function renderList(
 		pinnedIds: [],
 		pinnedCollapsed: false
 	});
+	const virtualizerRef = createRef<ModelListVirtualizer>();
 	const onToggleCollapsed = vi.fn();
 	const onTogglePin = vi.fn();
 	const onToggleDetails = vi.fn();
@@ -49,6 +54,7 @@ function renderList(
 				selectedModelId={sonnet.id}
 				detailsOpenId={overrides.detailsOpenId ?? null}
 				pinnedCollapsed={overrides.pinnedCollapsed ?? false}
+				virtualizerRef={virtualizerRef}
 				onToggleCollapsed={onToggleCollapsed}
 				onTogglePin={onTogglePin}
 				onToggleDetails={onToggleDetails}
@@ -56,17 +62,19 @@ function renderList(
 		</Combobox>
 	);
 
-	return { onToggleCollapsed, onTogglePin, onToggleDetails };
+	return { virtualizerRef, onToggleCollapsed, onTogglePin, onToggleDetails };
 }
 
-/** The list top to bottom, headings marked. */
+/**
+ * The list top to bottom, headings marked. Read from the rendered rows rather
+ * than the listbox's children: the virtualizer nests them under a scroller and
+ * a sizing wrapper, and lays them out by transform, so document order is the
+ * only order there is.
+ */
 function listShape(): string[] {
-	const list = screen.getByRole('listbox', { name: 'Models' });
-	return [...list.children].map((child) => {
-		const testid = child.getAttribute('data-testid');
-		if (testid === 'list-heading') return `# ${child.textContent}`;
-		if (testid?.startsWith('row-')) return testid.slice('row-'.length);
-		return `? ${child.tagName}`;
+	return screen.queryAllByTestId(/^(row-|list-heading$)/).map((element) => {
+		const testid = element.getAttribute('data-testid') ?? '';
+		return testid === 'list-heading' ? `# ${element.textContent}` : testid.slice('row-'.length);
 	});
 }
 
@@ -75,6 +83,28 @@ describe('ModelList', () => {
 		renderList();
 
 		expect(listShape()).toEqual(['# August 2026', opus.id, sonnet.id, '# July 2026', gpt.id]);
+	});
+
+	it('mounts a window of rows, not the catalog', () => {
+		// The whole point of the exercise: 500 models must not become 500 mounted
+		// rows. The exact size of the window is the virtualizer's business — that it
+		// is far short of everything, and not empty, is ours.
+		const many = Array.from({ length: 500 }, (_, index) =>
+			selectableModel({ id: `p/model-${String(index)}`, label: `Model ${String(index)}` })
+		);
+		const built = modelRows({
+			sections: [{ id: 'all', title: 'All', models: many }],
+			pinned: [],
+			pinnedIds: [],
+			pinnedCollapsed: false
+		});
+
+		renderList({ rows: built.rows, itemCount: built.items.length });
+
+		const mounted = screen.queryAllByTestId(/^row-/).length;
+
+		expect(mounted).toBeGreaterThan(0);
+		expect(mounted).toBeLessThan(100);
 	});
 
 	it('hands each row its place in the flat list and the size of it', () => {
