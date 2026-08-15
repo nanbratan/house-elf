@@ -160,7 +160,9 @@ generated and type-only files.
   Give each test a unique resource and thread prefix so they can run in parallel.
 - `tests/e2e/*.spec.ts` — Playwright, real browser. Slow and brittle by nature, so
   keep them to genuine user journeys plus the assertions jsdom cannot make. Fewer
-  than ten, total.
+  than ten, total. The number is a budget, not the rule — the sentence before it is.
+  When adding one would exceed it, audit the existing set against that criterion and
+  evict what no longer meets it, rather than trimming to hit the count.
 
 Tests must be order-independent and parallel-safe: unique ids per test, no shared
 mutable fixtures.
