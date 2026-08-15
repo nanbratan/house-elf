@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { readSidebarOpen } from '../../../src/lib/components/shell/sidebar-cookie.ts';
 import { SIDEBAR_COOKIE_NAME } from '../../../src/lib/components/ui/sidebar.tsx';
@@ -12,11 +12,6 @@ import { SIDEBAR_COOKIE_NAME } from '../../../src/lib/components/ui/sidebar.tsx'
 function setCookie(value: string) {
 	document.cookie = `${SIDEBAR_COOKIE_NAME}=${value}; path=/`;
 }
-
-afterEach(() => {
-	document.cookie = `${SIDEBAR_COOKIE_NAME}=; path=/; max-age=0`;
-	document.cookie = `not_${SIDEBAR_COOKIE_NAME}=; path=/; max-age=0`;
-});
 
 describe('readSidebarOpen', () => {
 	it('starts the sidebar open when nothing has been persisted', () => {

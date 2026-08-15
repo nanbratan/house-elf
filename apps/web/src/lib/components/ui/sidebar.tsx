@@ -6,13 +6,13 @@ import { createContext, useContext, useState, type ComponentProps } from 'react'
 
 import { useIsMobile } from '../../hooks/use-mobile.ts';
 import { cn } from '../../utils/cn.ts';
+import { writeCookie } from '../../utils/cookies.ts';
 import { Button } from './button.tsx';
 import { Sheet, SheetContent, SheetTitle } from './sheet.tsx';
 
 /** Exported so the SSR seed reads the same key this component writes. */
 export const SIDEBAR_COOKIE_NAME = 'sidebar_state';
 
-const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = '16rem';
 const SIDEBAR_WIDTH_MOBILE = '18rem';
 const SIDEBAR_WIDTH_ICON = '3rem';
@@ -66,7 +66,7 @@ function SidebarProvider({
 			setUncontrolledOpen(openState);
 		}
 
-		document.cookie = `${SIDEBAR_COOKIE_NAME}=${String(openState)}; path=/; max-age=${String(SIDEBAR_COOKIE_MAX_AGE)}`;
+		writeCookie(SIDEBAR_COOKIE_NAME, String(openState));
 	}
 
 	function toggleSidebar() {

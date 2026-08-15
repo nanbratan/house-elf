@@ -1,8 +1,11 @@
 import type { ModelCatalog, SelectableModel } from '@house-elf/shared';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 
-const modelStorageKey = 'house-elf:selected-model';
-const thinkingStorageKey = 'house-elf:thinking';
+import { modelCookieName, thinkingCookieName } from '../chat/model-selection-seed.ts';
+
+// One definition of the keys, shared with the loader that reads them.
+const modelStorageKey = modelCookieName;
+const thinkingStorageKey = thinkingCookieName;
 
 type ModelSelectionStorage = Pick<Storage, 'getItem' | 'setItem'>;
 
@@ -56,45 +59,33 @@ function failMissingInitialModel(catalog: ModelCatalog): never {
 
 /**
  * Owns the reader's model choice and whether the next message asks for
- * thinking, restored from storage after hydration.
+ * thinking, restored from storage as the first render happens.
  *
  * The two live together because choosing a model is the moment a stale
  * thinking flag is forced off, and switching away and back does not bring it
  * back — an unasked-for expensive request is worse than an extra click.
  *
- * Storage is read in an effect so the server render and first client render
- * agree (TanStack Start SSRs, and `localStorage` does not exist on the
- * server). Tests pass `initialStorage` to read restored state synchronously,
- * no `act` required.
+ * Storage is read during render rather than in an effect, and the caller supplies
+ * it. In the app it is backed by a route loader's cookie read, so the server render
+ * and the first client render see the same value and agree — `localStorage` could
+ * only be read after hydration, which the reader saw as the model name flicking
+ * from the default to their choice.
  */
 export function useModelSelection(
 	catalog: ModelCatalog,
-	initialStorage?: ModelSelectionStorage
+	storage: ModelSelectionStorage
 ): ModelSelection {
 	const modelsById = useMemo(
 		() => new Map(catalog.models.map((model) => [model.id, model])),
 		[catalog]
 	);
 	const initialModel = modelsById.get(catalog.initialModelId) ?? failMissingInitialModel(catalog);
-	const storageRef = useRef<ModelSelectionStorage | undefined>(initialStorage);
 
-	// One state object, not two, so a storage-provided restore runs once per
-	// render rather than once per field.
+	// One state object, not two, so a restore runs once per render rather than once
+	// per field.
 	const [{ selectedModelId, thinking }, setState] = useState<RestoredSelection>(() =>
-		initialStorage
-			? restore(catalog, modelsById, initialModel, initialStorage)
-			: { selectedModelId: catalog.initialModelId, thinking: false }
+		restore(catalog, modelsById, initialModel, storage)
 	);
-
-	useEffect(() => {
-		// Real deps, not a suppression: `storageRef.current` already guards this
-		// to fire once, so listing them is free. React Compiler refuses to
-		// compile a hook that disables the exhaustive-deps rule.
-		if (storageRef.current) return;
-		const storage = localStorage;
-		storageRef.current = storage;
-		setState(restore(catalog, modelsById, initialModel, storage));
-	}, [catalog, modelsById, initialModel]);
 
 	function modelFor(modelId: string): SelectableModel {
 		// An id the catalog does not carry falls back to the model the picker
@@ -104,7 +95,7 @@ export function useModelSelection(
 
 	function setThinking(next: boolean): void {
 		setState((state) => ({ ...state, thinking: next }));
-		storageRef.current?.setItem(thinkingStorageKey, String(next));
+		storage.setItem(thinkingStorageKey, String(next));
 	}
 
 	const selectedModel = modelFor(selectedModelId);
@@ -118,7 +109,7 @@ export function useModelSelection(
 		canChooseThinking: thinkingIsOptional(selectedModel),
 		select(modelId: string) {
 			setState((state) => ({ ...state, selectedModelId: modelId }));
-			storageRef.current?.setItem(modelStorageKey, modelId);
+			storage.setItem(modelStorageKey, modelId);
 			if (!thinkingIsOptional(modelFor(modelId))) setThinking(false);
 		},
 		setThinking

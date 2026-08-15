@@ -3,6 +3,7 @@ import { AssistantRuntimeProvider } from '@assistant-ui/react';
 import { useChatRuntime } from '@assistant-ui/react-ai-sdk';
 
 import { createChatTransport } from '../../chat/transport.ts';
+import { seedStorage, type ModelSelectionSeed } from '../../chat/model-selection-seed.ts';
 import { useModelSelection } from '../../hooks/model-selection.ts';
 import { Composer } from './Composer.tsx';
 import { Thread } from './Thread.tsx';
@@ -10,6 +11,8 @@ import { Thread } from './Thread.tsx';
 export interface ChatViewProps {
 	agentId: string;
 	modelCatalog: ModelCatalog;
+	/** The persisted model choice, read by the route loader so SSR renders it. */
+	modelSelectionSeed: ModelSelectionSeed;
 }
 
 /**
@@ -21,8 +24,8 @@ export interface ChatViewProps {
  * is built here — its model choice is the same state the transport reads — and
  * handed to `Thread` as an element, because it has to render inside the viewport.
  */
-export function ChatView({ agentId, modelCatalog }: ChatViewProps) {
-	const modelSelection = useModelSelection(modelCatalog);
+export function ChatView({ agentId, modelCatalog, modelSelectionSeed }: ChatViewProps) {
+	const modelSelection = useModelSelection(modelCatalog, seedStorage(modelSelectionSeed));
 
 	const transport = createChatTransport({
 		agentId,

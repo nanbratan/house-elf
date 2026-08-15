@@ -5,6 +5,24 @@ import '@testing-library/jest-dom/vitest';
 
 afterEach(cleanup);
 
+// Preferences persisted as cookies outlive a render, so without this a test that
+// changes one leaves it set for every test after it in the file — the tests stop
+// being order-independent. `localStorage` needed no equivalent because the suites
+// that use it clear it themselves; a cookie jar is shared by everything.
+// Guarded on the global for the same reason `scrollIntoView` below is: files with a
+// `// @vitest-environment node` docblock share this setup and have no `document`.
+afterEach(() => {
+	if (typeof document === 'undefined') return;
+
+	for (const pair of document.cookie.split(';')) {
+		const name = pair.split('=')[0]?.trim();
+
+		if (name !== undefined && name !== '') {
+			document.cookie = `${name}=; path=/; max-age=0`;
+		}
+	}
+});
+
 // jsdom does not implement ResizeObserver — cmdk's Command measures its list to
 // animate height changes, and throws `ReferenceError: ResizeObserver is not
 // defined` without this. A no-op is enough: nothing under test asserts on the

@@ -22,8 +22,8 @@ const catalog = {
 	]
 } satisfies ModelCatalog;
 
-const storageKey = 'house-elf:selected-model';
-const thinkingStorageKey = 'house-elf:thinking';
+const storageKey = 'selected_model';
+const thinkingStorageKey = 'thinking';
 
 beforeEach(() => {
 	localStorage.clear();

@@ -51,6 +51,10 @@ const runtime = { thread: 'stub-runtime' };
 const composerProps = () => vi.mocked(Composer).mock.lastCall?.[0];
 const transportOptions = () => vi.mocked(createChatTransport).mock.lastCall?.[0];
 
+// Nothing persisted: these tests are about what ChatView wires together, not about
+// restoring a previous choice.
+const emptySeed = { selectedModelId: null, thinking: null };
+
 describe('ChatView', () => {
 	beforeEach(() => {
 		vi.mocked(createChatTransport).mockReset();
@@ -61,7 +65,9 @@ describe('ChatView', () => {
 	});
 
 	it('runs the conversation on the transport it built', () => {
-		render(<ChatView agentId="general" modelCatalog={modelCatalog} />);
+		render(
+			<ChatView agentId="general" modelCatalog={modelCatalog} modelSelectionSeed={emptySeed} />
+		);
 
 		// Without this the runtime keeps assistant-ui's own transport: requests go
 		// to a default endpoint carrying `callSettings`/`config`/`tools` and no
@@ -71,7 +77,9 @@ describe('ChatView', () => {
 	});
 
 	it('puts the chat under that runtime, so both halves can reach it', () => {
-		render(<ChatView agentId="general" modelCatalog={modelCatalog} />);
+		render(
+			<ChatView agentId="general" modelCatalog={modelCatalog} modelSelectionSeed={emptySeed} />
+		);
 
 		expect(vi.mocked(AssistantRuntimeProvider).mock.lastCall?.[0]?.runtime).toBe(runtime);
 		expect(vi.mocked(Thread)).toHaveBeenCalled();
@@ -82,7 +90,9 @@ describe('ChatView', () => {
 	// it in — but its props come from the model selection ChatView owns. So ChatView
 	// builds the element and Thread is handed it, rather than the six props.
 	it('hands the composer to the thread as an element rather than rendering it alongside', () => {
-		render(<ChatView agentId="general" modelCatalog={modelCatalog} />);
+		render(
+			<ChatView agentId="general" modelCatalog={modelCatalog} modelSelectionSeed={emptySeed} />
+		);
 
 		const slot = vi.mocked(Thread).mock.lastCall?.[0]?.composer;
 
@@ -91,7 +101,9 @@ describe('ChatView', () => {
 	});
 
 	it('gives the transport the agent and the current choice', () => {
-		render(<ChatView agentId="general" modelCatalog={modelCatalog} />);
+		render(
+			<ChatView agentId="general" modelCatalog={modelCatalog} modelSelectionSeed={emptySeed} />
+		);
 
 		expect(transportOptions()).toEqual({
 			agentId: 'general',
@@ -100,7 +112,9 @@ describe('ChatView', () => {
 	});
 
 	it('passes on a model choice made through the composer', () => {
-		render(<ChatView agentId="general" modelCatalog={modelCatalog} />);
+		render(
+			<ChatView agentId="general" modelCatalog={modelCatalog} modelSelectionSeed={emptySeed} />
+		);
 
 		act(() => {
 			composerProps()?.onModelSelect('anthropic/claude-sonnet-4-6');
@@ -116,7 +130,9 @@ describe('ChatView', () => {
 	});
 
 	it('passes on a thinking choice made through the composer', () => {
-		render(<ChatView agentId="general" modelCatalog={modelCatalog} />);
+		render(
+			<ChatView agentId="general" modelCatalog={modelCatalog} modelSelectionSeed={emptySeed} />
+		);
 
 		act(() => {
 			composerProps()?.onThinkingChange(true);
@@ -126,7 +142,9 @@ describe('ChatView', () => {
 	});
 
 	it('hands the catalog’s models and the current selection to the composer', () => {
-		render(<ChatView agentId="general" modelCatalog={modelCatalog} />);
+		render(
+			<ChatView agentId="general" modelCatalog={modelCatalog} modelSelectionSeed={emptySeed} />
+		);
 
 		expect(composerProps()?.models).toBe(modelCatalog.models);
 		expect(composerProps()?.selectedModelId).toBe('openrouter/auto');

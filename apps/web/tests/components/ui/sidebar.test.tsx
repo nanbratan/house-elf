@@ -16,7 +16,6 @@ vi.mock('../../../src/lib/hooks/use-mobile.ts', () => ({ useIsMobile }));
 
 afterEach(() => {
 	useIsMobile.mockReturnValue(false);
-	document.cookie = `${SIDEBAR_COOKIE_NAME}=; path=/; max-age=0`;
 });
 
 function renderSidebar(defaultOpen: boolean) {
