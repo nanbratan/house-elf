@@ -3,7 +3,7 @@ import { CheckIcon, StarIcon } from 'lucide-react';
 import type { KeyboardEvent, MouseEvent } from 'react';
 
 import { providerName } from '../../utils/model-list.ts';
-import { CommandItem } from '../ui/command.tsx';
+import { ComboboxItemBase } from '../ui/combobox.tsx';
 import { ModelDetails } from './ModelDetails.tsx';
 
 export interface ModelRowProps {
@@ -11,14 +11,20 @@ export interface ModelRowProps {
 	selected: boolean;
 	pinned: boolean;
 	detailsOpen: boolean;
+	/**
+	 * Position among the listed models. Given explicitly so the item never has to
+	 * resolve its own index by searching the filtered set on every keystroke.
+	 */
+	index: number;
+	/** How many models are listed, for `aria-setsize` on a flat listbox. */
+	listedCount: number;
 	onTogglePin: (modelId: string) => void;
 	onToggleDetails: (modelId: string) => void;
-	onSelect: (modelId: string) => void;
 }
 
 /**
- * Stops a click or keypress from reaching the row's own `onSelect` — cmdk
- * selects the row when a nested button's click bubbles up.
+ * Stops a click or keypress from reaching the row's own selection — the item
+ * commits on click, which a nested button's click would otherwise bubble into.
  */
 function stopRowSelect(event: MouseEvent | KeyboardEvent) {
 	event.stopPropagation();
@@ -29,21 +35,21 @@ export function ModelRow({
 	selected,
 	pinned,
 	detailsOpen,
+	index,
+	listedCount,
 	onTogglePin,
-	onToggleDetails,
-	onSelect
+	onToggleDetails
 }: ModelRowProps) {
 	return (
-		<CommandItem
-			value={model.id}
-			onSelect={() => {
-				onSelect(model.id);
-			}}
+		<ComboboxItemBase
+			value={model}
+			index={index}
 			aria-label={model.label}
-			// `gap-0` is load-bearing: it overrides CommandItem's own `gap-2`, which
-			// would otherwise space the label row away from the details wrapper below
-			// it — a wrapper that is present even when the details are closed.
-			className="flex flex-col items-stretch gap-0 rounded-lg px-2 py-2 text-sm"
+			// The list is flat — headings are text, not groups — so each row states
+			// its own place in it rather than leaving that to a group's structure.
+			aria-setsize={listedCount}
+			aria-posinset={index + 1}
+			className="flex cursor-default flex-col items-stretch rounded-lg px-2 py-2 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
 		>
 			<div className="flex items-center gap-2">
 				{/* Lazy: clearing the search mounts the whole catalog at once, and every
@@ -106,6 +112,6 @@ export function ModelRow({
 			<div onClick={stopRowSelect} onKeyDown={stopRowSelect}>
 				<ModelDetails model={model} open={detailsOpen} />
 			</div>
-		</CommandItem>
+		</ComboboxItemBase>
 	);
 }

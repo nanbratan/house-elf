@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { ModelFiltersProps } from '../../../src/lib/components/chat/ModelFilters.tsx';
 import { ModelPickerHeader } from '../../../src/lib/components/chat/ModelPickerHeader.tsx';
-import { Command, CommandList } from '../../../src/lib/components/ui/command.tsx';
+import { Combobox, ComboboxList } from '../../../src/lib/components/ui/combobox.tsx';
 import { selectableModel } from '../../helpers/models.ts';
 
 let filtersProps: ModelFiltersProps | undefined;
@@ -26,11 +26,18 @@ function renderHeader(overrides: { search?: string; countLabel?: string } = {}) 
 	const user = userEvent.setup();
 	const onSearchChange = vi.fn();
 	const onFiltersChange = vi.fn();
+	const onInputValueChange = vi.fn();
 
-	// A real cmdk input needs the Command context that owns its label and list.
-	// ModelPicker sets the same pair on the real thing.
+	// The input is a real `Combobox.Input`, so it needs the root that owns the
+	// list it points at. `inline open` is the composition ModelPicker uses.
 	render(
-		<Command label="Search models">
+		<Combobox
+			inline
+			open
+			items={models}
+			inputValue={overrides.search ?? ''}
+			onInputValueChange={onInputValueChange}
+		>
 			<ModelPickerHeader
 				search={overrides.search ?? ''}
 				onSearchChange={onSearchChange}
@@ -39,11 +46,11 @@ function renderHeader(overrides: { search?: string; countLabel?: string } = {}) 
 				filters={filters}
 				onFiltersChange={onFiltersChange}
 			/>
-			<CommandList label="Models" />
-		</Command>
+			<ComboboxList aria-label="Models" />
+		</Combobox>
 	);
 
-	return { user, onSearchChange, onFiltersChange };
+	return { user, onSearchChange, onFiltersChange, onInputValueChange };
 }
 
 describe('ModelPickerHeader', () => {
@@ -58,12 +65,15 @@ describe('ModelPickerHeader', () => {
 		);
 	});
 
-	it('reports each keystroke up', async () => {
-		const { user, onSearchChange } = renderHeader();
+	// The query belongs to the combobox root now, not to the header — the header
+	// reports only the clear.
+	it('reports each keystroke up to the combobox that owns the query', async () => {
+		const { user, onInputValueChange } = renderHeader();
 
 		await user.type(screen.getByRole('combobox', { name: 'Search models' }), 'o');
 
-		expect(onSearchChange).toHaveBeenCalledExactlyOnceWith('o');
+		expect(onInputValueChange).toHaveBeenCalledOnce();
+		expect(onInputValueChange.mock.calls[0]?.[0]).toBe('o');
 	});
 
 	it('offers no way to clear an empty search', () => {

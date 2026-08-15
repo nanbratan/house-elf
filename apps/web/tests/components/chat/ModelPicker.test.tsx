@@ -1,66 +1,54 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { ModelListProps } from '../../../src/lib/components/chat/ModelList.tsx';
 import { ModelPicker } from '../../../src/lib/components/chat/ModelPicker.tsx';
 import type { ModelPickerHeaderProps } from '../../../src/lib/components/chat/ModelPickerHeader.tsx';
-import type { ModelRowProps } from '../../../src/lib/components/chat/ModelRow.tsx';
-import type { PinnedSectionProps } from '../../../src/lib/components/chat/PinnedSection.tsx';
 import type { ThinkingRowProps } from '../../../src/lib/components/chat/ThinkingRow.tsx';
+import { ComboboxItemBase, ComboboxList } from '../../../src/lib/components/ui/combobox.tsx';
 import { optionalThinking, selectableModel } from '../../helpers/models.ts';
 
 /*
- * Tested at its own boundary: every in-repo child — ModelRow, PinnedSection,
- * ModelFilters — is replaced by a stub that records its props and renders a
- * bare marker. The parent's own behaviour (open/close, search, count, group
- * wiring, accordion, the tilde id) is asserted here; the children's behaviour
- * is asserted in their own tests. To drive a child's callback, the recorded
- * props are read back and invoked directly, the way the instruction prescribes.
+ * Tested at its own boundary: every in-repo child — ModelList, ModelPickerHeader,
+ * ThinkingRow — is replaced by a stub that records its props. What the picker
+ * itself decides (open/close, search, count, which rows in which order, the
+ * accordion, pins, the tilde id) is asserted off those recorded props; how the
+ * list draws them is asserted in ModelList's own test.
  *
- * The stubs DO carry data-testid / role markers — not invented behaviour, but
- * the minimum markup for the parent to place a row in a group or a section.
+ * The list stub renders a real `ComboboxItemBase` per model row. That is not
+ * invented behaviour: selection is committed by the combobox root from the item
+ * the reader pressed, so a stub with no items would make the picker's own
+ * selection wiring untestable. It renders nothing else — no headings, no chrome.
  */
 
-/*
- * The stubs record their props on every render, keyed so the latest render
- * wins — a component re-renders when the picker's state changes, and a stale
- * first-render closure would call into old state. `rowProps(id)` therefore
- * always reads the props from the most recent render of that row.
- */
-const rowPropsById = new Map<string, ModelRowProps>();
-vi.mock('../../../src/lib/components/chat/ModelRow.tsx', () => ({
-	ModelRow: (props: ModelRowProps) => {
-		rowPropsById.set(props.model.id, props);
+let listProps: ModelListProps | undefined;
+vi.mock('../../../src/lib/components/chat/ModelList.tsx', () => ({
+	ModelList: (props: ModelListProps) => {
+		listProps = props;
 		return (
-			<div
-				role="option"
-				aria-selected={props.selected}
-				aria-label={props.model.label}
-				data-testid={`row-${props.model.id}`}
-			/>
+			<ComboboxList aria-label="Models">
+				{props.rows.map((row) =>
+					row.kind === 'model' ? (
+						<ComboboxItemBase
+							key={row.id}
+							value={row.model}
+							index={row.itemIndex}
+							aria-label={row.model.label}
+							data-testid={`row-${row.model.id}`}
+						/>
+					) : null
+				)}
+			</ComboboxList>
 		);
 	}
 }));
 
-let pinnedProps: PinnedSectionProps | undefined;
-vi.mock('../../../src/lib/components/chat/PinnedSection.tsx', () => ({
-	PinnedSection: (props: PinnedSectionProps) => {
-		pinnedProps = props;
-		return (
-			<div data-testid="pinned-section">
-				{props.models.map((model) => (
-					<div key={model.id} role="option" aria-label={model.label} />
-				))}
-			</div>
-		);
-	}
-}));
+function latestList(): ModelListProps {
+	if (!listProps) throw new Error('ModelList was never rendered');
+	return listProps;
+}
 
-/*
- * The header and thinking row are stubbed like the rest. Search state is
- * driven by invoking the recorded `onSearchChange`; the live count is the
- * picker's own computation, asserted off the recorded `countLabel`.
- */
 let headerProps: ModelPickerHeaderProps | undefined;
 vi.mock('../../../src/lib/components/chat/ModelPickerHeader.tsx', () => ({
 	ModelPickerHeader: (props: ModelPickerHeaderProps) => {
@@ -94,10 +82,6 @@ function searchFor(query: string) {
 /** The live count the picker computed for the header. */
 function countLabel(): string {
 	return latestHeader().countLabel;
-}
-
-function latestPinned(): PinnedSectionProps | undefined {
-	return pinnedProps;
 }
 
 const auto = selectableModel({
@@ -146,8 +130,7 @@ const gpt = selectableModel({
 const models = [auto, opus5, opus45, sonnet, haiku, gpt];
 
 afterEach(async () => {
-	rowPropsById.clear();
-	pinnedProps = undefined;
+	listProps = undefined;
 	headerProps = undefined;
 	thinkingRowProps = undefined;
 	// The picker owns its pinned state, which persists to `localStorage`. Without
@@ -199,23 +182,39 @@ async function openPicker(
 	return { user, onSelect, onThinkingChange };
 }
 
-/** Ids of the rows the main (browse) list rendered most recently, in order. */
-function browseRowIds(): string[] {
-	// The stub re-registers every row on every render, so the map holds only
-	// the latest render's set — but it is keyed, not ordered, so read order off
-	// the DOM the parent actually produced.
-	return screen.getAllByTestId(/^row-/).map((row) => {
-		const id = row.getAttribute('data-testid');
-		if (!id) throw new Error('row stub missing testid');
-		return id.slice('row-'.length);
-	});
+/** Ids of the models the picker listed, in order. */
+function rowIds(): string[] {
+	return latestList()
+		.rows.filter((row) => row.kind === 'model')
+		.map((row) => row.model.id);
 }
 
-/** The recorded props for one browse-list row, by model id. */
-function rowProps(modelId: string): ModelRowProps {
-	const props = rowPropsById.get(modelId);
-	if (!props) throw new Error(`No row rendered for ${modelId}`);
-	return props;
+/** The headings the picker put in the list, in order. */
+function headings(): string[] {
+	return latestList()
+		.rows.filter((row) => row.kind === 'heading')
+		.map((row) => row.title);
+}
+
+/**
+ * The list top to bottom, headings marked — the one view that shows both what
+ * is listed and where the breaks fall, now that there are no groups to nest in.
+ */
+function listShape(): string[] {
+	return latestList().rows.map((row) => (row.kind === 'heading' ? `# ${row.title}` : row.model.id));
+}
+
+/** Whether the picker listed a given model as pinned. */
+function pinnedFlag(modelId: string): boolean {
+	const row = latestList().rows.find(
+		(entry) => entry.kind === 'model' && entry.model.id === modelId
+	);
+	if (!row) throw new Error(`No row listed for ${modelId}`);
+	return row.kind === 'model' && row.pinned;
+}
+
+function pinnedHeadingRendered(): boolean {
+	return headings().some((heading) => heading.startsWith('Pinned'));
 }
 
 describe('ModelPicker', () => {
@@ -279,33 +278,33 @@ describe('ModelPicker', () => {
 	it('renders one row per listed model, handing each its model and selected flag', async () => {
 		await openPicker(sonnet.id, 'Sonnet 4.5');
 
-		// The pinned section is empty, so every model is a browse row.
-		expect(browseRowIds()).toEqual([auto.id, opus5.id, opus45.id, sonnet.id, haiku.id, gpt.id]);
-		expect(rowProps(sonnet.id).selected).toBe(true);
-		expect(rowProps(opus5.id).selected).toBe(false);
+		expect(rowIds()).toEqual([auto.id, opus5.id, opus45.id, sonnet.id, haiku.id, gpt.id]);
+		expect(latestList().selectedModelId).toBe(sonnet.id);
 	});
 
-	it('groups models under their release month, newest month first', async () => {
+	it('breaks the list by release month, newest month first, with routers above', async () => {
 		await openPicker();
 
-		expect(screen.getAllByRole('group')).toEqual([
-			screen.getByRole('group', { name: 'Routers' }),
-			screen.getByRole('group', { name: 'August 2026' }),
-			screen.getByRole('group', { name: 'July 2026' })
+		expect(listShape()).toEqual([
+			'# Routers',
+			auto.id,
+			'# August 2026',
+			opus5.id,
+			'# July 2026',
+			opus45.id,
+			sonnet.id,
+			haiku.id,
+			gpt.id
 		]);
+	});
 
-		const august = within(screen.getByRole('group', { name: 'August 2026' }));
-		expect(august.getAllByRole('option').map((row) => row.getAttribute('aria-label'))).toEqual([
-			'Opus 5'
-		]);
+	it('tells the list how many models it holds, headings passed over', async () => {
+		await openPicker();
 
-		const july = within(screen.getByRole('group', { name: 'July 2026' }));
-		expect(july.getAllByRole('option').map((row) => row.getAttribute('aria-label'))).toEqual([
-			'Opus 4.5',
-			'Sonnet 4.5',
-			'Haiku 4.5',
-			'GPT-5.3 Chat'
-		]);
+		// Nine rows go down, but six of them are models — the number the rows
+		// number themselves against.
+		expect(latestList().rows).toHaveLength(9);
+		expect(latestList().itemCount).toBe(6);
 	});
 
 	it('counts what is on the list beside the search box', async () => {
@@ -324,15 +323,14 @@ describe('ModelPicker', () => {
 		});
 	});
 
-	it('drops the month headers while searching, so results are not fragmented', async () => {
+	it('drops the month headings while searching, so results are not fragmented', async () => {
 		await openPicker();
 
 		searchFor('Opus');
 
 		await waitFor(() => {
-			expect(screen.getAllByRole('group')).toHaveLength(1);
+			expect(headings()).toEqual(['Best matches']);
 		});
-		expect(screen.queryByRole('group', { name: 'August 2026' })).not.toBeInTheDocument();
 	});
 
 	it('finds every model whose label shares the searched words', async () => {
@@ -341,7 +339,7 @@ describe('ModelPicker', () => {
 		searchFor('Opus');
 
 		await waitFor(() => {
-			expect(browseRowIds()).toEqual([opus5.id, opus45.id]);
+			expect(rowIds()).toEqual([opus5.id, opus45.id]);
 		});
 	});
 
@@ -351,9 +349,9 @@ describe('ModelPicker', () => {
 		searchFor('openai');
 
 		await waitFor(() => {
-			expect(screen.getByText('No models found.')).toBeVisible();
+			expect(latestList().rows).toEqual([]);
 		});
-		expect(screen.queryByRole('option')).not.toBeInTheDocument();
+		expect(countLabel()).toBe('0 models');
 	});
 
 	it('says so when nothing answers the search', async () => {
@@ -362,9 +360,9 @@ describe('ModelPicker', () => {
 		searchFor('a model nobody has built');
 
 		await waitFor(() => {
-			expect(screen.getByText('No models found.')).toBeVisible();
+			expect(latestList().rows).toEqual([]);
 		});
-		expect(screen.queryByRole('option')).not.toBeInTheDocument();
+		expect(countLabel()).toBe('0 models');
 	});
 
 	it('marks the current model as selected for assistive technology', async () => {
@@ -380,20 +378,17 @@ describe('ModelPicker', () => {
 		);
 	});
 
-	it('selects a searched model from the keyboard, closing the dialog', async () => {
-		const { onSelect } = await openPicker();
+	it('selects a searched model, closing the dialog', async () => {
+		const { user, onSelect } = await openPicker();
 
 		searchFor('Sonnet');
 		await waitFor(() => {
-			expect(browseRowIds()).toEqual([sonnet.id]);
+			expect(rowIds()).toEqual([sonnet.id]);
 		});
-		// cmdk's own keyboard navigation needs real CommandItems; the stub's
-		// bare markers are not focusable options, so this path is exercised
-		// through the row's own onSelect contract rather than a keystroke.
-		rowProps(sonnet.id).onSelect(sonnet.id);
 
-		expect(onSelect).toHaveBeenCalledOnce();
-		expect(onSelect).toHaveBeenCalledWith(sonnet.id);
+		await user.click(screen.getByRole('option', { name: 'Sonnet 4.5' }));
+
+		expect(onSelect).toHaveBeenCalledExactlyOnceWith(sonnet.id);
 		await waitFor(() => {
 			expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 		});
@@ -432,15 +427,15 @@ describe('ModelPicker', () => {
 		await waitFor(() => {
 			expect(countLabel()).toBe('1 model');
 		});
-		expect(browseRowIds()).toEqual([gpt.id]);
+		expect(rowIds()).toEqual([gpt.id]);
 	});
 
 	it('sends the id of a pointer model with its tilde intact', async () => {
 		// The tilde is stripped for reading only. It is part of the id the server
 		// resolves, so selecting must not hand back the tidied name.
-		const { onSelect } = await openPicker();
+		const { user, onSelect } = await openPicker();
 
-		rowProps(auto.id).onSelect(auto.id);
+		await user.click(screen.getByRole('option', { name: 'Auto Router' }));
 
 		expect(onSelect).toHaveBeenCalledExactlyOnceWith(auto.id);
 	});
@@ -449,141 +444,148 @@ describe('ModelPicker', () => {
 		it('opens one row at a time, not several', async () => {
 			await openPicker();
 
-			rowProps(opus5.id).onToggleDetails(opus5.id);
+			latestList().onToggleDetails(opus5.id);
 			await waitFor(() => {
-				expect(rowProps(opus5.id).detailsOpen).toBe(true);
+				expect(latestList().detailsOpenId).toBe(opus5.id);
 			});
 
-			rowProps(gpt.id).onToggleDetails(gpt.id);
+			latestList().onToggleDetails(gpt.id);
 			// Opening GPT closes Opus — one at a time, so the list does not grow a
 			// second scroll inside itself.
 			await waitFor(() => {
-				expect(rowProps(opus5.id).detailsOpen).toBe(false);
-				expect(rowProps(gpt.id).detailsOpen).toBe(true);
+				expect(latestList().detailsOpenId).not.toBe(opus5.id);
+				expect(latestList().detailsOpenId).toBe(gpt.id);
 			});
 		});
 
 		it('toggles a row closed when its own toggle fires again', async () => {
 			await openPicker();
 
-			rowProps(opus5.id).onToggleDetails(opus5.id);
+			latestList().onToggleDetails(opus5.id);
 			await waitFor(() => {
-				expect(rowProps(opus5.id).detailsOpen).toBe(true);
+				expect(latestList().detailsOpenId).toBe(opus5.id);
 			});
 
-			rowProps(opus5.id).onToggleDetails(opus5.id);
+			latestList().onToggleDetails(opus5.id);
 			await waitFor(() => {
-				expect(rowProps(opus5.id).detailsOpen).toBe(false);
+				expect(latestList().detailsOpenId).not.toBe(opus5.id);
 			});
 		});
 	});
 
 	describe('pinned models', () => {
-		function pinnedSectionRendered(): boolean {
-			return screen.queryByTestId('pinned-section') !== null;
-		}
-
-		it('does not show the pinned section when there are no pins', async () => {
+		it('does not show the pinned heading when there are no pins', async () => {
 			await openPicker();
 
-			expect(pinnedSectionRendered()).toBe(false);
+			expect(pinnedHeadingRendered()).toBe(false);
 		});
 
 		it('marks each row pinned or not, and a row is unpinned by default', async () => {
 			await openPicker();
 
-			expect(rowProps(opus5.id).pinned).toBe(false);
+			expect(pinnedFlag(opus5.id)).toBe(false);
 		});
 
-		it('pins a model when its row toggles a pin, showing the pinned section', async () => {
+		it('pins a model when its row toggles a pin, heading the list with it', async () => {
 			const { onSelect } = await openPicker();
 
-			rowProps(opus5.id).onTogglePin(opus5.id);
+			latestList().onTogglePin(opus5.id);
 
 			await waitFor(() => {
-				expect(pinnedSectionRendered()).toBe(true);
+				expect(pinnedHeadingRendered()).toBe(true);
 			});
 			expect(onSelect).not.toHaveBeenCalled();
 		});
 
-		it('removes the pinned model from the main browse list', async () => {
-			// A pinned model lives in the pinned section, not the main list — two
-			// `CommandItem`s sharing one `value` share one highlight state under
-			// cmdk, which reads as the main list reacting to the pinned section.
+		it('lists a pinned model once, at the top, and not again under its month', async () => {
+			// Two items sharing one value would leave the selected index ambiguous,
+			// so the pin is moved rather than copied.
 			await openPicker();
 
-			expect(browseRowIds()).toContain(opus5.id);
-
-			rowProps(opus5.id).onTogglePin(opus5.id);
+			latestList().onTogglePin(opus5.id);
 
 			await waitFor(() => {
-				expect(browseRowIds()).not.toContain(opus5.id);
+				expect(listShape()).toEqual([
+					'# Pinned (1)',
+					opus5.id,
+					'# Routers',
+					auto.id,
+					'# July 2026',
+					opus45.id,
+					sonnet.id,
+					haiku.id,
+					gpt.id
+				]);
 			});
-			expect(latestPinned()?.models.map((model) => model.id)).toContain(opus5.id);
+			expect(pinnedFlag(opus5.id)).toBe(true);
 		});
 
-		it('keeps a pinned model searchable by name', async () => {
-			// The main list drops pinned ids, but the search source keeps them: a
+		it('keeps a pinned model searchable by name, with no pinned block above it', async () => {
+			// The browse list drops pinned ids, but the search source keeps them: a
 			// pin is still a model the reader can look up, and search results are a
-			// flat list with no pinned section above them.
+			// flat list with nothing above them.
 			await openPicker();
 
-			rowProps(opus5.id).onTogglePin(opus5.id);
+			latestList().onTogglePin(opus5.id);
 			await waitFor(() => {
-				expect(pinnedSectionRendered()).toBe(true);
+				expect(pinnedHeadingRendered()).toBe(true);
 			});
-			expect(browseRowIds()).not.toContain(opus5.id);
 
 			searchFor('Opus');
 
 			await waitFor(() => {
-				expect(browseRowIds()).toContain(opus5.id);
-			});
-			expect(pinnedSectionRendered()).toBe(false);
-		});
-
-		it('unpins when the pin toggles again, and the model returns to the main list', async () => {
-			await openPicker();
-
-			rowProps(opus5.id).onTogglePin(opus5.id);
-			await waitFor(() => {
-				expect(pinnedSectionRendered()).toBe(true);
-			});
-			expect(browseRowIds()).not.toContain(opus5.id);
-
-			// The pinned model left the main list, so the unpin comes from the
-			// pinned section's own row.
-			latestPinned()?.onTogglePin(opus5.id);
-
-			await waitFor(() => {
-				expect(pinnedSectionRendered()).toBe(false);
-			});
-			expect(browseRowIds()).toContain(opus5.id);
-		});
-
-		it('hands the pinned section the pins sorted alphabetically, not by pin time', async () => {
-			// Pinned in insertion order sonnet → opus5, but the section is handed
-			// them sorted alphabetically by id (opus5 < sonnet). If the sort were
-			// removed this assertion would fail — it is load-bearing, not
-			// decorative.
-			await openPicker();
-
-			rowProps(sonnet.id).onTogglePin(sonnet.id);
-			await waitFor(() => {
-				expect(pinnedSectionRendered()).toBe(true);
-			});
-			rowProps(opus5.id).onTogglePin(opus5.id);
-			await waitFor(() => {
-				expect(latestPinned()?.models.map((model) => model.id)).toEqual([opus5.id, sonnet.id]);
+				expect(listShape()).toEqual(['# Best matches', opus5.id, opus45.id]);
 			});
 		});
 
-		it('drops a pin the filters exclude, so the section cannot claim it answered them', async () => {
+		it('unpins when the pin toggles again, and the model returns to its month', async () => {
 			await openPicker();
 
-			rowProps(opus5.id).onTogglePin(opus5.id);
+			latestList().onTogglePin(opus5.id);
 			await waitFor(() => {
-				expect(pinnedSectionRendered()).toBe(true);
+				expect(pinnedHeadingRendered()).toBe(true);
+			});
+
+			latestList().onTogglePin(opus5.id);
+
+			await waitFor(() => {
+				expect(pinnedHeadingRendered()).toBe(false);
+			});
+			expect(listShape()).toEqual([
+				'# Routers',
+				auto.id,
+				'# August 2026',
+				opus5.id,
+				'# July 2026',
+				opus45.id,
+				sonnet.id,
+				haiku.id,
+				gpt.id
+			]);
+		});
+
+		it('orders the pins alphabetically, not by pin time', async () => {
+			// Pinned in insertion order sonnet → opus5, but listed sorted by id
+			// (opus5 < sonnet). If the sort were removed this assertion would fail.
+			await openPicker();
+
+			latestList().onTogglePin(sonnet.id);
+			await waitFor(() => {
+				expect(pinnedHeadingRendered()).toBe(true);
+			});
+			latestList().onTogglePin(opus5.id);
+
+			await waitFor(() => {
+				expect(rowIds().slice(0, 2)).toEqual([opus5.id, sonnet.id]);
+			});
+		});
+
+		it('drops a pin the filters exclude, so it cannot claim it answered them', async () => {
+			await openPicker();
+
+			latestList().onTogglePin(opus5.id);
+			await waitFor(() => {
+				expect(pinnedHeadingRendered()).toBe(true);
 			});
 
 			latestHeader().onFiltersChange({
@@ -593,7 +595,7 @@ describe('ModelPicker', () => {
 			});
 
 			await waitFor(() => {
-				expect(pinnedSectionRendered()).toBe(false);
+				expect(pinnedHeadingRendered()).toBe(false);
 			});
 			// The count spoke for it too, so the header disagreed with the list.
 			expect(countLabel()).toBe('1 model');
@@ -602,9 +604,9 @@ describe('ModelPicker', () => {
 		it('keeps a pin the filters let through', async () => {
 			await openPicker();
 
-			rowProps(gpt.id).onTogglePin(gpt.id);
+			latestList().onTogglePin(gpt.id);
 			await waitFor(() => {
-				expect(pinnedSectionRendered()).toBe(true);
+				expect(pinnedHeadingRendered()).toBe(true);
 			});
 
 			latestHeader().onFiltersChange({
@@ -616,56 +618,56 @@ describe('ModelPicker', () => {
 			await waitFor(() => {
 				expect(countLabel()).toBe('1 model');
 			});
-			expect(latestPinned()?.models.map((model) => model.id)).toEqual([gpt.id]);
+			expect(listShape()).toEqual(['# Pinned (1)', gpt.id]);
 		});
 
-		it('hides the pinned section while searching, so results stay a flat list', async () => {
+		it('hides the pinned block while searching, so results stay a flat list', async () => {
 			await openPicker();
 
-			rowProps(opus5.id).onTogglePin(opus5.id);
+			latestList().onTogglePin(opus5.id);
 			await waitFor(() => {
-				expect(pinnedSectionRendered()).toBe(true);
+				expect(pinnedHeadingRendered()).toBe(true);
 			});
 
 			searchFor('Sonnet');
 
 			await waitFor(() => {
-				expect(pinnedSectionRendered()).toBe(false);
+				expect(pinnedHeadingRendered()).toBe(false);
 			});
 		});
 
-		it('folds the pinned section when its toggle fires', async () => {
+		it('folds the pinned rows away but keeps the heading that unfolds them', async () => {
 			await openPicker();
 
-			rowProps(opus5.id).onTogglePin(opus5.id);
+			latestList().onTogglePin(opus5.id);
 			await waitFor(() => {
-				expect(pinnedSectionRendered()).toBe(true);
+				expect(rowIds()).toContain(opus5.id);
 			});
 
-			latestPinned()?.onToggleCollapsed();
+			latestList().onToggleCollapsed();
 
-			// Collapsed keeps the section marker but hands it no visible rows —
-			// the fold is the section's own rendering, asserted in its test; here
-			// the parent proves it passes the flag through.
 			await waitFor(() => {
-				expect(latestPinned()?.collapsed).toBe(true);
+				expect(rowIds()).not.toContain(opus5.id);
 			});
+			expect(pinnedHeadingRendered()).toBe(true);
+			expect(latestList().pinnedCollapsed).toBe(true);
 		});
 
-		it('counts pinned models alongside the browse list, not just the browse list', async () => {
-			// The count is everything on screen. Pinning a model removes it from
-			// the browse list but adds it to the pinned section, so the total
-			// stays the same — 6 models. Without adding the pinned count, it would
-			// drop to 5.
+		it('counts a folded pin, which the filters still let through', async () => {
+			// The count answers the search and the filters, not the state of a
+			// section the reader chose to close.
 			await openPicker();
 
-			expect(countLabel()).toBe('6 models');
-
-			rowProps(opus5.id).onTogglePin(opus5.id);
+			latestList().onTogglePin(opus5.id);
 			await waitFor(() => {
-				expect(pinnedSectionRendered()).toBe(true);
+				expect(countLabel()).toBe('6 models');
 			});
 
+			latestList().onToggleCollapsed();
+
+			await waitFor(() => {
+				expect(rowIds()).not.toContain(opus5.id);
+			});
 			expect(countLabel()).toBe('6 models');
 		});
 	});

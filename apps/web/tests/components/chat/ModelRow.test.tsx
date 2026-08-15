@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ModelRow } from '../../../src/lib/components/chat/ModelRow.tsx';
-import { Command, CommandList } from '../../../src/lib/components/ui/command.tsx';
+import { Combobox, ComboboxList } from '../../../src/lib/components/ui/combobox.tsx';
 import { optionalThinking, selectableModel } from '../../helpers/models.ts';
 
 const opus = selectableModel({
@@ -12,30 +12,36 @@ const opus = selectableModel({
 	...optionalThinking
 });
 
+/**
+ * Selection is the root's to commit, not the row's — the row has no `onSelect`
+ * of its own — so a test that asks whether the model got chosen watches
+ * `onValueChange` here.
+ */
 function renderRow(
 	overrides: { pinned?: boolean; selected?: boolean; detailsOpen?: boolean } = {}
 ) {
 	const onTogglePin = vi.fn();
 	const onToggleDetails = vi.fn();
-	const onSelect = vi.fn();
+	const onValueChange = vi.fn();
 
 	render(
-		<Command label="Models" shouldFilter={false}>
-			<CommandList>
+		<Combobox inline open items={[opus]} onValueChange={onValueChange}>
+			<ComboboxList>
 				<ModelRow
 					model={opus}
 					selected={overrides.selected ?? false}
 					pinned={overrides.pinned ?? false}
 					detailsOpen={overrides.detailsOpen ?? false}
+					index={0}
+					listedCount={1}
 					onTogglePin={onTogglePin}
 					onToggleDetails={onToggleDetails}
-					onSelect={onSelect}
 				/>
-			</CommandList>
-		</Command>
+			</ComboboxList>
+		</Combobox>
 	);
 
-	return { onTogglePin, onToggleDetails, onSelect };
+	return { onTogglePin, onToggleDetails, onValueChange };
 }
 
 describe('ModelRow', () => {
@@ -43,6 +49,15 @@ describe('ModelRow', () => {
 		renderRow();
 
 		expect(screen.getByRole('option', { name: 'Opus 5' })).toBeInTheDocument();
+	});
+
+	it('states its own place in the list, which has no groups to state it', () => {
+		renderRow();
+
+		const row = screen.getByRole('option', { name: 'Opus 5' });
+
+		expect(row).toHaveAttribute('aria-posinset', '1');
+		expect(row).toHaveAttribute('aria-setsize', '1');
 	});
 
 	/**
@@ -91,11 +106,11 @@ describe('ModelRow', () => {
 	});
 
 	it('does not select the model when the star is clicked', async () => {
-		const { onSelect } = renderRow();
+		const { onValueChange } = renderRow();
 
 		await userEvent.setup().click(screen.getByRole('button', { name: 'Pin Opus 5' }));
 
-		expect(onSelect).not.toHaveBeenCalled();
+		expect(onValueChange).not.toHaveBeenCalled();
 	});
 
 	it('toggles details when "More" is clicked', async () => {
@@ -113,11 +128,11 @@ describe('ModelRow', () => {
 	});
 
 	it('does not select the model when "More" is clicked', async () => {
-		const { onSelect } = renderRow();
+		const { onValueChange } = renderRow();
 
 		await userEvent.setup().click(screen.getByRole('button', { name: 'More' }));
 
-		expect(onSelect).not.toHaveBeenCalled();
+		expect(onValueChange).not.toHaveBeenCalled();
 	});
 
 	it('shows the model description once details are open', () => {
@@ -127,10 +142,11 @@ describe('ModelRow', () => {
 	});
 
 	it('selects the model when the row itself is clicked', async () => {
-		const { onSelect } = renderRow();
+		const { onValueChange } = renderRow();
 
 		await userEvent.setup().click(screen.getByRole('option', { name: 'Opus 5' }));
 
-		expect(onSelect).toHaveBeenCalledExactlyOnceWith(opus.id);
+		expect(onValueChange).toHaveBeenCalledOnce();
+		expect(onValueChange.mock.calls[0]?.[0]).toEqual(opus);
 	});
 });

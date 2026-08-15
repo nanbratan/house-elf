@@ -3,7 +3,7 @@ import { SearchIcon, XIcon } from 'lucide-react';
 import { useRef } from 'react';
 
 import type { ModelFilters as Filters } from '../../utils/model-filters.ts';
-import { CommandInput } from '../ui/command.tsx';
+import { ComboboxInputControl } from '../ui/combobox.tsx';
 import { InputGroup, InputGroupAddon } from '../ui/input-group.tsx';
 import { ModelFilters } from './ModelFilters.tsx';
 
@@ -20,9 +20,8 @@ export interface ModelPickerHeaderProps {
 /**
  * The search box, live count and filter trigger above the model list.
  *
- * The search box is named by the enclosing `Command`'s `label` prop — cmdk
- * writes `aria-labelledby` after spreading our props, so an `aria-label` here
- * would be computed away.
+ * The box reads and writes the enclosing `Combobox.Root`'s input value, so the
+ * `search` prop here is only what the clear button needs to know.
  */
 export function ModelPickerHeader({
 	search,
@@ -47,19 +46,20 @@ export function ModelPickerHeader({
 				<InputGroupAddon align="inline-start">
 					<SearchIcon className="shrink-0 text-faint" aria-hidden="true" />
 				</InputGroupAddon>
-				{/* Home and End move the list highlight, not the caret: cmdk's root
-				    preventDefaults both. The list is what this box drives. */}
-				<CommandInput
+				{/* Named here rather than by the dialog: `DialogTitle` names the dialog,
+				    and this box needs a name of its own. base-ui writes `role="combobox"`
+				    and the `aria-controls` pointing at the list. */}
+				<ComboboxInputControl
 					ref={inputRef}
-					value={search}
-					onValueChange={onSearchChange}
+					aria-label="Search models"
 					placeholder="Search models…"
 				/>
 				<InputGroupAddon align="inline-end">
 					<span aria-live="polite" className="shrink-0 text-xs text-faint">
 						{countLabel}
 					</span>
-					{/* cmdk forces `type="text"`, so the native search-field clear is gone. */}
+					{/* Ours, not `Combobox.Clear`: in single-select mode that clears the
+					    selected model rather than the query. */}
 					{search === '' ? null : (
 						<button
 							type="button"

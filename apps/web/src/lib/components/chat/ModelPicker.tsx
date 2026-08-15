@@ -8,11 +8,12 @@ import {
 	type ModelFilters as Filters
 } from '../../utils/model-filters.ts';
 import { pinnedModels, releaseSections, searchSections } from '../../utils/model-list.ts';
-import { Command, CommandEmpty, CommandGroup, CommandList } from '../ui/command.tsx';
-import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '../ui/dialog.tsx';
+import { modelRows } from '../../utils/model-rows.ts';
+import { Combobox } from '../ui/combobox.tsx';
+import { Dialog, DialogContent, DialogTitle } from '../ui/dialog.tsx';
+import { ModelList } from './ModelList.tsx';
 import { ModelPickerHeader } from './ModelPickerHeader.tsx';
-import { ModelRow } from './ModelRow.tsx';
-import { PinnedSection } from './PinnedSection.tsx';
+import { ModelPickerTrigger } from './ModelPickerTrigger.tsx';
 import { ThinkingRow } from './ThinkingRow.tsx';
 
 export interface ModelPickerProps {
@@ -46,45 +47,63 @@ export function ModelPicker({
 	// grow a second scroll inside itself.
 	const [detailsOpenId, setDetailsOpenId] = useState<string | null>(null);
 
-	// The list is the expensive half: clearing the search mounts all ~400 rows,
-	// each a cmdk item with its own store subscriptions. Deferring it keeps the
-	// keystroke — and the clear button — responsive while that render lands.
+	// The list is the expensive half. Deferring it keeps the keystroke — and the
+	// clear button — responsive while that render lands.
 	const deferredSearch = useDeferredValue(search);
+	const searching = deferredSearch.trim() !== '';
 
 	const selectedModel = models.find((model) => model.id === selectedModelId);
 	const listed = filterModels(models, filters);
 
-	// A pinned model renders in the pinned section, not the browse list: two
-	// cmdk items sharing one `value` would share one highlight state. Search
-	// still sees pinned ids — a pin is a model the reader can look up by name.
+	// A pinned model renders in the pinned block, not the browse list: two items
+	// sharing one value would leave the selected index ambiguous. Search still
+	// sees pinned ids — a pin is a model the reader can look up by name.
 	//
 	// Drawn from the filtered list, not the catalog: a pin is a shortcut to a
 	// model, not an exemption from the question the reader just asked, and a pin
 	// sitting above the results reads as having answered it.
 	const pinned = pinnedModels(listed, pins.pinnedIds);
-	const showPinned = pinned.length > 0 && deferredSearch.trim() === '';
 	const pinnedIdSet = new Set(pinned.map((model) => model.id));
 	const browseList = listed.filter((model) => !pinnedIdSet.has(model.id));
 
-	const sections =
-		deferredSearch.trim() === ''
-			? releaseSections(browseList)
-			: searchSections(listed, deferredSearch);
-	// While searching the pinned section is hidden and `sections` already
-	// includes pinned ids, so nothing is added to the count.
-	const listedCount =
-		sections.reduce((count, { models: found }) => count + found.length, 0) +
-		(showPinned ? pinned.length : 0);
-	const countLabel = listedCount === 1 ? '1 model' : `${String(listedCount)} models`;
+	// Built once per catalog, filters and pins — never per keystroke. It is what
+	// the combobox navigates while closed, and the picker always opens on an
+	// empty query, so this is also the order the highlight is seeded against.
+	const browse = modelRows({
+		sections: releaseSections(browseList),
+		pinned,
+		pinnedIds: pins.pinnedIds,
+		pinnedCollapsed: pins.collapsed
+	});
 
-	function select(modelId: string) {
+	const view = searching
+		? modelRows({
+				sections: searchSections(listed, deferredSearch),
+				pinned: [],
+				pinnedIds: pins.pinnedIds,
+				pinnedCollapsed: pins.collapsed
+			})
+		: browse;
+
+	// What the list can navigate to, for each row's `aria-setsize`.
+	const itemCount = view.items.length;
+	// What the reader was shown, which a fold does not change: the count answers
+	// the search and the filters, not the state of a section the reader closed.
+	const shownCount = itemCount + (!searching && pins.collapsed ? pinned.length : 0);
+	const countLabel = shownCount === 1 ? '1 model' : `${String(shownCount)} models`;
+
+	function selectModel(model: SelectableModel | null) {
+		if (!model) return;
 		setSearch('');
-		onSelect(modelId);
-		setOpen(false);
+		onSelect(model.id);
 	}
 
 	function togglePin(modelId: string) {
 		pins.toggle(modelId);
+	}
+
+	function toggleCollapsed() {
+		pins.toggleCollapsed();
 	}
 
 	function toggleDetails(modelId: string) {
@@ -92,47 +111,30 @@ export function ModelPicker({
 	}
 
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger
-				aria-label={`Choose model. Current model: ${selectedModel?.label ?? 'none'}${
-					thinking ? ', thinking on' : ''
-				}`}
-				// `px-3` matches the composer textarea's own padding, so the model's name
-				// starts on the same vertical line as the placeholder above it.
-				className="flex h-8 min-w-0 items-center gap-1.5 rounded-md px-3 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-			>
-				<span className="max-w-32 truncate">{selectedModel?.label ?? 'Choose model'}</span>
-				{thinking ? (
-					// Named on the trigger so an expensive setting is never hidden.
-					<span className="shrink-0 text-faint">Thinking</span>
-				) : null}
-				<svg
-					className="size-3 shrink-0"
-					viewBox="0 0 12 12"
-					fill="none"
-					stroke="currentColor"
-					strokeWidth={1.5}
-					aria-hidden="true"
-				>
-					<path d="m3 4.5 3 3 3-3" />
-				</svg>
-			</DialogTrigger>
+		<Combobox
+			inline
+			open={open}
+			// Bound to the dialog's own state, as the `inline` composition requires:
+			// that is what resets the query and the highlight when the dialog closes.
+			onOpenChange={setOpen}
+			items={browse.items}
+			// Ours overrides base-ui's own filtering, so the ranking survives.
+			filteredItems={view.items}
+			value={selectedModel ?? null}
+			onValueChange={selectModel}
+			itemToStringLabel={(model: SelectableModel) => model.label}
+			inputValue={search}
+			onInputValueChange={setSearch}
+		>
+			<Dialog open={open} onOpenChange={setOpen}>
+				<ModelPickerTrigger label={selectedModel?.label ?? null} thinking={thinking} />
 
-			<DialogContent
-				showCloseButton={false}
-				className="w-model-picker max-w-[calc(100vw-2rem)] gap-0 overflow-hidden p-0"
-			>
-				<DialogTitle className="sr-only">Choose a model</DialogTitle>
-
-				<Command
-					// cmdk renders this as the hidden `<label>` for the search input, so
-					// it names the box, not the dialog — `DialogTitle` does that.
-					label="Search models"
-					defaultValue={selectedModelId}
-					shouldFilter={false}
-					loop
-					className="flex h-[min(30rem,80vh)] flex-col"
+				<DialogContent
+					showCloseButton={false}
+					className="flex h-[min(30rem,80vh)] w-model-picker max-w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden p-0"
 				>
+					<DialogTitle className="sr-only">Choose a model</DialogTitle>
+
 					<ModelPickerHeader
 						search={search}
 						onSearchChange={setSearch}
@@ -142,51 +144,22 @@ export function ModelPicker({
 						onFiltersChange={setFilters}
 					/>
 
-					{/* `label`, not `aria-label`: cmdk writes both that and the id itself,
-					    after spreading ours. */}
-					<CommandList label="Models" className="max-h-none flex-1 overflow-y-auto p-1.5">
-						{sections.length === 0 && !showPinned ? (
-							<CommandEmpty className="px-3 py-8 text-faint">No models found.</CommandEmpty>
-						) : null}
+					<ModelList
+						rows={view.rows}
+						itemCount={itemCount}
+						selectedModelId={selectedModelId}
+						detailsOpenId={detailsOpenId}
+						pinnedCollapsed={pins.collapsed}
+						onToggleCollapsed={toggleCollapsed}
+						onTogglePin={togglePin}
+						onToggleDetails={toggleDetails}
+					/>
 
-						{showPinned ? (
-							<PinnedSection
-								models={pinned}
-								selectedModelId={selectedModelId}
-								collapsed={pins.collapsed}
-								onToggleCollapsed={() => {
-									pins.toggleCollapsed();
-								}}
-								onTogglePin={togglePin}
-								onToggleDetails={toggleDetails}
-								onSelect={select}
-								detailsOpenId={detailsOpenId}
-							/>
-						) : null}
-
-						{sections.map((section) => (
-							<CommandGroup key={section.id} heading={section.title}>
-								{section.models.map((model) => (
-									<ModelRow
-										key={model.id}
-										model={model}
-										selected={model.id === selectedModelId}
-										pinned={pinnedIdSet.has(model.id)}
-										detailsOpen={detailsOpenId === model.id}
-										onTogglePin={togglePin}
-										onToggleDetails={toggleDetails}
-										onSelect={select}
-									/>
-								))}
-							</CommandGroup>
-						))}
-					</CommandList>
-				</Command>
-
-				{canChooseThinking ? (
-					<ThinkingRow thinking={thinking} onThinkingChange={onThinkingChange} />
-				) : null}
-			</DialogContent>
-		</Dialog>
+					{canChooseThinking ? (
+						<ThinkingRow thinking={thinking} onThinkingChange={onThinkingChange} />
+					) : null}
+				</DialogContent>
+			</Dialog>
+		</Combobox>
 	);
 }

@@ -29,10 +29,25 @@ function ComboboxTrigger({ className, ...props }: ComboboxPrimitive.Trigger.Prop
  */
 function ComboboxInput({ className, ...props }: ComboboxPrimitive.Input.Props) {
 	return (
-		<InputGroup className={cn('w-auto', className)}>
+		<InputGroup
+			// No focus ring: this field holds focus for as long as the popup is open,
+			// so a ring marks nothing — it is just a second border inside one.
+			className={cn(
+				'w-auto has-[[data-slot=input-group-control]:focus-visible]:border-input has-[[data-slot=input-group-control]:focus-visible]:ring-0',
+				className
+			)}
+		>
 			<ComboboxPrimitive.Input render={<InputGroupInput />} {...props} />
 		</InputGroup>
 	);
+}
+
+/**
+ * The search field without the `InputGroup` around it, for a caller that owns
+ * the group itself — one with its own addons, count or clear button.
+ */
+function ComboboxInputControl(props: ComboboxPrimitive.Input.Props) {
+	return <ComboboxPrimitive.Input render={<InputGroupInput />} {...props} />;
 }
 
 // The positioner's defaults are resolved in the body rather than in the
@@ -104,6 +119,12 @@ function ComboboxItem({ className, children, ...props }: ComboboxPrimitive.Item.
 	);
 }
 
+/**
+ * The item without the check indicator or the padding that reserves room for
+ * it, for a row that lays out its own contents and marks selection itself.
+ */
+const ComboboxItemBase = ComboboxPrimitive.Item;
+
 // Renders nothing of its own — it is the seam the root's filtering feeds, so
 // there is no element here to style.
 const ComboboxCollection = ComboboxPrimitive.Collection;
@@ -127,7 +148,9 @@ export {
 	ComboboxContent,
 	ComboboxEmpty,
 	ComboboxInput,
+	ComboboxInputControl,
 	ComboboxItem,
+	ComboboxItemBase,
 	ComboboxList,
 	ComboboxTrigger
 };
