@@ -8,6 +8,22 @@ import { ModelRow } from './ModelRow.tsx';
 
 export type ModelListVirtualizer = Virtualizer<HTMLDivElement, Element>;
 
+/** `p-1.5` on the scroller below, in pixels — the two have to agree. */
+const SCROLLER_PADDING = 6;
+
+/**
+ * Left clear beyond that padding when a row is scrolled to an edge, so it does
+ * not read as stuck to the border.
+ *
+ * Two scrollers have to agree on it, and they measure differently. Stepping the
+ * highlight is base-ui's to scroll, through `scrollIntoView`, which obeys the
+ * CSS `scroll-py-1.5` below — CSS insets from the padding box, so the scroller's
+ * own padding is already counted. Jumping to a row is ours, through the
+ * virtualizer, whose option is a plain offset that knows nothing about that
+ * padding, so there it has to be added on.
+ */
+const HIGHLIGHT_MARGIN = 6;
+
 export interface ModelListProps {
 	/** Headings and models as one flat sequence, in the order they are shown. */
 	rows: readonly ModelListRow[];
@@ -54,9 +70,15 @@ export function ModelList({
 		// an expanded row's height to whatever occupies that index after the next
 		// keystroke.
 		getItemKey: (index) => rows[index]?.id ?? index,
-		// Generous, so a highlight that jumps — on open, or wrapping past the end —
-		// lands on a row that is already mounted and can be pressed.
-		overscan: 20
+		// Roughly a screenful either side of the window: enough that a fast scroll
+		// does not show a gap, and no more. A jump does not need covering here —
+		// the picker scrolls to it first, and the window follows.
+		overscan: 10,
+		// The scroller's own padding, plus room to breathe. Without the first,
+		// scrolling a row to an edge lands it under the padding rather than
+		// against it; without the second it sits flush against the border.
+		scrollPaddingStart: SCROLLER_PADDING + HIGHLIGHT_MARGIN,
+		scrollPaddingEnd: SCROLLER_PADDING + HIGHLIGHT_MARGIN
 	});
 
 	useImperativeHandle(virtualizerRef, () => virtualizer, [virtualizer]);
@@ -73,7 +95,10 @@ export function ModelList({
 				<div
 					role="presentation"
 					ref={setScroller}
-					className="h-full overflow-y-auto overscroll-contain p-1.5"
+					// `scroll-py-1.5` is `HIGHLIGHT_MARGIN`, not the sum above: CSS insets
+					// from the scrollport, which is the padding box, so the scroller's own
+					// padding is already inside it.
+					className="h-full scroll-py-1.5 overflow-y-auto overscroll-contain p-1.5"
 				>
 					<div role="presentation" className="relative w-full" style={{ height: totalSize }}>
 						{virtualizer.getVirtualItems().map((virtualRow) => {
