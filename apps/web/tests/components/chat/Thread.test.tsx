@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { Fragment } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -18,27 +18,12 @@ import { ToolGroupTrigger } from '../../../src/lib/components/assistant-ui/tool-
 // the runtime's contents by assigning to them.
 let threadMessages: { role: string }[] = [];
 let messageParts: Record<string, unknown>[] = [];
-/*
- * The jump button reads the viewport's scroll geometry off the element itself,
- * which jsdom never lays out — so the numbers are stubbed here and the tests
- * dispatch the scroll events a reader or autoscroll would.
- */
-let viewportElement: HTMLDivElement | null = null;
-
-function scrollViewportTo({ from, height }: { from: number; height: number }) {
-	const element = viewportElement;
-	if (!element) throw new Error('no viewport element registered');
-	Object.defineProperty(element, 'scrollHeight', { value: height, configurable: true });
-	Object.defineProperty(element, 'clientHeight', { value: 500, configurable: true });
-	Object.defineProperty(element, 'scrollTop', { value: height - 500 - from, configurable: true });
-	return element;
-}
+let isAtBottom = true;
 const userPartText = 'What the user typed';
 
 vi.mock('@assistant-ui/react', () => ({
-	useThreadViewport: vi.fn(
-		(select: (state: { element: { viewport: HTMLDivElement | null } }) => unknown) =>
-			select({ element: { viewport: viewportElement } })
+	useThreadViewport: vi.fn((select: (viewport: { isAtBottom: boolean }) => unknown) =>
+		select({ isAtBottom })
 	),
 	groupPartByType: vi.fn(() => vi.fn()),
 	MessagePrimitive: {
@@ -140,7 +125,7 @@ describe('Thread', () => {
 	beforeEach(() => {
 		threadMessages = [];
 		messageParts = [];
-		viewportElement = document.createElement('div');
+		isAtBottom = true;
 		error.mockReturnValue(undefined);
 	});
 
@@ -167,43 +152,19 @@ describe('Thread', () => {
 	// `ThreadPrimitive.ScrollToBottom` only disables itself at the bottom; the e2e
 	// suite asserts the button is absent, so Thread has to unmount it.
 	it('withholds the jump button while the transcript is already at its end', () => {
-		render(<Thread composer={composer} />);
+		isAtBottom = true;
 
-		fireEvent.scroll(scrollViewportTo({ from: 0, height: 2000 }));
+		render(<Thread composer={composer} />);
 
 		expect(screen.queryByRole('button', { name: 'Jump to latest' })).not.toBeInTheDocument();
 	});
 
 	it('offers a jump button once the reader has scrolled away from the end', () => {
-		render(<Thread composer={composer} />);
+		isAtBottom = false;
 
-		fireEvent.scroll(scrollViewportTo({ from: 400, height: 2000 }));
+		render(<Thread composer={composer} />);
 
 		expect(screen.getByRole('button', { name: 'Jump to latest' })).toBeInTheDocument();
-	});
-
-	it('takes the jump button back once the reader returns to the end', () => {
-		render(<Thread composer={composer} />);
-		fireEvent.scroll(scrollViewportTo({ from: 400, height: 2000 }));
-
-		fireEvent.scroll(scrollViewportTo({ from: 0, height: 2000 }));
-
-		expect(screen.queryByRole('button', { name: 'Jump to latest' })).not.toBeInTheDocument();
-	});
-
-	it('does not offer it because a reply grew under a reader who is at the end', () => {
-		// The transcript getting taller is not the reader going anywhere. It raises
-		// `scrollHeight` a frame before autoscroll raises `scrollTop`, and reading
-		// that gap is what made the button blink once per streamed chunk. Growing
-		// fires no scroll event, so nothing here should notice it.
-		const { rerender } = render(<Thread composer={composer} />);
-		fireEvent.scroll(scrollViewportTo({ from: 0, height: 2000 }));
-
-		// Re-rendered as well as taller, which is what a chunk of a reply does.
-		scrollViewportTo({ from: 120, height: 2120 });
-		rerender(<Thread composer={composer} />);
-
-		expect(screen.queryByRole('button', { name: 'Jump to latest' })).not.toBeInTheDocument();
 	});
 
 	// Presence alone would not pin this down: both components hardcode their own

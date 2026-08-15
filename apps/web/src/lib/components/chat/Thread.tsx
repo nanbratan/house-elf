@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import {
 	MessagePrimitive,
 	ThreadPrimitive,
@@ -107,39 +107,9 @@ function AssistantMessage() {
  * affordance has to leave the DOM instead, so this reads the viewport itself.
  */
 function ScrollToBottom() {
-	const viewport = useThreadViewport((state) => state.element.viewport);
-	const [away, setAway] = useState(false);
+	const isAtBottom = useThreadViewport((viewport) => viewport.isAtBottom);
 
-	/*
-	 * Subscribed to the viewport's own scroll events — an external system, which
-	 * is what an effect is for.
-	 *
-	 * Not to `state.isAtBottom`, which blinks false on every chunk of a growing
-	 * reply: assistant-ui recomputes it from its resize observer as well
-	 * (`useThreadViewportAutoScroll`), and content growing raises `scrollHeight`
-	 * a frame before autoscroll raises `scrollTop`. Reading the position on
-	 * scroll alone never observes that gap, because growing the content fires no
-	 * scroll event — only the reader and autoscroll do, and both leave the
-	 * position already settled.
-	 */
-	useEffect(() => {
-		const scroller = viewport;
-		if (!scroller) return undefined;
-
-		function readPosition() {
-			if (!scroller) return;
-			// The same 1px test assistant-ui uses, so the button and the autoscroll
-			// agree on where "the end" is.
-			setAway(scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight > 1);
-		}
-
-		scroller.addEventListener('scroll', readPosition, { passive: true });
-		return () => {
-			scroller.removeEventListener('scroll', readPosition);
-		};
-	}, [viewport]);
-
-	return !away ? null : (
+	return isAtBottom ? null : (
 		<ThreadPrimitive.ScrollToBottom
 			aria-label="Jump to latest"
 			className={cn(
