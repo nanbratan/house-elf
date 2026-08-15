@@ -11,16 +11,17 @@ Why shadcn at all, and why base-ui: `bd list --all --type decision`.
 
 - `lib/components/ui/` — shadcn registry primitives.
 - `lib/components/assistant-ui/` — `@assistant-ui/*` registry components built on the
-  primitives (`reasoning`, `tool-group`, `tool-fallback`).
+  primitives (`reasoning`, `tool-group`, `tool-fallback`, `dot-matrix`).
 - `lib/components/elements/` — `@assistant-ui/elements-*` registry components, the
-  presentational layer that carries no primitive of its own (`composer`, `surfaces`).
+  presentational layer that carries no primitive of its own (`composer`, `surfaces`,
+  `error-state`, `thinking-indicator`).
 
 **All three hold ordinary app code.** Full house style, `strictTypeChecked`, the
 react-compiler rules, Prettier, tsconfig, tests. There is no carve-out, no
 `.prettierignore` entry, no ESLint exemption and no coverage exclude for any of them.
 
 This is shadcn's own model, not a local deviation. Its Open Code principle puts
-behaviour, accessibility and keyboard handling in `@base-ui-components/react` — an
+behaviour, accessibility and keyboard handling in `@base-ui/react` — an
 ordinary npm dependency, updated with `bun update` — and leaves the copied file as the
 design layer: variant maps, class strings, composition. Nothing arrives by re-copying a
 file that would not also arrive by upgrading the package.
@@ -131,7 +132,7 @@ you need.
 ## Taking an upstream change
 
 Deliberate, never routine. Logic and a11y fixes arrive through
-`@base-ui-components/react`, so the only reason to revisit the registry is a design-layer
+`@base-ui/react`, so the only reason to revisit the registry is a design-layer
 change you actually want.
 
 ```sh
