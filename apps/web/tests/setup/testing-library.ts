@@ -23,10 +23,10 @@ afterEach(() => {
 	}
 });
 
-// jsdom does not implement ResizeObserver — cmdk's Command measures its list to
-// animate height changes, and throws `ReferenceError: ResizeObserver is not
-// defined` without this. A no-op is enough: nothing under test asserts on the
-// measurement, only on what cmdk renders.
+// jsdom does not implement ResizeObserver — the model list's virtualizer
+// observes its scroller with one, and base-ui's popups observe their anchors.
+// A no-op is enough: it never fires, so the sizes come from the initial reads
+// `dom-layout.ts` stubs, which is all the tests assert against.
 class ResizeObserverStub {
 	observe() {
 		return;
@@ -62,8 +62,8 @@ if (typeof window !== 'undefined') {
 	window.matchMedia = matchMediaStub;
 }
 
-// jsdom does not implement scrollIntoView either — cmdk calls it on the
-// selected item to keep it in view as the reader arrows through the list.
+// jsdom does not implement scrollIntoView either — base-ui calls it on the
+// highlighted item to keep it in view as the reader arrows through the list.
 // Assigned outright rather than guarded on the property: TypeScript's DOM lib
 // insists it already exists, so a truthiness check on it is unreachable by the
 // types even though jsdom genuinely lacks it at runtime. Guard on the global

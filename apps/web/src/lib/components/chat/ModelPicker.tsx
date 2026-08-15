@@ -1,5 +1,5 @@
 import type { SelectableModel } from '@house-elf/shared';
-import { useDeferredValue, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { usePinnedModels } from '../../hooks/pinned-models.ts';
 import {
@@ -48,10 +48,7 @@ export function ModelPicker({
 	const [detailsOpenId, setDetailsOpenId] = useState<string | null>(null);
 	const virtualizerRef = useRef<ModelListVirtualizer | null>(null);
 
-	// The list is the expensive half. Deferring it keeps the keystroke — and the
-	// clear button — responsive while that render lands.
-	const deferredSearch = useDeferredValue(search);
-	const searching = deferredSearch.trim() !== '';
+	const searching = search.trim() !== '';
 
 	const selectedModel = models.find((model) => model.id === selectedModelId);
 	const listed = filterModels(models, filters);
@@ -79,7 +76,7 @@ export function ModelPicker({
 
 	const view = searching
 		? modelRows({
-				sections: searchSections(listed, deferredSearch),
+				sections: searchSections(listed, search),
 				pinned: [],
 				pinnedIds: pins.pinnedIds,
 				pinnedCollapsed: pins.collapsed

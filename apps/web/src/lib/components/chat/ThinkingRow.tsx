@@ -8,7 +8,7 @@ export interface ThinkingRowProps {
 	onThinkingChange: (thinking: boolean) => void;
 }
 
-/** The footer's thinking switch. Sits outside the cmdk list so arrow-key navigation never treats it as a model. */
+/** The footer's thinking switch. Sits outside the listbox so arrow-key navigation never treats it as a model. */
 export function ThinkingRow({ thinking, onThinkingChange }: ThinkingRowProps) {
 	const switchId = `${useId()}-thinking`;
 
