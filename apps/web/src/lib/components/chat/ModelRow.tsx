@@ -46,11 +46,15 @@ export function ModelRow({
 			className="flex flex-col items-stretch gap-0 rounded-lg px-2 py-2 text-sm"
 		>
 			<div className="flex items-center gap-2">
+				{/* Lazy: clearing the search mounts the whole catalog at once, and every
+				    row wants a logo the moment it exists. */}
 				<img
 					alt={`${providerName(model)} logo`}
 					className="size-3 dark:invert"
 					height={12}
 					width={12}
+					loading="lazy"
+					decoding="async"
 					src={`https://models.dev/logos/${providerName(model)}.svg`}
 				/>
 				<span className="min-w-0 flex-1 truncate">{model.label}</span>

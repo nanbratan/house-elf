@@ -19,6 +19,23 @@ function Command({ className, ...props }: ComponentProps<typeof CommandPrimitive
 	);
 }
 
+// Bare, unlike the registry's version, which seals itself inside its own
+// InputGroup and leaves no room for another addon — the caller composes the
+// group. `input-group-control` because InputGroup's focus ring keys off that
+// slot; named the registry's `command-input`, the ring would never fire.
+function CommandInput({ className, ...props }: ComponentProps<typeof CommandPrimitive.Input>) {
+	return (
+		<CommandPrimitive.Input
+			data-slot="input-group-control"
+			className={cn(
+				'min-w-0 flex-1 bg-transparent text-sm outline-hidden placeholder:text-faint disabled:cursor-not-allowed disabled:opacity-50',
+				className
+			)}
+			{...props}
+		/>
+	);
+}
+
 function CommandList({ className, ...props }: ComponentProps<typeof CommandPrimitive.List>) {
 	return (
 		<CommandPrimitive.List
@@ -71,4 +88,4 @@ function CommandItem({ className, ...props }: ComponentProps<typeof CommandPrimi
 	);
 }
 
-export { Command, CommandEmpty, CommandGroup, CommandItem, CommandList };
+export { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList };

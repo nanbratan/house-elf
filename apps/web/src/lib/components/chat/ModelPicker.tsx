@@ -1,5 +1,5 @@
 import type { SelectableModel } from '@house-elf/shared';
-import { useId, useState } from 'react';
+import { useDeferredValue, useState } from 'react';
 
 import { usePinnedModels } from '../../hooks/pinned-models.ts';
 import {
@@ -37,8 +37,6 @@ export function ModelPicker({
 	canChooseThinking,
 	onThinkingChange
 }: ModelPickerProps) {
-	const modelListId = `${useId()}-model-list`;
-
 	const pins = usePinnedModels(models);
 
 	const [open, setOpen] = useState(false);
@@ -47,6 +45,11 @@ export function ModelPicker({
 	// One details panel open at a time — an accordion, so the list does not
 	// grow a second scroll inside itself.
 	const [detailsOpenId, setDetailsOpenId] = useState<string | null>(null);
+
+	// The list is the expensive half: clearing the search mounts all ~400 rows,
+	// each a cmdk item with its own store subscriptions. Deferring it keeps the
+	// keystroke — and the clear button — responsive while that render lands.
+	const deferredSearch = useDeferredValue(search);
 
 	const selectedModel = models.find((model) => model.id === selectedModelId);
 	const listed = filterModels(models, filters);
@@ -59,12 +62,14 @@ export function ModelPicker({
 	// model, not an exemption from the question the reader just asked, and a pin
 	// sitting above the results reads as having answered it.
 	const pinned = pinnedModels(listed, pins.pinnedIds);
-	const showPinned = pinned.length > 0 && search.trim() === '';
+	const showPinned = pinned.length > 0 && deferredSearch.trim() === '';
 	const pinnedIdSet = new Set(pinned.map((model) => model.id));
 	const browseList = listed.filter((model) => !pinnedIdSet.has(model.id));
 
 	const sections =
-		search.trim() === '' ? releaseSections(browseList) : searchSections(listed, search);
+		deferredSearch.trim() === ''
+			? releaseSections(browseList)
+			: searchSections(listed, deferredSearch);
 	// While searching the pinned section is hidden and `sections` already
 	// includes pinned ids, so nothing is added to the count.
 	const listedCount =
@@ -115,12 +120,14 @@ export function ModelPicker({
 
 			<DialogContent
 				showCloseButton={false}
-				className="w-[min(26rem,calc(100vw-2rem))] gap-0 overflow-hidden p-0"
+				className="w-model-picker max-w-[calc(100vw-2rem)] gap-0 overflow-hidden p-0"
 			>
 				<DialogTitle className="sr-only">Choose a model</DialogTitle>
 
 				<Command
-					label="Models"
+					// cmdk renders this as the hidden `<label>` for the search input, so
+					// it names the box, not the dialog — `DialogTitle` does that.
+					label="Search models"
 					defaultValue={selectedModelId}
 					shouldFilter={false}
 					loop
@@ -129,14 +136,15 @@ export function ModelPicker({
 					<ModelPickerHeader
 						search={search}
 						onSearchChange={setSearch}
-						listId={modelListId}
 						countLabel={countLabel}
 						models={models}
 						filters={filters}
 						onFiltersChange={setFilters}
 					/>
 
-					<CommandList id={modelListId} className="max-h-none flex-1 overflow-y-auto p-1.5">
+					{/* `label`, not `aria-label`: cmdk writes both that and the id itself,
+					    after spreading ours. */}
+					<CommandList label="Models" className="max-h-none flex-1 overflow-y-auto p-1.5">
 						{sections.length === 0 && !showPinned ? (
 							<CommandEmpty className="px-3 py-8 text-faint">No models found.</CommandEmpty>
 						) : null}

@@ -1,63 +1,80 @@
 import type { SelectableModel } from '@house-elf/shared';
+import { SearchIcon, XIcon } from 'lucide-react';
+import { useRef } from 'react';
 
 import type { ModelFilters as Filters } from '../../utils/model-filters.ts';
+import { CommandInput } from '../ui/command.tsx';
+import { InputGroup, InputGroupAddon } from '../ui/input-group.tsx';
 import { ModelFilters } from './ModelFilters.tsx';
 
 export interface ModelPickerHeaderProps {
 	search: string;
 	onSearchChange: (search: string) => void;
-	/** The id of the listbox this combobox drives. */
-	listId: string;
-	/** Live count of what is on the list, announced before the reader scrolls. */
 	countLabel: string;
-	/** The whole catalog for the filter row — not the narrowed list, so a filter never vanishes the moment it is used. */
+	/** The whole catalog, not the narrowed list, so a filter never vanishes the moment it is used. */
 	models: readonly SelectableModel[];
-	/** What the list is narrowed to. Owned by the picker, which outlives this row. */
 	filters: Filters;
 	onFiltersChange: (filters: Filters) => void;
 }
 
-/** The search box, live count and filter trigger above the model list. */
+/**
+ * The search box, live count and filter trigger above the model list.
+ *
+ * The search box is named by the enclosing `Command`'s `label` prop — cmdk
+ * writes `aria-labelledby` after spreading our props, so an `aria-label` here
+ * would be computed away.
+ */
 export function ModelPickerHeader({
 	search,
 	onSearchChange,
-	listId,
 	countLabel,
 	models,
 	filters,
 	onFiltersChange
 }: ModelPickerHeaderProps) {
+	const inputRef = useRef<HTMLInputElement>(null);
+
+	function clearSearch() {
+		onSearchChange('');
+		inputRef.current?.focus();
+	}
+
 	return (
-		<div className="flex flex-wrap items-center gap-2 border-b border-border px-3">
-			<svg
-				className="size-4 shrink-0 text-faint"
-				viewBox="0 0 16 16"
-				fill="none"
-				stroke="currentColor"
-				strokeWidth={1.5}
-				aria-hidden="true"
-			>
-				<circle cx="7" cy="7" r="4.5" />
-				<path d="m10.5 10.5 3 3" />
-			</svg>
-			<input
-				type="search"
-				value={search}
-				onChange={(event) => {
-					onSearchChange(event.target.value);
-				}}
-				role="combobox"
-				aria-label="Search models"
-				aria-controls={listId}
-				aria-expanded="true"
-				aria-haspopup="listbox"
-				autoComplete="off"
-				placeholder="Search models…"
-				className="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-faint"
-			/>
-			<span aria-live="polite" className="shrink-0 text-xs text-faint">
-				{countLabel}
-			</span>
+		<div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2">
+			{/* `ring-0`: this input holds focus the whole time the dialog is open, so
+			    the group's default ring is a second border, not a focus cue. */}
+			<InputGroup className="h-9 w-auto min-w-0 flex-1 basis-48 border-input/30 bg-input/30 has-[[data-slot=input-group-control]:focus-visible]:ring-0">
+				<InputGroupAddon align="inline-start">
+					<SearchIcon className="shrink-0 text-faint" aria-hidden="true" />
+				</InputGroupAddon>
+				{/* Home and End move the list highlight, not the caret: cmdk's root
+				    preventDefaults both. The list is what this box drives. */}
+				<CommandInput
+					ref={inputRef}
+					value={search}
+					onValueChange={onSearchChange}
+					placeholder="Search models…"
+				/>
+				<InputGroupAddon align="inline-end">
+					<span aria-live="polite" className="shrink-0 text-xs text-faint">
+						{countLabel}
+					</span>
+					{/* cmdk forces `type="text"`, so the native search-field clear is gone. */}
+					{search === '' ? null : (
+						<button
+							type="button"
+							onClick={clearSearch}
+							aria-label="Clear search"
+							className="flex size-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+						>
+							<XIcon className="size-3.5" aria-hidden="true" />
+						</button>
+					)}
+				</InputGroupAddon>
+			</InputGroup>
+			{/* Outside the group: an addon swallows clicks to focus the group's first
+			    `<input>`, which is the search box — and ModelFilters' Combobox trigger
+			    is itself an `<input>`, so nesting it would misdirect that click. */}
 			<ModelFilters models={models} filters={filters} onChange={onFiltersChange} />
 		</div>
 	);

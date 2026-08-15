@@ -111,10 +111,9 @@ export function ModelFilters({ models, filters, onChange }: ModelFiltersProps) {
 			</button>
 
 			{shown ? (
-				<div
-					id={panelId}
-					className="flex w-full flex-wrap items-center gap-1.5 border-t border-border py-2.5"
-				>
+				// No `border-t`: inside the header's padding a rule stops short of both
+				// edges and reads as a broken line. The header's `border-b` closes the block.
+				<div id={panelId} className="flex w-full flex-wrap items-center gap-1.5">
 					{/* The catalog carries sixty-odd providers, the one list long enough
 					    that typing beats scrolling. */}
 					<Combobox

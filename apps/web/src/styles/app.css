@@ -154,6 +154,13 @@
 	 */
 	--spacing-header: 3rem;
 
+	/*
+	 * The model picker dialog's width, as `w-model-picker`. The width at which its
+	 * header fits the search box, count and filter trigger on one row — retune here
+	 * when that row's contents change.
+	 */
+	--spacing-model-picker: 26.875rem;
+
 	@keyframes collapsible-down {
 		from {
 			height: 0;

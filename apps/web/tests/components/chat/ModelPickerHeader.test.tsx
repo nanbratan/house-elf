@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { ModelFiltersProps } from '../../../src/lib/components/chat/ModelFilters.tsx';
 import { ModelPickerHeader } from '../../../src/lib/components/chat/ModelPickerHeader.tsx';
+import { Command, CommandList } from '../../../src/lib/components/ui/command.tsx';
 import { selectableModel } from '../../helpers/models.ts';
 
 let filtersProps: ModelFiltersProps | undefined;
@@ -26,28 +27,34 @@ function renderHeader(overrides: { search?: string; countLabel?: string } = {}) 
 	const onSearchChange = vi.fn();
 	const onFiltersChange = vi.fn();
 
+	// A real cmdk input needs the Command context that owns its label and list.
+	// ModelPicker sets the same pair on the real thing.
 	render(
-		<ModelPickerHeader
-			search={overrides.search ?? ''}
-			onSearchChange={onSearchChange}
-			listId="test-list"
-			countLabel={overrides.countLabel ?? '6 models'}
-			models={models}
-			filters={filters}
-			onFiltersChange={onFiltersChange}
-		/>
+		<Command label="Search models">
+			<ModelPickerHeader
+				search={overrides.search ?? ''}
+				onSearchChange={onSearchChange}
+				countLabel={overrides.countLabel ?? '6 models'}
+				models={models}
+				filters={filters}
+				onFiltersChange={onFiltersChange}
+			/>
+			<CommandList label="Models" />
+		</Command>
 	);
 
 	return { user, onSearchChange, onFiltersChange };
 }
 
 describe('ModelPickerHeader', () => {
+	// Resolved from the rendered list, not asserted as a literal: the bug this
+	// replaces was an `aria-controls` naming an id nothing on the page had.
 	it('points the search box at the list it drives', () => {
 		renderHeader();
 
 		expect(screen.getByRole('combobox', { name: 'Search models' })).toHaveAttribute(
 			'aria-controls',
-			'test-list'
+			screen.getByRole('listbox', { name: 'Models' }).id
 		);
 	});
 
@@ -57,6 +64,21 @@ describe('ModelPickerHeader', () => {
 		await user.type(screen.getByRole('combobox', { name: 'Search models' }), 'o');
 
 		expect(onSearchChange).toHaveBeenCalledExactlyOnceWith('o');
+	});
+
+	it('offers no way to clear an empty search', () => {
+		renderHeader({ search: '' });
+
+		expect(screen.queryByRole('button', { name: 'Clear search' })).not.toBeInTheDocument();
+	});
+
+	it('clears the search and puts the caret back', async () => {
+		const { user, onSearchChange } = renderHeader({ search: 'opus' });
+
+		await user.click(screen.getByRole('button', { name: 'Clear search' }));
+
+		expect(onSearchChange).toHaveBeenCalledExactlyOnceWith('');
+		expect(screen.getByRole('combobox', { name: 'Search models' })).toHaveFocus();
 	});
 
 	it('announces the count live, so a filter is heard before it is seen', () => {
