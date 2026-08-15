@@ -51,30 +51,30 @@
 	--radius: 0.625rem;
 
 	--background: oklch(0.129 0.042 264.695);
-	--foreground: oklch(0.984 0.003 247.858);
+	--foreground: oklch(0.93 0.004 95);
 	--card: oklch(0.208 0.042 265.755);
-	--card-foreground: oklch(0.984 0.003 247.858);
+	--card-foreground: oklch(0.93 0.004 95);
 	--popover: oklch(0.208 0.042 265.755);
-	--popover-foreground: oklch(0.984 0.003 247.858);
+	--popover-foreground: oklch(0.93 0.004 95);
 	--primary: oklch(0.929 0.013 255.508);
 	--primary-foreground: oklch(0.208 0.042 265.755);
 	--secondary: oklch(0.279 0.041 260.031);
-	--secondary-foreground: oklch(0.984 0.003 247.858);
+	--secondary-foreground: oklch(0.93 0.004 95);
 	--muted: oklch(0.279 0.041 260.031);
-	--muted-foreground: oklch(0.704 0.04 256.788);
+	--muted-foreground: oklch(0.755 0.006 95);
 	--accent: oklch(0.279 0.041 260.031);
-	--accent-foreground: oklch(0.984 0.003 247.858);
+	--accent-foreground: oklch(0.93 0.004 95);
 	--destructive: oklch(0.704 0.191 22.216);
 	--border: oklch(1 0 0 / 10%);
 	--input: oklch(1 0 0 / 15%);
 	--ring: oklch(0.551 0.027 264.364);
 
 	--sidebar: oklch(0.208 0.042 265.755);
-	--sidebar-foreground: oklch(0.984 0.003 247.858);
+	--sidebar-foreground: oklch(0.93 0.004 95);
 	--sidebar-primary: oklch(0.488 0.243 264.376);
-	--sidebar-primary-foreground: oklch(0.984 0.003 247.858);
+	--sidebar-primary-foreground: oklch(0.93 0.004 95);
 	--sidebar-accent: oklch(0.279 0.041 260.031);
-	--sidebar-accent-foreground: oklch(0.984 0.003 247.858);
+	--sidebar-accent-foreground: oklch(0.93 0.004 95);
 	--sidebar-border: oklch(1 0 0 / 10%);
 	--sidebar-ring: oklch(0.551 0.027 264.364);
 
@@ -84,8 +84,19 @@
 	 * the app at 23 usages. Kept distinct rather than collapsed into
 	 * muted-foreground, which would flatten two tiers into one.
 	 */
-	--faint: oklch(0.551 0.027 264.364);
+	--faint: oklch(0.635 0.006 95);
 }
+
+/*
+ * Slate exactly as `:root` ships it — every surface, border and accent value
+ * unchanged — with only the four text tokens taken from `fog`.
+ *
+ * Two things differ, and they are worth separating. Hue: 0.003@248 (cool) becomes
+ * 0.004@95 (warm), so text reads as off-white rather than blue-white. Brightness of
+ * the DIM tiers: `muted-foreground` 0.704 -> 0.755 and `faint` 0.551 -> 0.635. On a
+ * 0.129 background those two were the darkest text in the app, and lifting them is
+ * likely what made fog read easier — the change is much larger than the hue shift.
+ */
 
 /*
  * `dark:` variants key off a class rather than `prefers-color-scheme`. The palette
@@ -131,7 +142,9 @@
 	--radius-xl: calc(var(--radius) + 4px);
 
 	--font-mono: 'JetBrains Mono Variable', monospace;
-	--font-heading: 'IBM Plex Sans Variable', sans-serif;
+	--font-sans: 'IBM Plex Sans Variable', sans-serif;
+	/* One source of truth: headings and body are the same family. */
+	--font-heading: var(--font-sans);
 
 	/*
 	 * The app header's height, as `h-header` / `pb-header`. A token because two
@@ -178,18 +191,40 @@
 		/* Makes form controls and scrollbars render dark too. */
 		color-scheme: dark;
 		/*
+		 * Sans for the interface. This was `@apply font-mono`, which put JetBrains Mono
+		 * on every label, heading and paragraph and made the app read as a terminal
+		 * demo. Mono is now scoped to code by the rule below.
+		 *
+		 * `antialiased` because subpixel rendering thickens text on a dark background,
+		 * which is most of why 14px copy looked muddy here.
+		 */
+		font-family: var(--font-sans);
+		-webkit-font-smoothing: antialiased;
+		text-rendering: optimizeLegibility;
+		/*
 		 * No elastic overscroll: the document is not the app's scroller — the
 		 * transcript and the sidebar do their own scrolling inside a fixed
 		 * viewport — so dragging the whole page at the end of a gesture shows
 		 * nothing but the background behind it.
 		 */
 		overscroll-behavior: none;
-		@apply font-mono;
 	}
 
 	body {
 		background-color: var(--color-background);
 		color: var(--color-foreground);
+	}
+
+	/*
+	 * Code is mono regardless of the interface font. Without this, the sans family
+	 * inherits into fenced blocks and inline code, where column alignment carries
+	 * meaning.
+	 */
+	code,
+	kbd,
+	pre,
+	samp {
+		font-family: var(--font-mono);
 	}
 
 	:focus-visible {

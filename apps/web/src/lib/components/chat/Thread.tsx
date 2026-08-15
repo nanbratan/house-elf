@@ -42,7 +42,7 @@ function UserMessage() {
 			 * needs to have anything to push. An assistant turn stretches full width
 			 * instead, so a tool card's own `w-full` has the whole column to fill.
 			 */}
-			<div className="ml-auto flex w-fit min-w-0 flex-col gap-2 overflow-hidden rounded-lg bg-secondary px-4 py-3 text-sm text-foreground">
+			<div className="ml-auto flex w-fit min-w-0 flex-col gap-2 overflow-hidden rounded-lg bg-secondary px-4 py-3 text-base leading-relaxed text-foreground">
 				<MessagePrimitive.Parts components={{ Text: UserText }} />
 			</div>
 		</MessagePrimitive.Root>
@@ -56,7 +56,7 @@ function UserText({ text }: { text: string }) {
 function AssistantMessage() {
 	return (
 		<MessagePrimitive.Root
-			className="group flex w-full max-w-[95%] flex-col gap-2 text-sm text-foreground"
+			className="group flex w-full max-w-[95%] flex-col gap-2 text-base leading-relaxed text-foreground"
 			data-role="assistant"
 		>
 			<MessagePrimitive.GroupedParts groupBy={groupParts}>
