@@ -53,7 +53,7 @@ const transportOptions = () => vi.mocked(createChatTransport).mock.lastCall?.[0]
 
 // Nothing persisted: these tests are about what ChatView wires together, not about
 // restoring a previous choice.
-const emptySeed = { selectedModelId: null, thinking: null };
+const emptySeed = { selectedModelId: null };
 
 describe('ChatView', () => {
 	beforeEach(() => {
@@ -126,16 +126,57 @@ describe('ChatView', () => {
 		});
 		// The transport carrying the new id is not enough: the composer has to be
 		// told as well, or the picker keeps presenting the model it replaced.
-		expect(composerProps()?.selectedModelId).toBe('anthropic/claude-sonnet-4-6');
+		expect(composerProps()?.selectedModel.id).toBe('anthropic/claude-sonnet-4-6');
 	});
 
-	it('passes on a thinking choice made through the composer', () => {
+	it('passes on a setting changed through the composer', () => {
 		render(
 			<ChatView agentId="general" modelCatalog={modelCatalog} modelSelectionSeed={emptySeed} />
 		);
 
 		act(() => {
-			composerProps()?.onThinkingChange(true);
+			composerProps()?.onSettingChange('thinking', true);
+		});
+
+		expect(transportOptions()?.settings).toEqual({
+			model: 'openrouter/auto',
+			reasoning: { mode: 'on' }
+		});
+	});
+
+	it('keeps settings with the model they were made about', () => {
+		// Switching models must not carry an expensive choice made about one onto
+		// another that prices differently.
+		render(
+			<ChatView agentId="general" modelCatalog={modelCatalog} modelSelectionSeed={emptySeed} />
+		);
+		act(() => {
+			composerProps()?.onSettingChange('thinking', true);
+		});
+
+		act(() => {
+			composerProps()?.onModelSelect('anthropic/claude-sonnet-4-6');
+		});
+
+		expect(transportOptions()?.settings).toEqual({
+			model: 'anthropic/claude-sonnet-4-6',
+			reasoning: { mode: 'off' }
+		});
+	});
+
+	it('brings them back when that model is selected again', () => {
+		render(
+			<ChatView agentId="general" modelCatalog={modelCatalog} modelSelectionSeed={emptySeed} />
+		);
+		act(() => {
+			composerProps()?.onSettingChange('thinking', true);
+		});
+		act(() => {
+			composerProps()?.onModelSelect('anthropic/claude-sonnet-4-6');
+		});
+
+		act(() => {
+			composerProps()?.onModelSelect('openrouter/auto');
 		});
 
 		expect(transportOptions()?.settings).toEqual({
@@ -150,8 +191,8 @@ describe('ChatView', () => {
 		);
 
 		expect(composerProps()?.models).toBe(modelCatalog.models);
-		expect(composerProps()?.selectedModelId).toBe('openrouter/auto');
-		expect(composerProps()?.thinking).toBe(false);
-		expect(composerProps()?.canChooseThinking).toBe(true);
+		expect(composerProps()?.selectedModel.id).toBe('openrouter/auto');
+		expect(composerProps()?.storedSettings).toEqual({});
+		expect(composerProps()?.settingsRestored).toBe(true);
 	});
 });

@@ -1,11 +1,15 @@
 import type { ModelCatalog } from '@house-elf/shared';
-import { REASONING_MODE } from '@house-elf/shared';
 import { AssistantRuntimeProvider } from '@assistant-ui/react';
 import { useChatRuntime } from '@assistant-ui/react-ai-sdk';
 
 import { createChatTransport } from '../../chat/transport.ts';
 import { seedStorage, type ModelSelectionSeed } from '../../chat/model-selection-seed.ts';
 import { useModelSelection } from '../../hooks/model-selection.ts';
+import { useModelSettings } from '../../hooks/model-settings.ts';
+import { chatSettingsFor } from '../../utils/chat-settings.ts';
+import { modelCapabilities } from '../../utils/model-capabilities.ts';
+import { resolveSettings } from '../../utils/model-settings.ts';
+import type { StoredModelSettings } from '../../utils/stored-model-settings.ts';
 import { Composer } from './Composer.tsx';
 import { Thread } from './Thread.tsx';
 
@@ -17,8 +21,8 @@ export interface ChatViewProps {
 }
 
 /**
- * A conversation: the model choice, the transport that carries it, and the
- * runtime both feed.
+ * A conversation: the model choice, the settings that shape its answers, the
+ * transport that carries both, and the runtime they feed.
  *
  * The thread and the composer are separate components because a component
  * cannot consume a context it provides, and both read this runtime. The composer
@@ -27,13 +31,14 @@ export interface ChatViewProps {
  */
 export function ChatView({ agentId, modelCatalog, modelSelectionSeed }: ChatViewProps) {
 	const modelSelection = useModelSelection(modelCatalog, seedStorage(modelSelectionSeed));
+	const modelSettings = useModelSettings(modelCatalog.models, modelSelection.selectedModelId);
 
 	const transport = createChatTransport({
 		agentId,
-		settings: {
-			model: modelSelection.selectedModelId,
-			reasoning: { mode: modelSelection.thinking ? REASONING_MODE.on : REASONING_MODE.off }
-		}
+		settings: chatSettingsFor(
+			modelSelection.selectedModel.id,
+			resolveSettings(modelCapabilities(modelSelection.selectedModel), modelSettings.stored)
+		)
 	});
 
 	const runtime = useChatRuntime({ transport });
@@ -42,8 +47,11 @@ export function ChatView({ agentId, modelCatalog, modelSelectionSeed }: ChatView
 		modelSelection.select(modelId);
 	}
 
-	function setThinking(thinking: boolean) {
-		modelSelection.setThinking(thinking);
+	function changeSetting<Field extends keyof StoredModelSettings>(
+		field: Field,
+		value: StoredModelSettings[Field]
+	) {
+		modelSettings.set(field, value);
 	}
 
 	return (
@@ -51,12 +59,12 @@ export function ChatView({ agentId, modelCatalog, modelSelectionSeed }: ChatView
 			<Thread
 				composer={
 					<Composer
-						canChooseThinking={modelSelection.canChooseThinking}
 						models={modelCatalog.models}
 						onModelSelect={selectModel}
-						onThinkingChange={setThinking}
-						selectedModelId={modelSelection.selectedModelId}
-						thinking={modelSelection.thinking}
+						onSettingChange={changeSetting}
+						selectedModel={modelSelection.selectedModel}
+						settingsRestored={modelSettings.restored}
+						storedSettings={modelSettings.stored}
 					/>
 				}
 			/>

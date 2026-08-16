@@ -5,16 +5,18 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ModelListProps } from '../../../src/lib/components/chat/ModelList.tsx';
 import { ModelPicker } from '../../../src/lib/components/chat/ModelPicker.tsx';
 import type { ModelPickerHeaderProps } from '../../../src/lib/components/chat/ModelPickerHeader.tsx';
-import type { ThinkingRowProps } from '../../../src/lib/components/chat/ThinkingRow.tsx';
 import { ComboboxItemBase, ComboboxList } from '../../../src/lib/components/ui/combobox.tsx';
 import { optionalThinking, selectableModel } from '../../helpers/models.ts';
 
 /*
- * Tested at its own boundary: every in-repo child — ModelList, ModelPickerHeader,
- * ThinkingRow — is replaced by a stub that records its props. What the picker
- * itself decides (open/close, search, count, which rows in which order, the
- * accordion, pins, the tilde id) is asserted off those recorded props; how the
- * list draws them is asserted in ModelList's own test.
+ * Tested at its own boundary: every in-repo child — ModelList, ModelPickerHeader
+ * — is replaced by a stub that records its props. What the picker itself decides
+ * (open/close, search, count, which rows in which order, the accordion, pins,
+ * the tilde id) is asserted off those recorded props; how the list draws them is
+ * asserted in ModelList's own test.
+ *
+ * Nothing about how a model answers is here. Since T1.7.8 that is the settings
+ * picker's, and this component is a list the reader scans by name.
  *
  * The list stub renders a real `ComboboxItemBase` per model row. That is not
  * invented behaviour: selection is committed by the combobox root from the item
@@ -57,21 +59,9 @@ vi.mock('../../../src/lib/components/chat/ModelPickerHeader.tsx', () => ({
 	}
 }));
 
-let thinkingRowProps: ThinkingRowProps | undefined;
-vi.mock('../../../src/lib/components/chat/ThinkingRow.tsx', () => ({
-	ThinkingRow: (props: ThinkingRowProps) => {
-		thinkingRowProps = props;
-		return <div data-testid="thinking-row" />;
-	}
-}));
-
 function latestHeader(): ModelPickerHeaderProps {
 	if (!headerProps) throw new Error('ModelPickerHeader was never rendered');
 	return headerProps;
-}
-
-function latestThinkingRow(): ThinkingRowProps | undefined {
-	return thinkingRowProps;
 }
 
 /** Types a search the way the header would report it. */
@@ -132,7 +122,6 @@ const models = [auto, opus5, opus45, sonnet, haiku, gpt];
 afterEach(async () => {
 	listProps = undefined;
 	headerProps = undefined;
-	thinkingRowProps = undefined;
 	// The picker owns its pinned state, which persists to `localStorage`. Without
 	// clearing it, a pin from one test bleeds into the next.
 	localStorage.clear();
@@ -149,37 +138,17 @@ afterEach(async () => {
 	});
 });
 
-interface ThinkingProps {
-	thinking?: boolean;
-	canChooseThinking?: boolean;
-}
-
-async function openPicker(
-	selectedModelId: string = opus5.id,
-	selectedModelLabel = 'Opus 5',
-	thinkingProps: ThinkingProps = {}
-) {
+async function openPicker(selectedModelId: string = opus5.id, selectedModelLabel = 'Opus 5') {
 	const user = userEvent.setup();
 	const onSelect = vi.fn();
-	const onThinkingChange = vi.fn();
-	const thinking = thinkingProps.thinking ?? false;
-	render(
-		<ModelPicker
-			models={models}
-			selectedModelId={selectedModelId}
-			onSelect={onSelect}
-			thinking={thinking}
-			canChooseThinking={thinkingProps.canChooseThinking ?? true}
-			onThinkingChange={onThinkingChange}
-		/>
-	);
+	render(<ModelPicker models={models} selectedModelId={selectedModelId} onSelect={onSelect} />);
 	await user.click(
 		screen.getByRole('button', {
-			name: `Choose model. Current model: ${selectedModelLabel}${thinking ? ', thinking on' : ''}`
+			name: `Choose model. Current model: ${selectedModelLabel}`
 		})
 	);
 
-	return { user, onSelect, onThinkingChange };
+	return { user, onSelect };
 }
 
 /** Ids of the models the picker listed, in order. */
@@ -218,44 +187,20 @@ function pinnedHeadingRendered(): boolean {
 }
 
 describe('ModelPicker', () => {
-	describe('the thinking switch', () => {
-		it('hands the switch the thinking flag, and asks to turn thinking on when toggled', async () => {
-			const { onThinkingChange } = await openPicker();
-
-			expect(latestThinkingRow()?.thinking).toBe(false);
-
-			latestThinkingRow()?.onThinkingChange(true);
-
-			expect(onThinkingChange).toHaveBeenCalledExactlyOnceWith(true);
-		});
-
-		it('hands the switch the on state, and asks to turn thinking back off', async () => {
-			const { onThinkingChange } = await openPicker(opus5.id, 'Opus 5', { thinking: true });
-
-			expect(latestThinkingRow()?.thinking).toBe(true);
-
-			latestThinkingRow()?.onThinkingChange(false);
-
-			expect(onThinkingChange).toHaveBeenCalledExactlyOnceWith(false);
-		});
-
-		it('has no switch to show for a model that is always on or never on', async () => {
-			await openPicker(opus5.id, 'Opus 5', { canChooseThinking: false });
-
-			expect(screen.queryByTestId('thinking-row')).not.toBeInTheDocument();
-		});
-	});
-
-	it('names thinking on the trigger, so an expensive setting is not a hidden one', async () => {
-		await openPicker(opus5.id, 'Opus 5', { thinking: true });
-
+	it('names the model on the trigger, and nothing about how it answers', async () => {
 		// The Dialog marks background content `aria-hidden` while it is open — a
 		// real accessibility improvement over the bits-ui original, but it means
 		// the trigger is no longer reachable by role without opting back in for
 		// this one query.
-		expect(
-			screen.getByRole('button', { name: /Current model: Opus 5, thinking on/, hidden: true })
-		).toHaveTextContent('Thinking');
+		await openPicker();
+
+		const trigger = screen.getByRole('button', {
+			name: 'Choose model. Current model: Opus 5',
+			hidden: true
+		});
+
+		expect(trigger).toHaveTextContent('Opus 5');
+		expect(trigger).not.toHaveTextContent('Thinking');
 	});
 
 	it('locks page scrolling only while the modal is open', async () => {

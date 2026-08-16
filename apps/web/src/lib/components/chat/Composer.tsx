@@ -1,6 +1,7 @@
 import type { SelectableModel } from '@house-elf/shared';
 import { AuiIf, ComposerPrimitive, useAuiState } from '@assistant-ui/react';
 
+import type { StoredModelSettings } from '../../utils/stored-model-settings.ts';
 import {
 	ComposerActions,
 	ComposerBar,
@@ -8,14 +9,19 @@ import {
 	ComposerToolbar
 } from '../elements/composer.tsx';
 import { ModelPicker } from './ModelPicker.tsx';
+import { SettingsPicker } from './SettingsPicker.tsx';
 
 export interface ComposerProps {
 	models: readonly SelectableModel[];
-	selectedModelId: string;
+	selectedModel: SelectableModel;
 	onModelSelect: (modelId: string) => void;
-	thinking: boolean;
-	canChooseThinking: boolean;
-	onThinkingChange: (thinking: boolean) => void;
+	/** False until the settings restore lands, when the settings trigger is a skeleton. */
+	settingsRestored: boolean;
+	storedSettings: StoredModelSettings;
+	onSettingChange: <Field extends keyof StoredModelSettings>(
+		field: Field,
+		value: StoredModelSettings[Field]
+	) => void;
 }
 
 /**
@@ -23,18 +29,18 @@ export interface ComposerProps {
  * provides.
  *
  * The draft itself, Enter/Shift+Enter, IME composition, autosize and the
- * empty-draft guard all belong to `ComposerPrimitive`; only the model choice is
- * ours. Nothing is attached to the message here: what a request carries is
- * settled by the transport at send time, so a regenerate sends the same settings
- * as a first ask.
+ * empty-draft guard all belong to `ComposerPrimitive`; only the two triggers are
+ * ours — which model, and how it answers. Nothing is attached to the message
+ * here: what a request carries is settled by the transport at send time, so a
+ * regenerate sends the same settings as a first ask.
  */
 export function Composer({
 	models,
-	selectedModelId,
+	selectedModel,
 	onModelSelect,
-	thinking,
-	canChooseThinking,
-	onThinkingChange
+	settingsRestored,
+	storedSettings,
+	onSettingChange
 }: ComposerProps) {
 	// Drives the send button's resting colour only — whether it can be pressed is
 	// the primitive's own `disabled`, from the same emptiness.
@@ -66,14 +72,26 @@ export function Composer({
 					/>
 
 					<ComposerToolbar>
-						<ModelPicker
-							canChooseThinking={canChooseThinking}
-							models={models}
-							onSelect={onModelSelect}
-							onThinkingChange={onThinkingChange}
-							selectedModelId={selectedModelId}
-							thinking={thinking}
-						/>
+						{/*
+						 * One group, not two toolbar children: the toolbar spaces its
+						 * children apart, so a second bare child would be pushed to the
+						 * middle. Both triggers answer "what will this send", so they
+						 * belong together at the start.
+						 */}
+						<div className="flex min-w-0 items-center gap-0.5">
+							<ModelPicker
+								models={models}
+								onSelect={onModelSelect}
+								selectedModelId={selectedModel.id}
+							/>
+
+							<SettingsPicker
+								model={selectedModel}
+								onChange={onSettingChange}
+								restored={settingsRestored}
+								stored={storedSettings}
+							/>
+						</div>
 
 						<ComposerActions>
 							{/*

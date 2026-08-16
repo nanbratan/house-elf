@@ -14,30 +14,18 @@ import { Dialog, DialogContent, DialogTitle } from '../ui/dialog.tsx';
 import { ModelList, type ModelListVirtualizer } from './ModelList.tsx';
 import { ModelPickerHeader } from './ModelPickerHeader.tsx';
 import { ModelPickerTrigger } from './ModelPickerTrigger.tsx';
-import { ThinkingRow } from './ThinkingRow.tsx';
 
 export interface ModelPickerProps {
 	models: readonly SelectableModel[];
 	selectedModelId: string;
 	onSelect: (modelId: string) => void;
-	thinking: boolean;
-	/**
-	 * False when the current model settles the question itself — it either
-	 * always thinks or cannot. The switch is then not rendered at all, rather
-	 * than shown disabled: a control that can never be used is just clutter.
-	 */
-	canChooseThinking: boolean;
-	onThinkingChange: (thinking: boolean) => void;
 }
 
-export function ModelPicker({
-	models,
-	selectedModelId,
-	onSelect,
-	thinking,
-	canChooseThinking,
-	onThinkingChange
-}: ModelPickerProps) {
+/**
+ * Which model answers, and nothing else. How it answers is the settings
+ * picker's, so that a list the reader is scanning by name is not also a form.
+ */
+export function ModelPicker({ models, selectedModelId, onSelect }: ModelPickerProps) {
 	const pins = usePinnedModels(models);
 
 	const [open, setOpen] = useState(false);
@@ -158,7 +146,7 @@ export function ModelPicker({
 			onInputValueChange={setSearch}
 		>
 			<Dialog open={open} onOpenChange={setOpen}>
-				<ModelPickerTrigger label={selectedModel?.label ?? null} thinking={thinking} />
+				<ModelPickerTrigger label={selectedModel?.label ?? null} />
 
 				<DialogContent
 					showCloseButton={false}
@@ -188,10 +176,6 @@ export function ModelPicker({
 						onTogglePin={togglePin}
 						onToggleDetails={toggleDetails}
 					/>
-
-					{canChooseThinking ? (
-						<ThinkingRow thinking={thinking} onThinkingChange={onThinkingChange} />
-					) : null}
 				</DialogContent>
 			</Dialog>
 		</Combobox>

@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Composer } from '../../../src/lib/components/chat/Composer.tsx';
 import type { ModelPickerProps } from '../../../src/lib/components/chat/ModelPicker.tsx';
+import type { SettingsPickerProps } from '../../../src/lib/components/chat/SettingsPicker.tsx';
 import { selectableModel } from '../../helpers/models.ts';
 
 /*
@@ -81,24 +82,35 @@ vi.mock('../../../src/lib/components/chat/ModelPicker.tsx', () => ({
 	}
 }));
 
-const models = [selectableModel({ id: 'test/model', label: 'Test Model' })];
+/* The second trigger, stubbed on the same terms as the first. */
+let settingsPickerProps: SettingsPickerProps | undefined;
+vi.mock('../../../src/lib/components/chat/SettingsPicker.tsx', () => ({
+	SettingsPicker: (props: SettingsPickerProps) => {
+		settingsPickerProps = props;
+		return <div data-testid="settings-picker" />;
+	}
+}));
+
+const model = selectableModel({ id: 'test/model', label: 'Test Model' });
+const models = [model];
+const storedSettings = { thinking: true } as const;
 
 function renderComposer() {
 	const onModelSelect = vi.fn();
-	const onThinkingChange = vi.fn();
+	const onSettingChange = vi.fn();
 
 	render(
 		<Composer
-			canChooseThinking
 			models={models}
 			onModelSelect={onModelSelect}
-			onThinkingChange={onThinkingChange}
-			selectedModelId="test/model"
-			thinking={false}
+			onSettingChange={onSettingChange}
+			selectedModel={model}
+			settingsRestored
+			storedSettings={storedSettings}
 		/>
 	);
 
-	return { onModelSelect, onThinkingChange };
+	return { onModelSelect, onSettingChange };
 }
 
 describe('Composer', () => {
@@ -106,6 +118,7 @@ describe('Composer', () => {
 		threadIsRunning = false;
 		composerIsEmpty = true;
 		modelPickerProps = undefined;
+		settingsPickerProps = undefined;
 		inputProps = undefined;
 		sendIdle = undefined;
 	});
@@ -179,15 +192,35 @@ describe('Composer', () => {
 			expect(onModelSelect).toHaveBeenCalledExactlyOnceWith('other/model');
 		});
 
-		it('passes the thinking choice down, and passes a new one back up', () => {
-			const { onThinkingChange } = renderComposer();
+		it('leaves every setting to the other trigger', () => {
+			// The model picker is a list the reader scans by name; it stopped being a
+			// form in T1.7.8, and a setting creeping back would make it one again.
+			renderComposer();
 
-			expect(modelPickerProps?.thinking).toBe(false);
-			expect(modelPickerProps?.canChooseThinking).toBe(true);
+			expect(Object.keys(modelPickerProps ?? {}).sort()).toEqual([
+				'models',
+				'onSelect',
+				'selectedModelId'
+			]);
+		});
+	});
 
-			modelPickerProps?.onThinkingChange(true);
+	describe('settings picker contract', () => {
+		it('passes the selected model and its stored settings down', () => {
+			renderComposer();
 
-			expect(onThinkingChange).toHaveBeenCalledExactlyOnceWith(true);
+			// The whole model, not just the id: which controls exist is read from it.
+			expect(settingsPickerProps?.model).toBe(model);
+			expect(settingsPickerProps?.stored).toBe(storedSettings);
+			expect(settingsPickerProps?.restored).toBe(true);
+		});
+
+		it('passes a changed setting back up', () => {
+			const { onSettingChange } = renderComposer();
+
+			settingsPickerProps?.onChange('effort', 'high');
+
+			expect(onSettingChange).toHaveBeenCalledExactlyOnceWith('effort', 'high');
 		});
 	});
 });

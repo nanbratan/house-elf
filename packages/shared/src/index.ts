@@ -119,6 +119,25 @@ export const COST_TIERS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
 export type CostTier = (typeof COST_TIERS)[number];
 
 /**
+ * The models a cost tier may be sent to.
+ *
+ * A literal list rather than `SelectableModel.isRouter`, which is a prefix test
+ * on `openrouter/` and so is true for `openrouter/free` — a router with no
+ * documented cost-tier plugin id. Sending it one is a 400.
+ *
+ * It lives here because both halves have to agree: the server refuses a tier on
+ * anything else, so a picker that offered the control on a wider set would show
+ * a control whose only effect is an error.
+ */
+export const COST_TIER_MODEL_IDS = ['openrouter/auto', 'openrouter/auto-beta'] as const;
+
+export type CostTierModelId = (typeof COST_TIER_MODEL_IDS)[number];
+
+export function supportsCostTier(modelId: string): modelId is CostTierModelId {
+	return COST_TIER_MODEL_IDS.some((id) => id === modelId);
+}
+
+/**
  * What the browser is allowed to decide about a single request.
  *
  * The client names intent; the server decides what it costs in the provider's

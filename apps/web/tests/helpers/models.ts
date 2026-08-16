@@ -49,3 +49,26 @@ export const mandatoryThinking = {
 	supportedParameters: ['temperature', 'reasoning'],
 	reasoning: { mandatory: true }
 } as const satisfies Partial<SelectableModel>;
+
+/**
+ * Thinking with a published set of levels and a published default.
+ *
+ * The two travel together in the live catalog: all 72 models that publish
+ * `supportedEfforts` publish a `defaultEffort` too, and it is always one of
+ * their own levels. The list is deliberately out of order and carries `none`,
+ * because that is what the catalog does and both are the picker's to sort out.
+ */
+export const effortThinking = {
+	supportedParameters: ['temperature', 'reasoning', 'reasoning_effort'],
+	reasoning: { mandatory: false, supportedEfforts: ['high', 'none', 'low'], defaultEffort: 'low' }
+} as const satisfies Partial<SelectableModel>;
+
+/**
+ * Takes an effort level but publishes neither a list nor a default — the shape
+ * of `openrouter/auto` and `openrouter/auto-beta`, the only two models in the
+ * catalog like this, and the reason the `Auto` choice exists.
+ */
+export const routerThinking = {
+	supportedParameters: ['temperature', 'reasoning', 'reasoning_effort'],
+	reasoning: { mandatory: false }
+} as const satisfies Partial<SelectableModel>;

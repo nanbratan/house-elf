@@ -1,5 +1,16 @@
-import type { ChatReasoning, ChatSettings, CostTier, SelectableModel } from '@house-elf/shared';
-import { EFFORT_MEANING_OFF, REASONING_EFFORTS, REASONING_MODE } from '@house-elf/shared';
+import type {
+	ChatReasoning,
+	ChatSettings,
+	CostTier,
+	CostTierModelId,
+	SelectableModel
+} from '@house-elf/shared';
+import {
+	EFFORT_MEANING_OFF,
+	REASONING_EFFORTS,
+	REASONING_MODE,
+	supportsCostTier
+} from '@house-elf/shared';
 import type { JSONValue } from 'ai';
 
 /**
@@ -26,15 +37,18 @@ export class UnsupportedSettingError extends Error {
 }
 
 /**
- * A literal map rather than the `isRouter` flag, which is a prefix test and would
- * admit `openrouter/free` — a router with no documented plugin id. Each slug
- * reads only its own id and ignores the other's in silence, so a wrong id here
- * is a cost tier that appears to work and does nothing.
+ * The plugin each cost-tier model routes through. Each slug reads only its own
+ * id and ignores the other's in silence, so a wrong id here is a cost tier that
+ * appears to work and does nothing.
+ *
+ * Keyed by `CostTierModelId` rather than `string`, so adding a model to the
+ * shared list without naming its plugin here fails to compile — the picker and
+ * this map cannot drift apart into a control that only ever 400s.
  */
-const COST_TIER_PLUGIN_ID = new Map<string, string>([
-	['openrouter/auto', 'auto-router'],
-	['openrouter/auto-beta', 'auto-beta-router']
-]);
+const COST_TIER_PLUGIN_ID: Record<CostTierModelId, string> = {
+	'openrouter/auto': 'auto-router',
+	'openrouter/auto-beta': 'auto-beta-router'
+};
 
 /** One request's settings, checked against the model. Absent means not sent. */
 interface AcceptedSettings {
@@ -113,11 +127,10 @@ function acceptCostTier(
 	model: SelectableModel,
 	tier: CostTier
 ): NonNullable<AcceptedSettings['costTier']> {
-	const pluginId = COST_TIER_PLUGIN_ID.get(model.id);
-	if (pluginId === undefined) {
+	if (!supportsCostTier(model.id)) {
 		throw new UnsupportedSettingError('a cost tier', model, 'only the auto routers route by cost');
 	}
-	return { pluginId, tier };
+	return { pluginId: COST_TIER_PLUGIN_ID[model.id], tier };
 }
 
 /** Every capability check for one request, and the only place that refuses. */

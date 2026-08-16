@@ -3,11 +3,9 @@ import { readCookie, writeCookie } from '../utils/cookies.ts';
 // Cookie names are RFC 6265 tokens, so they cannot carry the colon the old
 // `house-elf:*` localStorage keys used.
 const modelCookieName = 'selected_model';
-const thinkingCookieName = 'thinking';
 
 export interface ModelSelectionSeed {
 	selectedModelId: string | null;
-	thinking: string | null;
 }
 
 /**
@@ -22,10 +20,7 @@ export interface ModelSelectionSeed {
  * correct after hydration.
  */
 export function readModelSelectionSeed(): ModelSelectionSeed {
-	return {
-		selectedModelId: readCookie(modelCookieName) ?? null,
-		thinking: readCookie(thinkingCookieName) ?? null
-	};
+	return { selectedModelId: readCookie(modelCookieName) ?? null };
 }
 
 /** Thrown when the seed is asked for a key it does not carry. */
@@ -40,7 +35,7 @@ export class UnknownSeedKeyError extends Error {
  * A `Storage`-shaped view over a seed: reads answer from the value the loader
  * already resolved, writes go to the cookie the next request will carry.
  *
- * `Storage.getItem` takes any string, but this seed carries exactly two settings.
+ * `Storage.getItem` takes any string, but this seed carries exactly one setting.
  * An unrecognised key is a caller bug — a renamed constant, a typo — so it throws
  * rather than handing back whichever value happened to be on the other side of a
  * ternary.
@@ -48,17 +43,11 @@ export class UnknownSeedKeyError extends Error {
 export function seedStorage(seed: ModelSelectionSeed): Pick<Storage, 'getItem' | 'setItem'> {
 	return {
 		getItem: (key: string) => {
-			switch (key) {
-				case modelCookieName:
-					return seed.selectedModelId;
-				case thinkingCookieName:
-					return seed.thinking;
-				default:
-					throw new UnknownSeedKeyError(key);
-			}
+			if (key === modelCookieName) return seed.selectedModelId;
+			throw new UnknownSeedKeyError(key);
 		},
 		setItem: writeCookie
 	};
 }
 
-export { modelCookieName, thinkingCookieName };
+export { modelCookieName };
