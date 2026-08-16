@@ -76,25 +76,70 @@ export type ModelCatalog = Readonly<{
 	models: readonly SelectableModel[];
 }>;
 
+export const REASONING_MODE = { on: 'on', off: 'off' } as const;
+
+export type ReasoningMode = (typeof REASONING_MODE)[keyof typeof REASONING_MODE];
+
+/**
+ * A union rather than `{ enabled, effort? }`, so `{ off, effort }` is a parse
+ * error rather than a rule someone has to remember.
+ *
+ * `effort` is optional when on, and absent means the provider's own level. Most
+ * models that reason publish no `supportedEfforts`, so that is the only way they
+ * can be asked to think at all.
+ */
+export const chatReasoningSchema = z.discriminatedUnion('mode', [
+	z.strictObject({ mode: z.literal(REASONING_MODE.off) }),
+	z.strictObject({
+		mode: z.literal(REASONING_MODE.on),
+		/** Validated against the selected model's own list, so no enum here. */
+		effort: z.string().min(1).optional()
+	})
+]);
+
+export type ChatReasoning = Readonly<z.infer<typeof chatReasoningSchema>>;
+
+/**
+ * The effort levels a request may name, least to most.
+ *
+ * OpenRouter also defines `none`, left out because it disables reasoning, which
+ * `mode: 'off'` already says. Includes `max`, which OpenRouter's parameter
+ * reference omits and many live models publish.
+ */
+export const REASONING_EFFORTS = ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const;
+
+export type ReasoningEffort = (typeof REASONING_EFFORTS)[number];
+
+/** OpenRouter's spelling of "do not reason", which this contract spells `mode: 'off'`. */
+export const EFFORT_MEANING_OFF = 'none';
+
+/** Router cost bands, cheapest to most capable. */
+export const COST_TIERS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
+
+export type CostTier = (typeof COST_TIERS)[number];
+
 /**
  * What the browser is allowed to decide about a single request.
  *
- * The client names intent, never provider parameters: `thinking` is a boolean
- * because what thinking costs — an effort level, a token budget, a provider's
- * spelling of either — is the server's to say. When the user should choose an
- * effort level, that becomes its own validated field with its own server-side
- * mapping, not a raw provider blob.
+ * The client names intent; the server decides what it costs in the provider's
+ * own spelling. An absent field means the parameter is not sent at all, so no
+ * value is ever invented here.
  *
- * One nested object rather than top-level fields, so there is one thing to
- * validate as it grows.
+ * `reasoning` is required because models of the Claude 5 class think unless told
+ * not to, so omitting it hands them a default the reader never chose.
  *
- * Strict, so a setting this server does not understand is a 400 rather than a
- * silent no-op: the user can see the control they moved.
+ * Strict at both levels, so a setting this server does not understand is a 400
+ * rather than a silent no-op: the user can see the control they moved.
  */
 export const chatSettingsSchema = z.strictObject({
 	/** A catalog id, not a provider id — the server maps it to the router. */
 	model: z.string().min(1),
-	thinking: z.boolean()
+	reasoning: chatReasoningSchema,
+	/** OpenRouter's universal range; no per-model range is published anywhere. */
+	temperature: z.number().min(0).max(2).optional(),
+	seed: z.int().optional(),
+	/** Routers only — the server rejects it on anything else. */
+	costTier: z.enum(COST_TIERS).optional()
 });
 
 export type ChatSettings = Readonly<z.infer<typeof chatSettingsSchema>>;

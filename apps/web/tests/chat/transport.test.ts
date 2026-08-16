@@ -11,7 +11,7 @@ vi.mock('@assistant-ui/react-ai-sdk', () => ({ AssistantChatTransport: vi.fn() }
 
 const mockedTransport = vi.mocked(AssistantChatTransport);
 
-const settings: ChatSettings = { model: 'openrouter/auto', thinking: false };
+const settings: ChatSettings = { model: 'openrouter/auto', reasoning: { mode: 'off' } };
 
 /**
  * The request the transport would send, given what it was last built with.
@@ -64,19 +64,19 @@ describe('createChatTransport', () => {
 			id: 'thread-1',
 			messages: [{ id: 'm1', role: 'user', parts: [{ type: 'text', text: 'Hello' }] }],
 			trigger: 'submit-message',
-			settings: { model: 'openrouter/auto', thinking: false }
+			settings: { model: 'openrouter/auto', reasoning: { mode: 'off' } }
 		});
 	});
 
-	it("sends the reader's current model and thinking choice", async () => {
+	it("sends the reader's current model and reasoning choice", async () => {
 		createChatTransport({
 			agentId: 'general',
-			settings: { model: 'anthropic/claude-sonnet-4-6', thinking: true }
+			settings: { model: 'anthropic/claude-sonnet-4-6', reasoning: { mode: 'on' } }
 		});
 
 		expect((await wireBody()).settings).toEqual({
 			model: 'anthropic/claude-sonnet-4-6',
-			thinking: true
+			reasoning: { mode: 'on' }
 		});
 	});
 
@@ -90,7 +90,7 @@ describe('createChatTransport', () => {
 		expect(body).toMatchObject({
 			trigger: 'regenerate-message',
 			messageId: 'message-1',
-			settings: { model: 'openrouter/auto', thinking: false }
+			settings: { model: 'openrouter/auto', reasoning: { mode: 'off' } }
 		});
 	});
 

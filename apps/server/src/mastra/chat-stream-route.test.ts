@@ -11,18 +11,18 @@ import { respondWith, stubCatalogEnv } from '../../tests/helpers/openrouter-cata
  * Two kinds of test live here. The refusals stop before the agent is reached,
  * and assert the status and the text a client sees. The rest assert what the
  * agent is asked for, captured through a fake agent — because between the body
- * and the provider this route resolves a model, maps a thinking flag and wires
- * an abort signal, and none of that shows in a status code.
+ * and the provider this route resolves a model, maps the reader's settings and
+ * wires an abort signal, and none of that shows in a status code.
  *
- * What makes a model unknown is `models.test.ts`'s business, what thinking
- * translates to is `thinking.test.ts`'s, and what the body may contain is
+ * What makes a model unknown is `models.test.ts`'s business, what a setting
+ * translates to is `chat-settings.test.ts`'s, and what the body may contain is
  * `chat-request.test.ts`'s.
  */
 type HandleChatRequest = typeof import('./chat-stream-route.ts').handleChatRequest;
 
 let handleChatRequest: HandleChatRequest;
 
-const settings = { model: 'anthropic/claude-opus-5', thinking: false };
+const settings = { model: 'anthropic/claude-opus-5', reasoning: { mode: 'off' } };
 const messages = [{ id: 'm1', role: 'user', parts: [{ type: 'text', text: 'hi' }] }];
 
 function request(body: string) {
@@ -137,7 +137,7 @@ describe('handleChatRequest', () => {
 		const response = await post(
 			JSON.stringify({
 				messages,
-				settings: { model: 'anthropic/claude-opus-4-1', thinking: false }
+				settings: { model: 'anthropic/claude-opus-4-1', reasoning: { mode: 'off' } }
 			})
 		);
 
@@ -150,10 +150,30 @@ describe('handleChatRequest', () => {
 		// `gpt-5.3-chat` takes no reasoning parameter, so the request is the
 		// caller's mistake rather than something to send on and be billed for.
 		const response = await post(
-			JSON.stringify({ messages, settings: { model: 'openai/gpt-5.3-chat', thinking: true } })
+			JSON.stringify({
+				messages,
+				settings: { model: 'openai/gpt-5.3-chat', reasoning: { mode: 'on' } }
+			})
 		);
 
 		expect(response.status).toBe(400);
+	});
+
+	it('names the setting a model will not take, rather than dropping it', async () => {
+		// The whole point of refusing rather than dropping: a control that moved in
+		// the picker and changed nothing is indistinguishable from one that worked.
+		const response = await post(
+			JSON.stringify({
+				messages,
+				settings: { ...settings, temperature: 0.5 }
+			})
+		);
+
+		expect(response.status).toBe(400);
+		await expect(response.json()).resolves.toEqual({
+			error:
+				'Model anthropic/claude-opus-5 will not take a temperature: it ignores sampling parameters.'
+		});
 	});
 
 	it('answers 503 when the catalog cannot say whether the model exists', async () => {
@@ -183,18 +203,43 @@ describe('handleChatRequest', () => {
 		expect(asked).toEqual(messages);
 	});
 
-	it('turns the thinking flag into provider options the client never named', async () => {
-		// The client sends a boolean; what it costs at the provider is decided
-		// here. Thinking-off is stated out loud because several models think
-		// unless told not to.
+	it('turns the reasoning choice into provider options the client never named', async () => {
+		// The client names intent; what it costs at the provider is decided here.
+		// Thinking-off is stated out loud because several models think unless told
+		// not to.
 		const thinkingOn = await paramsSentToAgent({
 			messages,
-			settings: { model: 'anthropic/claude-opus-5', thinking: true }
+			settings: { model: 'anthropic/claude-opus-5', reasoning: { mode: 'on' } }
 		});
 		const thinkingOff = await paramsSentToAgent({ messages, settings });
 
 		expect(thinkingOn.providerOptions).toEqual({ openrouter: { reasoning: { enabled: true } } });
 		expect(thinkingOff.providerOptions).toEqual({ openrouter: { reasoning: { enabled: false } } });
+	});
+
+	it('carries every setting the reader chose to the provider', async () => {
+		// `openrouter/auto` is the one catalog entry that accepts all of these at
+		// once, cost tier included — which is the point, since it is also where a
+		// first visit starts.
+		const params = await paramsSentToAgent({
+			messages,
+			settings: {
+				model: 'openrouter/auto',
+				reasoning: { mode: 'on', effort: 'high' },
+				temperature: 0.5,
+				seed: 7,
+				costTier: 'low'
+			}
+		});
+
+		expect(params.providerOptions).toEqual({
+			openrouter: {
+				reasoning: { enabled: true, effort: 'high' },
+				temperature: 0.5,
+				seed: 7,
+				plugins: [{ id: 'auto-router', cost_tier: 'low' }]
+			}
+		});
 	});
 
 	it('passes on the page context the request contributed', async () => {

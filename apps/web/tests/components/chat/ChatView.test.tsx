@@ -107,7 +107,7 @@ describe('ChatView', () => {
 
 		expect(transportOptions()).toEqual({
 			agentId: 'general',
-			settings: { model: 'openrouter/auto', thinking: false }
+			settings: { model: 'openrouter/auto', reasoning: { mode: 'off' } }
 		});
 	});
 
@@ -122,7 +122,7 @@ describe('ChatView', () => {
 
 		expect(transportOptions()?.settings).toEqual({
 			model: 'anthropic/claude-sonnet-4-6',
-			thinking: false
+			reasoning: { mode: 'off' }
 		});
 		// The transport carrying the new id is not enough: the composer has to be
 		// told as well, or the picker keeps presenting the model it replaced.
@@ -138,7 +138,10 @@ describe('ChatView', () => {
 			composerProps()?.onThinkingChange(true);
 		});
 
-		expect(transportOptions()?.settings).toEqual({ model: 'openrouter/auto', thinking: true });
+		expect(transportOptions()?.settings).toEqual({
+			model: 'openrouter/auto',
+			reasoning: { mode: 'on' }
+		});
 	});
 
 	it('hands the catalog’s models and the current selection to the composer', () => {

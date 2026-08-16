@@ -1,4 +1,5 @@
 import type { ModelCatalog } from '@house-elf/shared';
+import { REASONING_MODE } from '@house-elf/shared';
 import { AssistantRuntimeProvider } from '@assistant-ui/react';
 import { useChatRuntime } from '@assistant-ui/react-ai-sdk';
 
@@ -29,7 +30,10 @@ export function ChatView({ agentId, modelCatalog, modelSelectionSeed }: ChatView
 
 	const transport = createChatTransport({
 		agentId,
-		settings: { model: modelSelection.selectedModelId, thinking: modelSelection.thinking }
+		settings: {
+			model: modelSelection.selectedModelId,
+			reasoning: { mode: modelSelection.thinking ? REASONING_MODE.on : REASONING_MODE.off }
+		}
 	});
 
 	const runtime = useChatRuntime({ transport });

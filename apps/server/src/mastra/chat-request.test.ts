@@ -8,11 +8,11 @@ import { chatRequestSchema, describeRefusal } from './chat-request.ts';
  * would satisfy "rejected" while losing the property that makes the list safe
  * to keep narrow.
  *
- * What a model id or a thinking flag means is `models.test.ts`'s and
- * `thinking.test.ts`'s business.
+ * What a model id or a reasoning setting means is `models.test.ts`'s and
+ * `chat-settings.test.ts`'s business.
  */
 const messages = [{ id: 'm1', role: 'user' as const, parts: [{ type: 'text', text: 'hi' }] }];
-const settings = { model: 'anthropic/claude-opus-5', thinking: false };
+const settings = { model: 'anthropic/claude-opus-5', reasoning: { mode: 'off' } };
 
 function parse(body: Record<string, unknown>) {
 	return chatRequestSchema.safeParse(body);
@@ -76,9 +76,50 @@ describe('chatRequestSchema', () => {
 	it('names the setting it refused, path included', () => {
 		// A setting the server does not understand is the case most likely to look
 		// like it worked: the control moved in the UI and nothing said otherwise.
-		expect(refusal(parse({ messages, settings: { ...settings, temperature: 2 } }))).toBe(
-			'settings: Unrecognized key: "temperature"'
+		expect(refusal(parse({ messages, settings: { ...settings, topK: 2 } }))).toBe(
+			'settings: Unrecognized key: "topK"'
 		);
+	});
+
+	it('names a refused key inside the reasoning setting', () => {
+		expect(
+			refusal(parse({ messages, settings: { ...settings, reasoning: { mode: 'off', budget: 1 } } }))
+		).toBe('settings.reasoning: Unrecognized key: "budget"');
+	});
+
+	it('refuses an effort alongside reasoning switched off, which contradicts itself', () => {
+		// The union is what makes this unrepresentable rather than a rule someone
+		// has to remember: there is no `effort` on the `off` branch to parse into.
+		expect(
+			parse({ messages, settings: { ...settings, reasoning: { mode: 'off', effort: 'high' } } })
+				.success
+		).toBe(false);
+	});
+
+	it('refuses a temperature outside the range providers accept', () => {
+		expect(refusal(parse({ messages, settings: { ...settings, temperature: 2.5 } }))).toBe(
+			'settings.temperature: Too big: expected number to be <=2'
+		);
+	});
+
+	it('refuses a fractional seed, which no provider can use', () => {
+		expect(parse({ messages, settings: { ...settings, seed: 1.5 } }).success).toBe(false);
+	});
+
+	it('refuses a cost tier that is not one of the bands', () => {
+		expect(parse({ messages, settings: { ...settings, costTier: 'cheap' } }).success).toBe(false);
+	});
+
+	it('accepts the settings the picker can now send', () => {
+		const chosen = {
+			model: 'anthropic/claude-opus-5',
+			reasoning: { mode: 'on', effort: 'high' },
+			temperature: 0.5,
+			seed: 7,
+			costTier: 'low'
+		};
+
+		expect(parse({ messages, settings: chosen }).success).toBe(true);
 	});
 
 	it('carries UI-contributed instructions, which are additive rather than an override', () => {

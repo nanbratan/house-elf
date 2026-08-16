@@ -21,12 +21,12 @@ import { createUIMessageStreamResponse } from 'ai';
 
 import type { ChatRequest } from './chat-request';
 import { chatRequestSchema, describeRefusal } from './chat-request';
+import { UnsupportedSettingError, chatSettingsProviderOptions } from './chat-settings';
 import { describeChatError } from './chat-error';
 import { logger } from './logger';
 import { routerModelId } from './model-router';
 import { UnknownModelError, resolveModel } from './models';
 import { CatalogUnavailableError } from './openrouter-catalog';
-import { ThinkingNotSupportedError, thinkingProviderOptions } from './thinking';
 
 export interface ChatRequestOptions {
 	request: Request;
@@ -66,7 +66,7 @@ async function chatStreamParams(
 		system,
 		requestContext,
 		model: routerModelId(model),
-		providerOptions: thinkingProviderOptions(model, settings.thinking),
+		providerOptions: chatSettingsProviderOptions(model, settings),
 		// `chatRoute` wires this up itself. Without it the provider keeps
 		// generating — and being billed — after the user presses stop.
 		abortSignal: request.signal
@@ -78,7 +78,7 @@ async function chatStreamParams(
  * a fault, and is left to the caller to rethrow as one.
  */
 function refusalResponse(error: unknown): Response | undefined {
-	if (error instanceof UnknownModelError || error instanceof ThinkingNotSupportedError) {
+	if (error instanceof UnknownModelError || error instanceof UnsupportedSettingError) {
 		return Response.json({ error: error.message }, { status: 400 });
 	}
 	if (error instanceof CatalogUnavailableError) {
