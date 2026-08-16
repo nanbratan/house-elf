@@ -5,6 +5,7 @@ import type { KeyboardEvent, MouseEvent } from 'react';
 import { providerName } from '../../utils/model-list.ts';
 import { ComboboxItemBase } from '../ui/combobox.tsx';
 import { ModelDetails } from './ModelDetails.tsx';
+import { ProviderLogo } from './ProviderLogo.tsx';
 
 export interface ModelRowProps {
 	model: SelectableModel;
@@ -52,17 +53,7 @@ export function ModelRow({
 			className="flex cursor-default flex-col items-stretch rounded-lg px-2 py-2 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
 		>
 			<div className="flex items-center gap-2">
-				{/* Lazy: clearing the search mounts the whole catalog at once, and every
-				    row wants a logo the moment it exists. */}
-				<img
-					alt={`${providerName(model)} logo`}
-					className="size-3 dark:invert"
-					height={12}
-					width={12}
-					loading="lazy"
-					decoding="async"
-					src={`https://models.dev/logos/${providerName(model)}.svg`}
-				/>
+				<ProviderLogo provider={providerName(model)} />
 				<span className="min-w-0 flex-1 truncate">{model.label}</span>
 				{selected ? (
 					<CheckIcon className="size-4 shrink-0 text-foreground" aria-hidden="true" />

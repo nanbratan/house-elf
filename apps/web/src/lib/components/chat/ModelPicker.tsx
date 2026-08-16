@@ -146,7 +146,7 @@ export function ModelPicker({ models, selectedModelId, onSelect }: ModelPickerPr
 			onInputValueChange={setSearch}
 		>
 			<Dialog open={open} onOpenChange={setOpen}>
-				<ModelPickerTrigger label={selectedModel?.label ?? null} />
+				<ModelPickerTrigger model={selectedModel ?? null} />
 
 				<DialogContent
 					showCloseButton={false}
