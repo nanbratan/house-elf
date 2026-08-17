@@ -47,12 +47,14 @@ export interface ModelListProps {
 /**
  * The listbox itself: a window onto the rows the picker is showing.
  *
- * React Compiler skips this one component: `useVirtualizer` returns functions
- * whose identity changes every render, which the compiler cannot memoise
- * without risking stale UI, so it declines to try (`react-hooks/
- * incompatible-library`). Only this component's own JSX goes uncached —
- * `ModelPicker` above still compiles, so the row derivation and the callbacks
- * handed down here are memoised as usual.
+ * React Compiler skips this one component, and no restructuring here changes
+ * that: it hard-codes `useVirtualizer` as incompatible, and the diagnostic
+ * fires at the call site, so moving the call only moves the skip. The build
+ * warns rather than errors (see the logger in `vite.config.ts`).
+ *
+ * Only this component's own JSX goes uncached — `ModelPicker` above still
+ * compiles, so the row derivation and the callbacks handed down here are
+ * memoised as usual.
  *
  * The cost is that the mounted window's rows are recreated whenever the picker
  * re-renders. Left as it is deliberately: measured in Chromium, `memo` on

@@ -1,4 +1,5 @@
 import tailwindcss from '@tailwindcss/vite';
+import { ErrorCategory } from 'babel-plugin-react-compiler';
 import babel from '@rolldown/plugin-babel';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
@@ -103,6 +104,31 @@ export default defineConfig(({ mode }) =>
 									logger: {
 										logEvent(filename, event) {
 											const where = `[react-compiler] ${event.kind} in ${filename ?? 'unknown file'}`;
+
+											// The fifth kind, cutting across the four above: the compiler
+											// declining to memoise a caller of a hook its
+											// `DefaultModuleTypeProvider` hard-codes as unsafe. Degradation, so
+											// it warns — it is only a CompileError because the compiler raises
+											// it by throwing.
+											//
+											// Nothing in our code clears it. It fires at the call site, so it
+											// follows the hook into any wrapper, and `'use no memo'` only stops
+											// the throw, not the log. Suppressing it needs `moduleTypeProvider`
+											// to deny the incompatibility, which buys memoisation at the price
+											// of the stale UI the check exists to prevent.
+											//
+											// Relabelled, since `where` would print CompileError on a line that
+											// is no longer one.
+											if (
+												event.kind === 'CompileError' &&
+												event.detail.category === ErrorCategory.IncompatibleLibrary
+											) {
+												console.warn(
+													`[react-compiler] IncompatibleLibrary (left unmemoised) in ${filename ?? 'unknown file'}`,
+													event
+												);
+												return;
+											}
 
 											if (event.kind === 'PipelineError' || event.kind === 'CompileError') {
 												console.error(where, event);

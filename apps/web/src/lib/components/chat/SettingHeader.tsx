@@ -25,7 +25,7 @@ export function SettingHeader({
 	hint,
 	htmlFor,
 	onReset,
-	showReset = false,
+	showReset,
 	children
 }: SettingHeaderProps) {
 	return (
