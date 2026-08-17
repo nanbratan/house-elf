@@ -1,13 +1,10 @@
 import { Agent } from '@mastra/core/agent';
 
+import { sharedMemory } from '../memory/shared-memory';
 import { routerModelId } from '../model-router';
 import { INITIAL_MODEL_ID } from '../models';
 import { getCurrentTimeTool } from '../tools/get-current-time';
 
-/**
- * Placeholder agent for M0. It exists to prove the server, the model router and
- * Studio are wired together; it gains memory in M2.
- */
 export const generalAgent = new Agent({
 	id: 'general',
 	name: 'General',
@@ -25,5 +22,6 @@ export const generalAgent = new Agent({
 	model: routerModelId({ id: INITIAL_MODEL_ID }),
 	// The key, not the tool's `id`, is the name the model calls and the name that
 	// appears in the stream's `toolName`. Keep it clean.
-	tools: { getCurrentTime: getCurrentTimeTool }
+	tools: { getCurrentTime: getCurrentTimeTool },
+	memory: sharedMemory
 });

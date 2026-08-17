@@ -34,17 +34,20 @@ const router = modelWith(['reasoning', 'reasoning_effort'], { id: 'openrouter/au
 const on = { mode: REASONING_MODE.on } as const;
 const off = { mode: REASONING_MODE.off } as const;
 
+/** Sent whatever the reader chose, so it appears in every expectation below. */
+const COMPRESSION_OFF = { id: 'context-compression', enabled: false };
+
 describe('reasoning', () => {
 	it('states thinking-off out loud rather than omitting it', () => {
 		// Claude-class models think unless told not to.
 		expect(chatSettingsProviderOptions(thinks, settingsWith({ reasoning: off }))).toEqual({
-			openrouter: { reasoning: { enabled: false } }
+			openrouter: { plugins: [COMPRESSION_OFF], reasoning: { enabled: false } }
 		});
 	});
 
 	it('asks for thinking without naming an effort the reader did not choose', () => {
 		expect(chatSettingsProviderOptions(thinks, settingsWith({ reasoning: on }))).toEqual({
-			openrouter: { reasoning: { enabled: true } }
+			openrouter: { plugins: [COMPRESSION_OFF], reasoning: { enabled: true } }
 		});
 	});
 
@@ -54,7 +57,9 @@ describe('reasoning', () => {
 				thinks,
 				settingsWith({ reasoning: { mode: REASONING_MODE.on, effort: 'high' } })
 			)
-		).toEqual({ openrouter: { reasoning: { enabled: true, effort: 'high' } } });
+		).toEqual({
+			openrouter: { plugins: [COMPRESSION_OFF], reasoning: { enabled: true, effort: 'high' } }
+		});
 	});
 
 	it('refuses an effort outside the ones the model publishes', () => {
@@ -81,7 +86,9 @@ describe('reasoning', () => {
 				router,
 				settingsWith({ reasoning: { mode: REASONING_MODE.on, effort: 'xhigh' } })
 			)
-		).toEqual({ openrouter: { reasoning: { enabled: true, effort: 'xhigh' } } });
+		).toEqual({
+			openrouter: { plugins: [COMPRESSION_OFF], reasoning: { enabled: true, effort: 'xhigh' } }
+		});
 	});
 
 	it('refuses an effort OpenRouter does not define', () => {
@@ -125,7 +132,9 @@ describe('reasoning', () => {
 				mandatory,
 				settingsWith({ reasoning: { mode: REASONING_MODE.on, effort: 'low' } })
 			)
-		).toEqual({ openrouter: { reasoning: { enabled: true, effort: 'low' } } });
+		).toEqual({
+			openrouter: { plugins: [COMPRESSION_OFF], reasoning: { enabled: true, effort: 'low' } }
+		});
 	});
 
 	it('refuses to switch off a model that always thinks', () => {
@@ -141,10 +150,10 @@ describe('reasoning', () => {
 		);
 	});
 
-	it('sends nothing for a model that cannot think and was not asked to', () => {
-		expect(
-			chatSettingsProviderOptions(cannotThink, settingsWith({ reasoning: off }))
-		).toBeUndefined();
+	it('names no reasoning for a model that cannot think and was not asked to', () => {
+		expect(chatSettingsProviderOptions(cannotThink, settingsWith({ reasoning: off }))).toEqual({
+			openrouter: { plugins: [COMPRESSION_OFF] }
+		});
 	});
 });
 
@@ -155,7 +164,7 @@ describe('sampling settings', () => {
 
 	it('carries a temperature the model accepts', () => {
 		expect(chatSettingsProviderOptions(samples, settingsWith({ temperature: 0.5 }))).toEqual({
-			openrouter: { reasoning: { enabled: false }, temperature: 0.5 }
+			openrouter: { plugins: [COMPRESSION_OFF], reasoning: { enabled: false }, temperature: 0.5 }
 		});
 	});
 
@@ -168,7 +177,7 @@ describe('sampling settings', () => {
 
 	it('carries a seed the model accepts', () => {
 		expect(chatSettingsProviderOptions(samples, settingsWith({ seed: 7 }))).toEqual({
-			openrouter: { reasoning: { enabled: false }, seed: 7 }
+			openrouter: { plugins: [COMPRESSION_OFF], reasoning: { enabled: false }, seed: 7 }
 		});
 	});
 
@@ -182,7 +191,7 @@ describe('sampling settings', () => {
 		// The acceptance criterion most likely to regress: absent must reach the
 		// provider as absent, never as a default this server invented.
 		expect(chatSettingsProviderOptions(samples, settingsWith({ reasoning: on }))).toEqual({
-			openrouter: { reasoning: { enabled: true } }
+			openrouter: { plugins: [COMPRESSION_OFF], reasoning: { enabled: true } }
 		});
 	});
 
@@ -207,7 +216,7 @@ describe('sampling settings', () => {
 				reasoning: { enabled: true, effort: 'high' },
 				temperature: 0.5,
 				seed: 7,
-				plugins: [{ id: 'auto-beta-router', cost_tier: 'low' }]
+				plugins: [COMPRESSION_OFF, { id: 'auto-beta-router', cost_tier: 'low' }]
 			}
 		});
 	});
@@ -220,7 +229,7 @@ describe('cost tier', () => {
 
 	it('routes openrouter/auto under its own plugin id', () => {
 		expect(chatSettingsProviderOptions(auto, settingsWith({ costTier: 'low' }))).toEqual({
-			openrouter: { plugins: [{ id: 'auto-router', cost_tier: 'low' }] }
+			openrouter: { plugins: [COMPRESSION_OFF, { id: 'auto-router', cost_tier: 'low' }] }
 		});
 	});
 
@@ -228,7 +237,7 @@ describe('cost tier', () => {
 		// Each slug reads only its own id, and ignores the other's in silence — so
 		// the wrong id here is a cost tier that appears to work and does nothing.
 		expect(chatSettingsProviderOptions(autoBeta, settingsWith({ costTier: 'max' }))).toEqual({
-			openrouter: { plugins: [{ id: 'auto-beta-router', cost_tier: 'max' }] }
+			openrouter: { plugins: [COMPRESSION_OFF, { id: 'auto-beta-router', cost_tier: 'max' }] }
 		});
 	});
 
@@ -236,5 +245,25 @@ describe('cost tier', () => {
 		expect(() => chatSettingsProviderOptions(free, settingsWith({ costTier: 'low' }))).toThrow(
 			UnsupportedSettingError
 		);
+	});
+
+	it('keeps compression switched off alongside the tier it routes through', () => {
+		// Both write to one array, so a contributor that assigned rather than
+		// appended would drop the other — and what goes missing is the off-switch.
+		const plugins = chatSettingsProviderOptions(auto, settingsWith({ costTier: 'low' })).openrouter
+			.plugins;
+
+		expect(plugins).toContainEqual(COMPRESSION_OFF);
+	});
+});
+
+describe('context compression', () => {
+	const plain = modelWith([]);
+
+	it('switches compression off on a request that named no settings at all', () => {
+		// Omitting it is not neutral: OpenRouter compresses by default below 8k.
+		expect(chatSettingsProviderOptions(plain, settingsWith({}))).toEqual({
+			openrouter: { plugins: [{ id: 'context-compression', enabled: false }] }
+		});
 	});
 });

@@ -24,6 +24,8 @@ let handleChatRequest: HandleChatRequest;
 
 const settings = { model: 'anthropic/claude-opus-5', reasoning: { mode: 'off' } };
 const messages = [{ id: 'm1', role: 'user', parts: [{ type: 'text', text: 'hi' }] }];
+/** Sent whatever the reader chose; see chat-settings.ts. */
+const COMPRESSION_OFF = { id: 'context-compression', enabled: false };
 
 function request(body: string) {
 	return new Request('http://test/chat/general', {
@@ -213,8 +215,12 @@ describe('handleChatRequest', () => {
 		});
 		const thinkingOff = await paramsSentToAgent({ messages, settings });
 
-		expect(thinkingOn.providerOptions).toEqual({ openrouter: { reasoning: { enabled: true } } });
-		expect(thinkingOff.providerOptions).toEqual({ openrouter: { reasoning: { enabled: false } } });
+		expect(thinkingOn.providerOptions).toEqual({
+			openrouter: { plugins: [COMPRESSION_OFF], reasoning: { enabled: true } }
+		});
+		expect(thinkingOff.providerOptions).toEqual({
+			openrouter: { plugins: [COMPRESSION_OFF], reasoning: { enabled: false } }
+		});
 	});
 
 	it('carries every setting the reader chose to the provider', async () => {
@@ -237,7 +243,7 @@ describe('handleChatRequest', () => {
 				reasoning: { enabled: true, effort: 'high' },
 				temperature: 0.5,
 				seed: 7,
-				plugins: [{ id: 'auto-router', cost_tier: 'low' }]
+				plugins: [COMPRESSION_OFF, { id: 'auto-router', cost_tier: 'low' }]
 			}
 		});
 	});

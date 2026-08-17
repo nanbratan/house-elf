@@ -158,28 +158,47 @@ function acceptSettings(model: SelectableModel, settings: ChatSettings): Accepte
 	return accepted;
 }
 
+/**
+ * Every plugin one request routes through, collected rather than assigned.
+ *
+ * `plugins` is a single field and Mastra replaces arrays outright when merging
+ * provider options, so a contributor that assigned the field would be the only
+ * one sent.
+ *
+ * Compression is switched off explicitly because OpenRouter enables it by
+ * default below 8k of context, and the picker offers the whole catalog — a
+ * small-context model is one click from dropping the middle of a conversation
+ * nobody agreed to lose.
+ *
+ * Verified live against an 8k endpoint: with the switch off, a request past the
+ * window returns a 400 naming the limit rather than being quietly compressed.
+ * That refusal is the intended outcome, so treat such a 400 as working.
+ */
+function pluginsFor(accepted: AcceptedSettings): JSONValue[] {
+	const plugins: JSONValue[] = [{ id: 'context-compression', enabled: false }];
+
+	if (accepted.costTier !== undefined) {
+		plugins.push({ id: accepted.costTier.pluginId, cost_tier: accepted.costTier.tier });
+	}
+
+	return plugins;
+}
+
 /** Total: reads no model and refuses nothing, because `acceptSettings` already did. */
-function providerOptionsFor(
-	accepted: AcceptedSettings
-): { openrouter: Record<string, JSONValue> } | undefined {
-	const openrouter: Record<string, JSONValue> = {};
+function providerOptionsFor(accepted: AcceptedSettings): { openrouter: Record<string, JSONValue> } {
+	const openrouter: Record<string, JSONValue> = { plugins: pluginsFor(accepted) };
 
 	if (accepted.reasoning !== undefined) openrouter.reasoning = accepted.reasoning;
 	if (accepted.temperature !== undefined) openrouter.temperature = accepted.temperature;
 	if (accepted.seed !== undefined) openrouter.seed = accepted.seed;
-	if (accepted.costTier !== undefined) {
-		// Mastra merges provider options by replacing arrays outright, so a second
-		// contributor to `plugins` would silently win.
-		openrouter.plugins = [{ id: accepted.costTier.pluginId, cost_tier: accepted.costTier.tier }];
-	}
 
-	return Object.keys(openrouter).length === 0 ? undefined : { openrouter };
+	return { openrouter };
 }
 
-/** `undefined` when the reader asked for nothing the model can act on. */
+/** Never absent: every request carries the compression switch, whatever it asked for. */
 export function chatSettingsProviderOptions(
 	model: SelectableModel,
 	settings: ChatSettings
-): { openrouter: Record<string, JSONValue> } | undefined {
+): { openrouter: Record<string, JSONValue> } {
 	return providerOptionsFor(acceptSettings(model, settings));
 }
