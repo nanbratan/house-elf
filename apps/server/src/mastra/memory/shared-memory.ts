@@ -13,6 +13,9 @@
 
 import { Memory } from '@mastra/memory';
 
+import { routerModelId } from '../model-router';
+import { OBSERVER_MODEL_ID } from '../models';
+
 /**
  * The document the agent keeps about its reader.
  *
@@ -41,12 +44,13 @@ const WORKING_MEMORY_TEMPLATE = `# About the reader
 
 export const sharedMemory = new Memory({
 	options: {
-		// Sizes the whole history window, so not the library default of 10 — five
-		// turns is short enough that the agent visibly forgets mid-conversation.
+		// Inert while observational memory is on: OM loads the raw window itself as
+		// every message since it last observed (`perPage: false`), bounded by
+		// `observation.messageTokens` rather than by any count here.
 		//
-		// Observational memory ignores the number but not the field: enabling it
-		// removes the message-history processor entirely, and a falsy value here
-		// skips that branch before OM is ever consulted. Keep it truthy.
+		// Truthy anyway, for the readers that are not OM — a falsy value makes
+		// `Agent.getMemoryMessages` return nothing and disables history in
+		// `Memory.recall`.
 		lastMessages: 20,
 		workingMemory: {
 			enabled: true,
@@ -55,6 +59,25 @@ export const sharedMemory = new Memory({
 			// conversation, so losing it should take an edit, not a changed default.
 			scope: 'resource',
 			template: WORKING_MEMORY_TEMPLATE
+		},
+		observationalMemory: {
+			// A separate setting from working memory's scope above. Resource scope
+			// here is experimental upstream, where one thread resumes work another
+			// left unfinished.
+			scope: 'thread',
+			observation: {
+				model: routerModelId({ id: OBSERVER_MODEL_ID }),
+				// Also takes `updateWorkingMemory` off the agent, so remembering no
+				// longer depends on it choosing to write something down mid-answer.
+				manageWorkingMemory: true,
+				// Otherwise the Observer first runs ~6k tokens in, and a two-line
+				// exchange that names a city would never reach that.
+				bufferOnIdle: true,
+				// Not `enabled: false`, which this repo uses elsewhere: the model
+				// publishes `mandatory: true` and the pinned id 400s on it, while a
+				// failed observation is silent. `low` costs the same and thinks least.
+				providerOptions: { openrouter: { reasoning: { effort: 'low' } } }
+			}
 		}
 	}
 });

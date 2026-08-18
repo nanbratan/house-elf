@@ -32,6 +32,18 @@ export type { SelectableModel } from '@house-elf/shared';
  */
 export const INITIAL_MODEL_ID = 'openrouter/auto';
 
+/**
+ * The model the Observer runs on. Never client-supplied.
+ *
+ * Multimodal on purpose: a text-only model reduces an attachment to
+ * `[File #1: floorplan.pdf]`, which M4 needs.
+ *
+ * A catalog id, like `INITIAL_MODEL_ID` — `routerModelId` adds the router prefix.
+ * Bare, it resolves through Mastra's direct Google provider and wants a key this
+ * repo does not carry.
+ */
+export const OBSERVER_MODEL_ID = '~google/gemini-flash-latest';
+
 /** OpenRouter states `created` in seconds; the schema carries milliseconds. */
 const SECONDS_TO_MS = 1000;
 
