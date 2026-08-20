@@ -45,16 +45,20 @@ export const INITIAL_MODEL_ID = 'openrouter/auto';
 export const OBSERVER_MODEL_ID = '~google/gemini-flash-latest';
 
 /**
- * The low tier of `observation.model` — in practice every per-message
- * extraction, since idle buffering observes one turn at a time.
+ * The low tier of `observation.model`, for the buffered observations that run
+ * every `bufferTokens` interval rather than the compaction at the threshold.
  *
  * A preset, not a bare id: a bare one lets a quantized provider serve it.
  * Text-only, so attachments reach it as placeholders.
  */
-export const EXTRACTOR_MODEL_ID = '@preset/deepseek-preset';
+export const OBSERVER_SHORT_INPUT_MODEL_ID = '@preset/deepseek-preset';
 
-/** Input tokens above which an observation is compaction rather than extraction. */
-export const EXTRACTOR_MAX_INPUT_TOKENS = 12_000;
+/**
+ * Where the tier boundary sits. Comfortably above one buffer interval —
+ * `bufferTokens` x `messageTokens`, 6k at present — since each call also
+ * carries previous observations. Move it if either of those changes.
+ */
+export const OBSERVER_SHORT_INPUT_MAX_TOKENS = 12_000;
 
 /** OpenRouter states `created` in seconds; the schema carries milliseconds. */
 const SECONDS_TO_MS = 1000;

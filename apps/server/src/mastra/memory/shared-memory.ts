@@ -14,7 +14,11 @@
 import { Memory, ModelByInputTokens } from '@mastra/memory';
 
 import { routerModelId } from '../model-router';
-import { EXTRACTOR_MAX_INPUT_TOKENS, EXTRACTOR_MODEL_ID, OBSERVER_MODEL_ID } from '../models';
+import {
+	OBSERVER_MODEL_ID,
+	OBSERVER_SHORT_INPUT_MAX_TOKENS,
+	OBSERVER_SHORT_INPUT_MODEL_ID
+} from '../models';
 
 export const sharedMemory = new Memory({
 	options: {
@@ -26,9 +30,9 @@ export const sharedMemory = new Memory({
 		// `Agent.getMemoryMessages` return nothing and disables history in
 		// `Memory.recall`.
 		lastMessages: 20,
-		// Neither `schema` nor `template`: Mastra supplies its own default. A schema
-		// travels by `response_format`, where the compaction model double-encodes it
-		// and some providers reject what a `Record` generates.
+		// Neither `schema` nor `template`: Mastra supplies its own default, and the
+		// agent writes it through `updateWorkingMemory`. Turning that over to the
+		// Observer records what it reads rather than what a turn was for.
 		workingMemory: {
 			enabled: true,
 			// Stated rather than inherited: this is the difference between an
@@ -42,19 +46,15 @@ export const sharedMemory = new Memory({
 			// left unfinished.
 			scope: 'thread',
 			observation: {
-				// Otherwise the Observer first runs ~6k tokens in, and a two-line
-				// exchange that names a city would never reach that. Gated on
-				// `bufferTokens` being above zero, so both are needed.
-				bufferOnIdle: true,
+				// Buffer every 20% of `messageTokens`, so observing is spread across
+				// the window instead of one blocking call when it fills.
 				bufferTokens: 0.2,
-				// Also takes `updateWorkingMemory` off the agent, so remembering no
-				// longer depends on it choosing to write something down mid-answer.
-				manageWorkingMemory: true,
 				// Input size is all that separates the two jobs this one setting
-				// covers: extraction sees one exchange, compaction the whole window.
+				// covers: a buffered observation sees a slice, a compaction the whole
+				// window.
 				model: new ModelByInputTokens({
 					upTo: {
-						[EXTRACTOR_MAX_INPUT_TOKENS]: routerModelId({ id: EXTRACTOR_MODEL_ID }),
+						[OBSERVER_SHORT_INPUT_MAX_TOKENS]: routerModelId({ id: OBSERVER_SHORT_INPUT_MODEL_ID }),
 						1_000_000: routerModelId({ id: OBSERVER_MODEL_ID })
 					}
 				}),
