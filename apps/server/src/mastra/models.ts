@@ -54,7 +54,7 @@ export const OBSERVER_MODEL_ID = '~google/gemini-flash-latest';
 export const EXTRACTOR_MODEL_ID = '@preset/deepseek-preset';
 
 /** Input tokens above which an observation is compaction rather than extraction. */
-export const EXTRACTOR_MAX_INPUT_TOKENS = 6_000;
+export const EXTRACTOR_MAX_INPUT_TOKENS = 12_000;
 
 /** OpenRouter states `created` in seconds; the schema carries milliseconds. */
 const SECONDS_TO_MS = 1000;
