@@ -11,36 +11,11 @@
  * which reads exactly like memory being switched off.
  */
 
-import { Memory } from '@mastra/memory';
+import { Memory, ModelByInputTokens } from '@mastra/memory';
 
 import { routerModelId } from '../model-router';
-import { OBSERVER_MODEL_ID } from '../models';
-
-/**
- * The document the agent keeps about its reader.
- *
- * A seed, not a schema: which facts about a person turn out to matter is not
- * knowable in advance, and a fixed field list would have the model filling in a
- * shape that code could maintain on its own. Resist tightening it into one.
- *
- * Additive guidance only. Mastra's injected instruction tells the model to keep
- * empty sections, so inviting it to remove them sets the two pulling against
- * each other.
- */
-const WORKING_MEMORY_TEMPLATE = `# About the reader
-
-## Personal
-- Name:
-- Location:
-- Timezone:
-
-## Preferences
-- Communication style:
-
-## Notes
-- Add what turns out to matter, and why it mattered. Add sections of your own as
-  the picture fills in. Skip anything the conversation already makes obvious.
-`;
+import { EXTRACTOR_MAX_INPUT_TOKENS, EXTRACTOR_MODEL_ID, OBSERVER_MODEL_ID } from '../models';
+import { workingMemoryInstruction, WORKING_MEMORY_TEMPLATE } from './working-memory-template';
 
 export const sharedMemory = new Memory({
 	options: {
@@ -66,7 +41,16 @@ export const sharedMemory = new Memory({
 			// left unfinished.
 			scope: 'thread',
 			observation: {
-				model: routerModelId({ id: OBSERVER_MODEL_ID }),
+				// Tiered by input size, which is the only thing separating the two jobs
+				// this one setting covers: a per-message extraction sees one exchange,
+				// a compaction sees the whole window.
+				model: new ModelByInputTokens({
+					upTo: {
+						[EXTRACTOR_MAX_INPUT_TOKENS]: routerModelId({ id: EXTRACTOR_MODEL_ID }),
+						1_000_000: routerModelId({ id: OBSERVER_MODEL_ID })
+					}
+				}),
+				instruction: workingMemoryInstruction(),
 				// Also takes `updateWorkingMemory` off the agent, so remembering no
 				// longer depends on it choosing to write something down mid-answer.
 				manageWorkingMemory: true,

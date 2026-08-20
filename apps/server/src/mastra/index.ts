@@ -1,6 +1,7 @@
 import { Mastra } from '@mastra/core/mastra';
 import { PostgresStore } from '@mastra/pg';
 
+import { evalAgents, evalScorers, evalWorkflows } from '../../evals/memory/register';
 import { env } from '../env';
 import { generalAgent } from './agents/general';
 import { chatStreamRoute } from './chat-stream-route';
@@ -8,7 +9,9 @@ import { logger } from './logger';
 import { modelCatalogRoute } from './model-catalog-route';
 
 export const mastra = new Mastra({
-	agents: { general: generalAgent },
+	agents: { general: generalAgent, ...evalAgents() },
+	workflows: evalWorkflows(),
+	scorers: evalScorers(),
 	server: {
 		apiRoutes: [
 			modelCatalogRoute,

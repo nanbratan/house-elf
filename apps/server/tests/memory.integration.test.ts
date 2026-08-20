@@ -51,19 +51,17 @@ function turn(
 	return { content, finishReason: { unified, raw: undefined }, usage: NO_USAGE, warnings: [] };
 }
 
-/** The document the Observer keeps, as it stands once a name and a city are known. */
-const REMEMBERED = `# About the reader
+/**
+ * The document the Observer keeps, as it stands once a name and a city are
+ * known. Markdown per `WORKING_MEMORY_TEMPLATE` — production configures a
+ * template rather than a schema.
+ */
+const REMEMBERED = `# What I know about this person
 
-## Personal
-- Name: Sam
-- Location: Berlin
-- Timezone:
+## Profile
 
-## Preferences
-- Communication style:
-
-## Notes
-`;
+- Their name is Sam
+- Lives in Berlin`;
 
 describe('working memory across threads', () => {
 	let store: PostgresStore;

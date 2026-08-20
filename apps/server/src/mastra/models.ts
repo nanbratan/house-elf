@@ -44,6 +44,22 @@ export const INITIAL_MODEL_ID = 'openrouter/auto';
  */
 export const OBSERVER_MODEL_ID = '~google/gemini-flash-latest';
 
+/**
+ * The model that runs the Observer on a short input — in practice every
+ * per-message extraction, since idle buffering observes one turn at a time.
+ *
+ * Input size is the only thing that separates the two jobs: extraction sees one
+ * exchange, compaction sees the whole window, and both run through
+ * `observation.model`. So a tier boundary is what splits them.
+ *
+ * Also multimodal (`file`, `image`, `text`), so an attachment still reaches the
+ * Observer on this tier rather than being reduced to a placeholder.
+ */
+export const EXTRACTOR_MODEL_ID = 'openai/gpt-5.6-luna';
+
+/** Input tokens above which observation is compaction rather than extraction. */
+export const EXTRACTOR_MAX_INPUT_TOKENS = 10_000;
+
 /** OpenRouter states `created` in seconds; the schema carries milliseconds. */
 const SECONDS_TO_MS = 1000;
 

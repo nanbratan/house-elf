@@ -10,10 +10,18 @@ export default mergeConfig(
 				{
 					// Pure logic, no I/O, no containers. Must stay fast — this is the
 					// subset the pre-commit hook runs.
+					//
+					// The eval globs name test files, never `evals/**` wholesale — most
+					// of `evals/memory` registers real agents against real models, and a
+					// test may only be added beside one if it imports no such module.
 					test: {
 						name: 'unit',
 						environment: 'node',
-						include: ['src/**/*.test.ts']
+						include: [
+							'src/**/*.test.ts',
+							'evals/memory/*.test.ts',
+							'evals/memory/scorers/**/*.test.ts'
+						]
 					}
 				},
 

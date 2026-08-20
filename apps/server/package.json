@@ -5,6 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "mastra dev --env ../../.env",
+		"evals:seed": "bun --env-file=../../.env run evals/memory/seed-dataset.ts",
 		"build": "mastra build",
 		"start": "mastra start",
 		"test": "vitest run --coverage",
