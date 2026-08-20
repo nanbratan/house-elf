@@ -150,11 +150,12 @@ describe('working memory across threads', () => {
 		expect(stored).toEqual(expect.stringContaining('Berlin'));
 	});
 
-	it('leaves the agent no tool for writing working memory', async () => {
-		// The Observer owns the document now. Were this tool back, two writers
-		// would share one document and the last turn to finish would win.
+	it('gives the agent the tool for writing working memory', async () => {
+		// `manageWorkingMemory` would take this tool away and hand the document to
+		// the Observer, which records what it reads rather than what the turn was
+		// for — a question about which message came first became a remembered fact.
 		const memory = await generalAgent.getMemory();
 
-		expect(Object.keys(memory?.listTools({}) ?? {})).toEqual([]);
+		expect(Object.keys(memory?.listTools({}) ?? {})).toContain('updateWorkingMemory');
 	});
 });

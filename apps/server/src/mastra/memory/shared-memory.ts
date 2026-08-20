@@ -66,13 +66,10 @@ export const sharedMemory = new Memory({
 			// left unfinished.
 			scope: 'thread',
 			observation: {
+				// Compaction only. The document above is the agent's to write, so
+				// observation no longer needs to run after short turns to catch a
+				// fact — it runs when the window needs clearing, at `messageTokens`.
 				model: routerModelId({ id: OBSERVER_MODEL_ID }),
-				// Also takes `updateWorkingMemory` off the agent, so remembering no
-				// longer depends on it choosing to write something down mid-answer.
-				manageWorkingMemory: true,
-				// Otherwise the Observer first runs ~6k tokens in, and a two-line
-				// exchange that names a city would never reach that.
-				bufferOnIdle: true,
 				// Not `enabled: false`, which this repo uses elsewhere: the model
 				// publishes `mandatory: true` and the pinned id 400s on it, while a
 				// failed observation is silent. `low` costs the same and thinks least.
