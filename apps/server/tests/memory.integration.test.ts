@@ -11,6 +11,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { generalAgent } from '../src/mastra/agents/general.ts';
 import { OWNER_RESOURCE_ID } from '../src/mastra/memory/owner.ts';
+import type { WorkingMemoryDocument } from '../src/mastra/memory/working-memory-schema.ts';
 import { createTestStore, uniqueId } from './helpers/test-store.ts';
 
 /**
@@ -51,19 +52,13 @@ function turn(
 	return { content, finishReason: { unified, raw: undefined }, usage: NO_USAGE, warnings: [] };
 }
 
-/** The document the Observer keeps, as it stands once a name and a city are known. */
-const REMEMBERED = `# About the reader
-
-## Personal
-- Name: Sam
-- Location: Berlin
-- Timezone:
-
-## Preferences
-- Communication style:
-
-## Notes
-`;
+/** The document the agent keeps, as it stands once a name and a city are known. */
+const REMEMBERED = JSON.stringify({
+	topics: [
+		{ name: 'Sam', summary: 'Their name is Sam' },
+		{ name: 'Berlin', summary: 'Lives in Berlin' }
+	]
+} satisfies WorkingMemoryDocument);
 
 describe('working memory across threads', () => {
 	let store: PostgresStore;
