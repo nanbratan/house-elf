@@ -11,7 +11,6 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { generalAgent } from '../src/mastra/agents/general.ts';
 import { OWNER_RESOURCE_ID } from '../src/mastra/memory/owner.ts';
-import type { WorkingMemoryDocument } from '../src/mastra/memory/working-memory-schema.ts';
 import { createTestStore, uniqueId } from './helpers/test-store.ts';
 
 /**
@@ -52,13 +51,17 @@ function turn(
 	return { content, finishReason: { unified, raw: undefined }, usage: NO_USAGE, warnings: [] };
 }
 
-/** The document the agent keeps, as it stands once a name and a city are known. */
-const REMEMBERED = JSON.stringify({
-	topics: [
-		{ name: 'Sam', summary: 'Their name is Sam' },
-		{ name: 'Berlin', summary: 'Lives in Berlin' }
-	]
-} satisfies WorkingMemoryDocument);
+/** The document the Observer keeps, in the shape Mastra's default template gives it. */
+const REMEMBERED = `# User Information
+- **First Name**: Sam
+- **Last Name**:
+- **Location**: Berlin
+- **Occupation**:
+- **Interests**:
+- **Goals**:
+- **Events**:
+- **Facts**:
+- **Projects**:`;
 
 describe('working memory across threads', () => {
 	let store: PostgresStore;
@@ -145,12 +148,12 @@ describe('working memory across threads', () => {
 		expect(stored).toEqual(expect.stringContaining('Berlin'));
 	});
 
-	it('gives the agent the tool for writing working memory', async () => {
-		// `manageWorkingMemory` would take this tool away and hand the document to
-		// the Observer, which records what it reads rather than what the turn was
-		// for — a question about which message came first became a remembered fact.
+	it('leaves the agent no tool for writing working memory', async () => {
+		// `manageWorkingMemory` hands the document to the Observer. Were this tool
+		// back, two writers would share one document and the last turn to finish
+		// would win.
 		const memory = await generalAgent.getMemory();
 
-		expect(Object.keys(memory?.listTools({}) ?? {})).toContain('updateWorkingMemory');
+		expect(Object.keys(memory?.listTools({}) ?? {})).toEqual([]);
 	});
 });
